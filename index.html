@@ -9,17 +9,22 @@
     :root {
       color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-      --hud-bg: #0b0f19;
-      --hud-panel: #151a28;
-      --hud-panel-soft: #111725;
-      --hud-track: #2d313e;
-      --hud-cyan: #00ccff;
-      --hud-green: #00ff66;
-      --hud-muted: #96a5c8;
-      --hud-due-bg: #2f1625;
-      --hud-due-border: #d31f59;
-      --hud-due: #ff3366;
-      --hud-white: #f8fbff;
+      --hud-bg: #080a0f;
+      --hud-panel: #12161d;
+      --hud-panel-soft: #0e1218;
+      --hud-track: #292f38;
+      --hud-cyan: #718fa9;
+      --hud-green: #789486;
+      --hud-muted: #8994a3;
+      --hud-due-bg: #21171b;
+      --hud-due-border: #97606c;
+      --hud-due: #c47b89;
+      --hud-white: #e2e8f0;
+      --hud-water: #718fae;
+      --hud-fuel: #bf8952;
+      --hud-stretch: #8d7ba8;
+      --hud-aero: #6f879e;
+      --hud-upright: #9b8878;
       --hud-mono: "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
     }
     * { box-sizing: border-box; }
@@ -27,7 +32,7 @@
     html, body { overflow: hidden; background: var(--hud-bg); }
     button, input { font: inherit; }
     button { touch-action: manipulation; }
-    button:focus-visible, input:focus-visible, [tabindex="0"]:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+    button:focus-visible, input:focus-visible, [tabindex="0"]:focus-visible { outline: 3px solid var(--hud-white); outline-offset: 2px; }
     .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
     .screen {
       position: relative; width: 100%; height: 100%; min-height: 300px; overflow: hidden;
@@ -64,17 +69,14 @@
     .action:active { transform: scale(.985); }
     .pip-note { grid-column: 1 / -1; min-height: 1em; margin: 0; color: #ffdb4d; font-size: .68rem; }
     .ride-progress { position: absolute; top: 8px; left: 50%; z-index: 20; width: min(calc(100% - 24px), 900px); height: 7px; overflow: hidden; transform: translateX(-50%); border-radius: 999px; background: var(--hud-track); }
-    .ride-progress-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--hud-cyan), var(--hud-green)); transition: width .25s linear; }
+    .ride-progress-fill { height: 100%; width: 0; border-radius: inherit; background: var(--hud-aero); transition: width .25s linear; }
     .ride-progress-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
     .aero, .paused, .fuel, .water, .stretch { background: var(--hud-bg); color: var(--hud-white); }
-    .aero.alert .aero-hero { animation: hero-alert 850ms ease-in-out 3; }
-    .action-screen.finished { animation: light-alert 850ms ease-in-out 3; }
-    @keyframes hero-alert { 50% { border-color: var(--hud-green); box-shadow: 0 0 32px rgba(0,255,102,.3); } }
-    @keyframes light-alert { 50% { background: #fff; color: #d20000; } }
+    .aero.alert .aero-hero { border-color: #9a8461; background: #211e18; }
+    .action-screen.finished { border-color: #9a8461; background: #181610; }
     .eyebrow { margin: 5px 0 3px; font-size: clamp(.78rem, 3.8vmin, 1rem); font-weight: 1000; letter-spacing: .16em; text-transform: uppercase; }
     .timer { margin: 0; font-variant-numeric: tabular-nums; font-size: clamp(3.7rem, 25vmin, 6.8rem); line-height: .9; font-weight: 1000; letter-spacing: -.085em; }
-    .timer.message { max-width: 100%; color: #ffe000; font-size: clamp(2.2rem, 15vmin, 4rem); line-height: .86; letter-spacing: -.055em; animation: message-pulse 850ms ease-in-out 3; }
-    @keyframes message-pulse { 50% { color: #fff; transform: scale(1.035); } }
+    .timer.message { max-width: 100%; color: #c9ab73; font-size: clamp(2.2rem, 15vmin, 4rem); line-height: .86; letter-spacing: -.055em; }
     .stats { display: grid; grid-template-columns: repeat(3, 1fr); width: min(100%, 380px); margin-top: 8px; border-radius: 11px; overflow: hidden; background: rgba(0,0,0,.22); }
     .stat { padding: 6px 3px; border-right: 1px solid rgba(255,255,255,.13); }
     .stat:last-child { border: 0; }
@@ -122,15 +124,15 @@
     .camera-actions { display: grid; gap: 7px; margin-top: 9px; }
     .camera-error { color: #ffcf55 !important; }
     .camera-badge { position: absolute; top: 27px; left: 10px; z-index: 5; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 7px; background: rgba(0,0,0,.42); color: #d9e6f4; font-size: .56rem; font-weight: 1000; letter-spacing: .08em; text-transform: uppercase; }
-    .camera-badge.aero { border-color: #45f797; color: #65ffab; }
-    .camera-badge.upright { border-color: #ffe15a; color: #ffe15a; }
-    .camera-badge.uncertain { border-color: #ff9d62; color: #ffc09a; }
+    .camera-badge.aero { border-color: var(--hud-aero); color: #aec0d0; }
+    .camera-badge.upright { border-color: var(--hud-upright); color: #c7b7aa; }
+    .camera-badge.uncertain { border-color: #a77d63; color: #c9a58e; }
     .ride-utility-controls { position: absolute; top: 27px; right: 10px; z-index: 18; display: flex; align-items: center; gap: 6px; }
     .pip-mini, .camera-auto-toggle, .ride-pause-button { min-height: 42px; border-radius: 9px; padding: 6px 9px; font-size: .62rem; font-weight: 1000; cursor: pointer; }
-    .pip-mini { min-width: 42px; border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.38); color: #fff; }
-    .camera-auto-toggle { border: 1px solid #55f39a; background: rgba(0,0,0,.46); color: #6dffad; }
+    .pip-mini { min-width: 42px; border: 1px solid #3a424d; background: #11151b; color: #cbd3dc; }
+    .camera-auto-toggle { border: 1px solid #607b6d; background: #121915; color: #9eb5a9; }
     .camera-auto-toggle.off { border-color: #a4b2c2; color: #d5deea; }
-    .ride-pause-button { min-width: 68px; border: 1px solid #ffe36a; background: #493800; color: #fff2a8; letter-spacing: .06em; }
+    .ride-pause-button { min-width: 68px; border: 1px solid #806f54; background: #282218; color: #d3c19e; letter-spacing: .06em; }
     .camera-review { width: min(100%, 420px); margin: 0 0 12px; padding: 10px; border: 1px solid #285b4a; border-radius: 12px; background: #09231d; text-align: left; }
     .camera-review h2 { margin: 0 0 7px; color: #6dffad; font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; }
     .camera-review p { margin: 4px 0; color: #bed6ce; font-size: .7rem; line-height: 1.3; }
@@ -164,14 +166,14 @@
     .learning-management-row { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 8px; border: 1px solid #243b53; border-radius: 8px; background: #091522; }
     .learning-management-row span { color: #c8d6e6; font-size: .65rem; font-weight: 850; }
     .learning-management-row .learning-card-actions { margin: 0; }
-    .active-ride { padding: 46px clamp(10px, 3vmin, 18px) 72px; }
-    .quick-action-dock { position: absolute; left: 6px; right: 6px; bottom: 5px; z-index: 12; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; padding: 5px; border: 1px solid #252d3e; border-radius: 13px; background: rgba(11,15,25,.94); backdrop-filter: blur(12px); }
+    .active-ride { padding: 46px clamp(10px, 3vmin, 18px) 72px; transition: none; }
+    .quick-action-dock { position: absolute; left: 6px; right: 6px; bottom: 5px; z-index: 12; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; padding: 5px; border: 1px solid #252d36; border-radius: 13px; background: #0e1117; }
     .quick-action { min-width: 0; min-height: 48px; border: 1px solid rgba(255,255,255,.23); border-radius: 9px; padding: 5px 2px; color: #fff; font-size: .65rem; line-height: 1.05; font-weight: 1000; cursor: pointer; }
-    .quick-action.water-button { background: #087fa4; }
-    .quick-action.fuel-button { background: #5f5000; }
-    .quick-action.stretch-button { background: #147b3a; }
+    .quick-action.water-button { background: #344a60; }
+    .quick-action.fuel-button { background: #59432d; }
+    .quick-action.stretch-button { background: #493f59; }
     .quick-action.locked { background: #263445; color: #91a3b7; }
-    .action-toast { position: absolute; left: 50%; bottom: 68px; z-index: 14; transform: translateX(-50%); width: max-content; max-width: 94%; border-radius: 999px; padding: 7px 11px; background: #052418; color: #68ffad; font-size: .64rem; font-weight: 1000; }
+    .action-toast { position: absolute; left: 50%; bottom: 68px; z-index: 14; transform: translateX(-50%); width: max-content; max-width: 94%; border: 1px solid #4c6759; border-radius: 999px; padding: 7px 11px; background: #151d19; color: #abc0b5; font-size: .64rem; font-weight: 1000; }
     .pending-card { width: min(100%,380px); margin-top: 7px; padding: 8px; border: 1px solid #ffd94a; border-radius: 11px; background: rgba(31,24,0,.78); text-align: left; }
     .pending-head { display: flex; justify-content: space-between; gap: 8px; color: #ffe768; font-size: .68rem; font-weight: 1000; text-transform: uppercase; }
     .pending-actions { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; margin-top: 7px; }
@@ -180,28 +182,32 @@
     .pending-count { margin: 4px 0 0; color: #d9ca8a; font-size: .61rem; }
     .aero.active-ride { justify-content: flex-start; padding: 49px clamp(8px, 3vw, 20px) 12px; }
     .aero-dashboard { display: grid; grid-template-rows: minmax(145px, .88fr) minmax(180px, 1fr); gap: clamp(10px, 2.5vh, 20px); width: min(100%, 900px); height: 100%; min-height: 0; }
-    .aero-hero { position: relative; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(12px, 2.6vh, 22px); border: 2px solid var(--hud-cyan); border-radius: clamp(18px, 4vmin, 28px); background: linear-gradient(115deg, #0a3947 0%, #093b39 55%, #06422e 100%); box-shadow: 0 18px 45px rgba(0,0,0,.25), inset 0 1px rgba(255,255,255,.04); }
-    .aero-hero::after { content: ""; position: absolute; inset: auto -12% -65% 28%; height: 150%; border-radius: 50%; background: radial-gradient(circle, rgba(0,255,102,.12), transparent 62%); pointer-events: none; }
+    .aero-hero { position: relative; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(12px, 2.6vh, 22px); border: 2px solid #52687b; border-radius: clamp(18px, 4vmin, 28px); background: #151c23; }
+    .hero-tap-target { position: absolute; inset: 0; z-index: 3; border: 0; border-radius: inherit; padding: 0; background: transparent; cursor: pointer; }
+    .hero-tap-target:active { background: rgba(125,145,163,.09); }
+    .hero-tap-target:focus-visible { outline-offset: -5px; }
     .aero-interval { position: absolute; top: 12px; left: 16px; z-index: 1; color: #82a7ba; font-size: clamp(.55rem, 1.5vw, .7rem); font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
-    .aero-title { position: relative; z-index: 1; margin: 0; color: var(--hud-cyan); font-size: clamp(2rem, 6.2vmin, 3.15rem); line-height: .9; font-weight: 1000; letter-spacing: .02em; text-shadow: 0 0 16px rgba(0,204,255,.25); }
+    .aero-title { position: relative; z-index: 1; margin: 0; color: #9db1c3; font-size: clamp(2rem, 6.2vmin, 3.15rem); line-height: .9; font-weight: 1000; letter-spacing: .02em; }
     .aero-subtitle { position: relative; z-index: 1; margin: clamp(8px, 1.8vh, 12px) 0 clamp(13px, 2.5vh, 20px); color: var(--hud-muted); font-size: clamp(.62rem, 2vmin, .88rem); font-weight: 750; letter-spacing: .22em; text-transform: uppercase; }
     .aero-clock { position: relative; z-index: 1; display: flex; align-items: baseline; justify-content: center; gap: 8px; }
     .aero-clock .timer { color: var(--hud-white); font-family: var(--hud-mono); font-size: clamp(2rem, 6vmin, 2.8rem); line-height: 1; letter-spacing: -.055em; }
     .aero-clock .timer.message { color: var(--hud-due); font-family: inherit; font-size: clamp(1.65rem, 5.2vmin, 2.45rem); letter-spacing: -.03em; }
-    .aero-percentage { color: var(--hud-green); font-family: var(--hud-mono); font-size: clamp(.82rem, 2.3vmin, 1.05rem); font-weight: 1000; }
-    .hero-metrics { position: relative; z-index: 1; display: flex; gap: clamp(10px, 3vw, 24px); margin-top: clamp(11px, 2vh, 17px); color: #9eb0cb; font-size: clamp(.55rem, 1.55vw, .68rem); font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
-    .hero-metrics strong { color: #edf7ff; font-family: var(--hud-mono); }
+    .aero-percentage { color: #91aa9d; font-family: var(--hud-mono); font-size: clamp(.82rem, 2.3vmin, 1.05rem); font-weight: 1000; }
+    .hero-metrics { position: relative; z-index: 1; display: flex; gap: clamp(10px, 3vw, 24px); margin-top: clamp(11px, 2vh, 17px); color: #788390; font-size: clamp(.55rem, 1.55vw, .68rem); font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .hero-metrics strong { color: #b9c3cd; font-family: var(--hud-mono); }
     .reminder-zone { display: flex; min-height: 0; flex-direction: column; gap: 8px; }
     .reminder-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex: 1 1 auto; min-height: 0; gap: clamp(6px, 1.7vw, 14px); }
-    .dashboard-card { --card-accent: var(--hud-cyan); position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(8px, 2vh, 16px) clamp(5px, 1.5vw, 13px); overflow: hidden; border: 1px solid #202738; border-radius: clamp(14px, 3vmin, 19px); background: var(--hud-panel); box-shadow: 0 12px 28px rgba(0,0,0,.18); }
-    .dashboard-card.type-stretch { --card-accent: var(--hud-cyan); }
-    .dashboard-card.type-fuel { --card-accent: #ffd24a; }
-    .dashboard-card.type-water { --card-accent: #37d9ff; }
-    .dashboard-card.due { --card-accent: var(--hud-due); border-color: var(--hud-due-border); background: linear-gradient(145deg, var(--hud-due-bg), #281420); }
-    .dashboard-card.urgent { box-shadow: 0 0 24px rgba(255,51,102,.2), 0 12px 28px rgba(0,0,0,.2); }
+    .dashboard-card { --card-accent: var(--hud-aero); position: relative; width: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(8px, 2vh, 16px) clamp(5px, 1.5vw, 13px); overflow: hidden; border: 1px solid #2a3039; border-radius: clamp(14px, 3vmin, 19px); background: var(--hud-panel); color: var(--hud-white); text-align: center; cursor: pointer; }
+    .dashboard-card.type-stretch { --card-accent: var(--hud-stretch); border-color: #4c435a; }
+    .dashboard-card.type-fuel { --card-accent: var(--hud-fuel); border-color: #59462f; }
+    .dashboard-card.type-water { --card-accent: var(--hud-water); border-color: #3c5063; }
+    .dashboard-card:active { background: #1a2028; }
+    .dashboard-card.due { --card-accent: var(--hud-due); border-color: var(--hud-due-border); background: var(--hud-due-bg); }
+    .dashboard-card.due:active { background: #2a1c21; }
+    .dashboard-card:disabled { cursor: default; }
     .card-queue-badge { position: absolute; top: 7px; right: 8px; border-radius: 999px; padding: 3px 6px; background: rgba(255,255,255,.08); color: #b8c4da; font-size: .52rem; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
     .dashboard-card.due .card-queue-badge { color: #ff91b1; }
-    .status-ring { --ring-progress: 0deg; position: relative; width: clamp(52px, 10vmin, 76px); aspect-ratio: 1; flex: 0 0 auto; border-radius: 50%; background: conic-gradient(from -90deg, var(--hud-green) var(--ring-progress), var(--hud-track) 0); }
+    .status-ring { --ring-progress: 0deg; position: relative; display: block; width: clamp(52px, 10vmin, 76px); aspect-ratio: 1; flex: 0 0 auto; border-radius: 50%; background: conic-gradient(from -90deg, var(--card-accent) var(--ring-progress), var(--hud-track) 0); }
     .status-ring::after { content: ""; position: absolute; inset: 6px; border-radius: inherit; background: var(--hud-panel); }
     .dashboard-card.due .status-ring { background: conic-gradient(from -90deg, var(--hud-due) var(--ring-progress), #4a2836 0); }
     .dashboard-card.due .status-ring::after { background: #2d1724; }
@@ -209,21 +215,21 @@
     .dashboard-card.due .card-time { color: #fff; }
     .card-label { margin-top: 7px; color: var(--hud-muted); font-size: clamp(.55rem, 1.5vmin, .67rem); font-weight: 850; letter-spacing: .16em; text-transform: uppercase; }
     .card-detail { display: -webkit-box; min-height: 2.4em; margin: clamp(7px, 1.6vh, 12px) 0 8px; overflow: hidden; color: var(--card-accent); font-size: clamp(.58rem, 1.55vmin, .72rem); line-height: 1.2; font-weight: 800; text-align: center; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-    .card-done { min-width: 68px; min-height: 36px; margin-top: auto; border: 0; border-radius: 999px; padding: 7px 13px; background: #282d3a; color: #f3f6fb; font-size: clamp(.62rem, 1.7vmin, .76rem); font-weight: 900; cursor: pointer; }
-    .dashboard-card.due .card-done { background: var(--hud-due); color: #fff; box-shadow: 0 0 18px rgba(255,51,102,.4); }
-    .card-done:disabled { background: #303746; color: #96a2b4; box-shadow: none; cursor: default; }
+    .card-action { min-width: 78px; min-height: 32px; display: grid; place-items: center; margin-top: auto; border: 1px solid #3a424d; border-radius: 999px; padding: 6px 11px; background: #1b2028; color: #c6ced8; font-size: clamp(.58rem, 1.55vmin, .7rem); font-weight: 900; letter-spacing: .04em; }
+    .dashboard-card.due .card-action { border-color: #8f5965; background: #342128; color: #d8adb6; }
+    .dashboard-card:disabled .card-action { color: #89939f; }
     .reminder-resolution { display: flex; min-height: 38px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; border: 1px solid #343d50; border-radius: 12px; padding: 5px 8px; background: #111623; }
     .resolution-label { margin-right: auto; overflow: hidden; color: #ff9ab8; font-size: clamp(.57rem, 1.5vmin, .68rem); font-weight: 950; letter-spacing: .08em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
     .resolution-action { min-height: 28px; flex: 0 0 auto; border: 1px solid #3a4457; border-radius: 999px; padding: 4px 10px; background: #222938; color: #eaf1fb; font-size: clamp(.54rem, 1.35vmin, .63rem); font-weight: 900; cursor: pointer; }
     .aero .action-toast { bottom: 10px; }
     .screen-advance-control { position: absolute; top: 20px; left: 50%; z-index: 30; min-height: 30px; transform: translateX(-50%); border: 1px solid #4e627d; border-radius: 999px; padding: 5px 11px; opacity: 0; pointer-events: none; background: #101826; color: #fff; font-size: .58rem; font-weight: 950; letter-spacing: .07em; text-transform: uppercase; }
     .screen-advance-control:focus-visible { opacity: 1; pointer-events: auto; }
-    .paused { background: radial-gradient(circle at 50% 34%, #1b2839, var(--hud-bg) 62%); }
-    .paused .eyebrow { color: var(--hud-cyan); }
+    .paused { background: #151311; }
+    .paused .eyebrow { color: var(--hud-upright); }
     .paused .timer, .ride-session-paused .timer, .action-screen .timer { font-family: var(--hud-mono); }
-    .ride-session-paused { cursor: default; background: radial-gradient(circle at 50% 34%, #243148, var(--hud-bg) 64%); }
+    .ride-session-paused { cursor: default; background: #0e1116; }
     .ride-session-paused .eyebrow { color: #ffe36a; }
-    .ride-pause-panel { display: grid; width: min(100%, 390px); gap: 10px; margin-top: 18px; padding: 14px; border: 1px solid #34445e; border-radius: 16px; background: rgba(8,14,25,.82); }
+    .ride-pause-panel { display: grid; width: min(100%, 390px); gap: 10px; margin-top: 18px; padding: 14px; border: 1px solid #343b46; border-radius: 16px; background: #13171e; }
     .ride-pause-copy { margin: 0 0 2px; color: #b9c9dc; font-size: .76rem; line-height: 1.4; font-weight: 750; }
     .ride-resume-action, .ride-exit-action { min-height: 54px; border: 0; border-radius: 11px; padding: 10px 12px; font-weight: 1000; cursor: pointer; }
     .ride-resume-action { min-height: 64px; background: #35f08a; color: #04130b; font-size: 1.1rem; }
@@ -232,10 +238,10 @@
     .ride-exit-action.end { border-color: #d9b630; color: #ffe36a; }
     .ride-exit-action.confirm { border-color: #ffe36a; background: #493800; color: #fff5bd; }
     .ride-save-note { margin: -2px 0 0; color: #8194aa; font-size: .61rem; font-weight: 800; }
-    .action-screen { background: radial-gradient(circle at 50% 34%, #172438, var(--hud-bg) 64%); }
-    .action-screen.water .action-title { color: var(--hud-cyan); }
-    .action-screen.fuel .action-title { color: #ffd24a; }
-    .action-screen.stretch .action-title { color: var(--hud-green); }
+    .action-screen { background: #0d1015; }
+    .action-screen.water .action-title { color: var(--hud-water); }
+    .action-screen.fuel .action-title { color: var(--hud-fuel); }
+    .action-screen.stretch .action-title { color: var(--hud-stretch); }
     .action-screen .instruction { color: #d8e3f2; }
     .action-screen .pending-actions { width: min(100%, 360px); }
     .review-section { width: min(100%,420px); margin: 0 0 10px; padding: 10px; border: 1px solid #28425f; border-radius: 12px; background: #0b192b; text-align: left; }
@@ -287,7 +293,7 @@
       .card-time { margin-top: 7px; font-size: .91rem; }
       .card-label { margin-top: 5px; font-size: .47rem; letter-spacing: .11em; }
       .card-detail { min-height: 1.15em; margin: 5px 0 5px; font-size: .5rem; line-height: 1.1; -webkit-line-clamp: 1; }
-      .card-done { min-width: 58px; min-height: 32px; padding: 5px 8px; font-size: .57rem; }
+      .card-action { min-width: 68px; min-height: 30px; padding: 5px 8px; font-size: .52rem; }
       .reminder-resolution { min-height: 34px; gap: 4px; padding: 3px 5px; border-radius: 10px; }
       .resolution-label { font-size: .48rem; }
       .resolution-action { min-height: 28px; padding: 3px 7px; font-size: .49rem; }
@@ -317,7 +323,7 @@
       .hero-metrics, .card-detail { display: none; }
       .status-ring { width: 36px; }
       .card-time { margin-top: 5px; }
-      .card-done { min-height: 28px; }
+      .card-action { min-height: 26px; }
     }
     @media (prefers-reduced-motion: reduce) { .ride-progress-fill { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
   </style>
@@ -668,14 +674,14 @@
         const queueBadge = reminder
           ? `<span class="card-queue-badge">${isUrgent ? `1 / ${pending.length}` : sameTypePending > 1 ? `+${sameTypePending - 1}` : "Queued"}</span>`
           : "";
-        const button = reminder
-          ? `<button class="card-done reminder-done" type="button" data-reminder-id="${reminder.id}" data-action-type="${type}" data-default-label="DONE" aria-label="Complete ${labels[type]} reminder" aria-keyshortcuts="${shortcuts[type]}" ${locked ? "disabled" : ""}>${locked ? "✓ DONE" : "DONE"}</button>`
-          : `<button class="card-done" type="button" data-log-action="${type}" data-action-type="${type}" data-default-label="DONE" aria-label="Record ${labels[type]} completed" aria-keyshortcuts="${shortcuts[type]}" ${locked ? "disabled" : ""}>${locked ? "✓ DONE" : "DONE"}</button>`;
-        return `<article class="dashboard-card type-${type}${reminder ? " due" : ""}${isUrgent ? " urgent" : ""}" data-dashboard-card="${type}">
-          ${queueBadge}<div class="status-ring" data-reminder-ring="${type}" style="--ring-progress:${progressDegrees}deg" aria-hidden="true"></div>
+        const actionAttributes = reminder
+          ? `class="dashboard-card type-${type} due${isUrgent ? " urgent" : ""} reminder-done" data-reminder-id="${reminder.id}" aria-label="Complete ${labels[type]} reminder"`
+          : `class="dashboard-card type-${type}" data-log-action="${type}" aria-label="Record ${labels[type]} completed"`;
+        return `<button ${actionAttributes} type="button" data-dashboard-card="${type}" data-action-type="${type}" data-default-label="${reminder ? "TAP WHEN DONE" : "TAP TO LOG"}" aria-keyshortcuts="${shortcuts[type]}" ${locked ? "disabled" : ""}>
+          ${queueBadge}<span class="status-ring" data-reminder-ring="${type}" style="--ring-progress:${progressDegrees}deg" aria-hidden="true"></span>
           <strong class="card-time reminder-time${reminder ? " due" : ""}" data-reminder="${type}">${model.remindersEnabled ? formatTime(remaining) : "—:—"}</strong>
-          <span class="card-label">${labels[type]}</span><p class="card-detail">${details[type]}</p>${button}
-        </article>`;
+          <span class="card-label">${labels[type]}</span><span class="card-detail">${details[type]}</span><span class="card-action">${locked ? "✓ LOGGED" : reminder ? "TAP WHEN DONE" : "TAP TO LOG"}</span>
+        </button>`;
       }).join("");
       const urgent = pending[0];
       const resolution = urgent ? `<div class="reminder-resolution" aria-label="${ACTION_LABELS[urgent.type]} reminder controls">
@@ -708,6 +714,7 @@
       return `<section class="screen active-ride aero${model.intervalComplete || model.rideTargetReached ? " alert" : ""}" data-advance="true" role="region" aria-label="Aero training dashboard. Click the background to advance.">
         ${progressMarkup()}${rideControlsMarkup()}<button class="screen-advance-control" type="button" aria-keyshortcuts="Enter Space">${advanceLabel}</button><div class="aero-dashboard">
           <section class="aero-hero" aria-label="Current Aero interval">
+            <button class="hero-tap-target" id="aero-hero-action" type="button" aria-label="${advanceLabel}" aria-keyshortcuts="Enter Space"><span class="visually-hidden">${advanceLabel}</span></button>
             <span class="aero-interval">Interval ${model.intervalNumber} • ${formatTime(model.currentIntervalTargetSec)} target</span>
             <h1 class="aero-title">${title}</h1><p class="aero-subtitle">${subtitle}</p>
             <div class="aero-clock"><span class="timer${model.intervalComplete || model.rideTargetReached ? " message" : ""}" id="aero-timer">${headline}</span><span class="aero-percentage" id="aero-percentage">(${aeroAdherencePercent()}%)</span></div>
@@ -879,6 +886,7 @@
       doc.getElementById("pop-out")?.addEventListener("click", async event => { event.stopPropagation(); await openPictureInPicture(doc); });
       doc.getElementById("pip-ride")?.addEventListener("click", async event => { event.stopPropagation(); await openPictureInPicture(doc); });
       doc.querySelector(".screen-advance-control")?.addEventListener("click", event => { event.stopPropagation(); advance("manual"); });
+      doc.getElementById("aero-hero-action")?.addEventListener("click", event => { event.stopPropagation(); advance("manual"); });
       doc.getElementById("pause-ride")?.addEventListener("click", event => { event.stopPropagation(); pauseRide(); });
       doc.getElementById("resume-ride")?.addEventListener("click", event => { event.stopPropagation(); resumeRide(); });
       doc.getElementById("camera-auto-toggle")?.addEventListener("click", event => { event.stopPropagation(); toggleCameraAutoControl(); });
@@ -1628,7 +1636,8 @@
           const defaultLabel = button.dataset.defaultLabel || ({ water: "DRANK", fuel: "FUEL TAKEN", stretch: "STRETCH DONE" })[type];
           button.disabled = locked;
           button.classList.toggle("locked", locked);
-          button.textContent = locked ? defaultLabel === "DONE" ? "✓ DONE" : "✓ LOGGED" : defaultLabel;
+          const label = button.querySelector(".card-action") || button;
+          label.textContent = locked ? defaultLabel === "DONE" ? "✓ DONE" : "✓ LOGGED" : defaultLabel;
         });
       }
       if (model.actionFeedback && now() >= model.actionFeedback.expiresAt) {
