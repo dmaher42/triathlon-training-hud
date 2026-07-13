@@ -21,6 +21,21 @@ const makeSamples = (kind, count = 35) => Array.from({ length: count }, (_, inde
   };
 });
 
+const makeDroppedHeadFrame = () => {
+  const landmarks = Array.from({ length: 33 }, () => ({ x: .5, y: .5, z: 0, visibility: 0 }));
+  landmarks[11] = { x: .72, y: .38, z: 0, visibility: .32 };
+  landmarks[12] = { x: .7, y: .4, z: 0, visibility: .94 };
+  landmarks[23] = { x: .4, y: .72, z: 0, visibility: .95 };
+  landmarks[24] = { x: .42, y: .72, z: 0, visibility: .93 };
+
+  const worldLandmarks = Array.from({ length: 33 }, () => ({ x: 0, y: 0, z: 0 }));
+  worldLandmarks[11] = { x: .45, y: .55, z: .08 };
+  worldLandmarks[12] = { x: .43, y: .54, z: .06 };
+  worldLandmarks[23] = { x: 0, y: -.2, z: 0 };
+  worldLandmarks[24] = { x: .02, y: -.2, z: 0 };
+  return { landmarks: [landmarks], worldLandmarks: [worldLandmarks] };
+};
+
 test("calibration separates Aero and upright samples", () => {
   const observer = new CameraObserver({ video: {} });
   observer.calibration = { upright: makeSamples("upright"), aero: makeSamples("aero"), profile: null, quality: 0 };
@@ -49,6 +64,44 @@ test("dropping the head does not invalidate an otherwise stable Aero torso", () 
 
   assert.equal(observer.calibration.profile.headOffset, undefined);
   assert.equal(observer.classify({ features: aeroWithDroppedHead, quality: .9 }).state, "aero");
+});
+
+test("a dropped head obscuring one shoulder does not discard a clear torso", () => {
+  const observer = new CameraObserver({ video: { videoWidth: 960, videoHeight: 540 } });
+  const sample = observer.extractFeatures(makeDroppedHeadFrame());
+
+  assert.ok(sample);
+  assert.ok(Number.isFinite(sample.features.torsoAngle));
+  assert.ok(Number.isFinite(sample.features.worldTorsoTilt));
+});
+
+test("poor visibility on both shoulders still rejects the torso sample", () => {
+  const observer = new CameraObserver({ video: { videoWidth: 960, videoHeight: 540 } });
+  const frame = makeDroppedHeadFrame();
+  frame.landmarks[0][11].visibility = .4;
+  frame.landmarks[0][12].visibility = .4;
+
+  assert.equal(observer.extractFeatures(frame), null);
+});
+
+test("confirmed in-ride posture feedback adds a bounded calibration sample set", () => {
+  const observer = new CameraObserver({ video: {} });
+  observer.calibration = { upright: makeSamples("upright"), aero: makeSamples("aero"), profile: null, quality: 0 };
+  observer.finalizeCalibration();
+  const originalCount = observer.calibration.aero.length;
+  const movingAero = { ...makeSamples("aero", 1)[0], torsoAngle: 47, torsoOffset: .4, worldTorsoTilt: 43 };
+  for (let index = 0; index < 12; index += 1) {
+    observer.processSample({ features: movingAero, quality: .9 }, 1000 + index * 120);
+  }
+
+  const candidate = observer.stageLearningCandidate(2320);
+  const result = observer.applyLearningFeedback("aero");
+
+  assert.equal(candidate.count, 12);
+  assert.equal(result.learned, true);
+  assert.equal(result.label, "aero");
+  assert.equal(observer.calibration.aero.length, originalCount + 12);
+  assert.equal(observer.stableState, "aero");
 });
 
 test("Aero arm support tolerates normal torso movement", () => {

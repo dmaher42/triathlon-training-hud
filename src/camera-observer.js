@@ -13,6 +13,9 @@ const CORE_FEATURES = new Set(["torsoAngle", "torsoOffset", "worldTorsoTilt"]);
 const ARM_FEATURES = new Set(["armWristHeight", "armElbowAngle"]);
 const IGNORED_CLASSIFICATION_FEATURES = new Set(["headOffset"]);
 const ARM_FEATURE_WEIGHT = 0.85;
+const LEARNING_SAMPLE_WINDOW_MS = 1800;
+const MAX_LEARNING_SAMPLES = 14;
+const MAX_CALIBRATION_SAMPLES_PER_POSE = 90;
 
 const median = values => {
   const sorted = [...values].sort((a, b) => a - b);
@@ -25,12 +28,21 @@ const mad = values => {
   return median(values.map(value => Math.abs(value - center)));
 };
 
-const point = (a, b) => ({
-  x: (a.x + b.x) / 2,
-  y: (a.y + b.y) / 2,
-  z: ((a.z || 0) + (b.z || 0)) / 2,
-  visibility: Math.min(a.visibility ?? 1, b.visibility ?? 1)
-});
+const point = (a, b) => {
+  const aVisibility = a.visibility ?? 1;
+  const bVisibility = b.visibility ?? 1;
+  const visibilityTotal = aVisibility + bVisibility;
+  const aWeight = visibilityTotal ? aVisibility / visibilityTotal : .5;
+  const bWeight = visibilityTotal ? bVisibility / visibilityTotal : .5;
+  return {
+    x: a.x * aWeight + b.x * bWeight,
+    y: a.y * aWeight + b.y * bWeight,
+    z: (a.z || 0) * aWeight + (b.z || 0) * bWeight,
+    // Side-on riding naturally hides the far shoulder or hip. Use the pair's
+    // combined confidence so one clear side can keep the torso track alive.
+    visibility: visibilityTotal / 2
+  };
+};
 
 const distance2d = (a, b, aspect = 1) => Math.hypot((a.x - b.x) * aspect, a.y - b.y);
 const angleAt = (a, b, c, aspect = 1) => {
@@ -58,6 +70,8 @@ export class CameraObserver {
     this.history = [];
     this.calibration = null;
     this.capture = null;
+    this.recentSamples = [];
+    this.learningCandidate = [];
     this.sessionActive = false;
     this.context = { rideSec: 0, manualAero: false };
     this.lastSessionAt = 0;
@@ -113,6 +127,8 @@ export class CameraObserver {
     this.capture = null;
     this.calibration = null;
     this.history = [];
+    this.recentSamples = [];
+    this.learningCandidate = [];
     this.rawState = "uncertain";
     this.stableState = "uncertain";
     this.confidence = 0;
@@ -220,6 +236,10 @@ export class CameraObserver {
       this.notify();
       return;
     }
+    if (sample) {
+      this.recentSamples.push({ timestamp, features: { ...sample.features }, quality: sample.quality });
+      this.recentSamples = this.recentSamples.filter(item => timestamp - item.timestamp <= LEARNING_SAMPLE_WINDOW_MS);
+    }
     const classification = this.classify(sample);
     this.rawState = classification.state;
     this.confidence = classification.confidence;
@@ -277,6 +297,32 @@ export class CameraObserver {
     this.history = [];
     this.notify();
     return { quality, features: Object.keys(profile) };
+  }
+
+  stageLearningCandidate(timestamp = performance.now()) {
+    this.learningCandidate = this.recentSamples
+      .filter(item => timestamp - item.timestamp <= LEARNING_SAMPLE_WINDOW_MS && item.quality >= .45)
+      .slice(-MAX_LEARNING_SAMPLES)
+      .map(item => ({ ...item.features }));
+    return { count: this.learningCandidate.length };
+  }
+
+  applyLearningFeedback(label) {
+    if (!["aero", "upright"].includes(label) || !this.calibration?.profile) {
+      return { learned: false, count: 0 };
+    }
+    const samples = this.learningCandidate;
+    this.learningCandidate = [];
+    if (samples.length < 5) return { learned: false, count: samples.length };
+    this.calibration[label] = [...this.calibration[label], ...samples].slice(-MAX_CALIBRATION_SAMPLES_PER_POSE);
+    const result = this.finalizeCalibration();
+    this.rawState = label;
+    this.stableState = label;
+    this.confidence = .95;
+    this.reason = `Learned a confirmed ${label} variation.`;
+    this.history = [];
+    this.notify();
+    return { learned: true, count: samples.length, quality: result.quality, label };
   }
 
   classify(sample) {

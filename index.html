@@ -127,6 +127,13 @@
     .camera-badge.aero { border-color: var(--hud-aero); color: #aec0d0; }
     .camera-badge.upright { border-color: var(--hud-upright); color: #c7b7aa; }
     .camera-badge.uncertain { border-color: #a77d63; color: #c9a58e; }
+    .camera-learning-prompt { position: absolute; left: 50%; bottom: 72px; z-index: 45; display: grid; grid-template-columns: minmax(0, 1fr) repeat(2, minmax(72px, auto)); align-items: center; gap: 8px; width: min(calc(100% - 16px), 460px); transform: translateX(-50%); border: 1px solid #556171; border-radius: 14px; padding: 9px; background: #171b22; color: var(--hud-white); text-align: left; cursor: default; }
+    .aero .camera-learning-prompt { bottom: 12px; }
+    .camera-learning-copy strong { display: block; color: #b8c6d4; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+    .camera-learning-copy span { display: block; margin-top: 3px; color: #8994a3; font-size: .59rem; line-height: 1.25; }
+    .camera-learning-answer { min-height: 48px; border: 1px solid #4b5665; border-radius: 10px; padding: 7px 10px; background: #202630; color: #e2e8f0; font-size: .75rem; font-weight: 950; cursor: pointer; }
+    .camera-learning-answer.yes { border-color: #607b6d; background: #1b2822; color: #b6cabe; }
+    .camera-learning-answer:active { background: #2a313c; }
     .ride-utility-controls { position: absolute; top: 27px; right: 10px; z-index: 18; display: flex; align-items: center; gap: 6px; }
     .pip-mini, .camera-auto-toggle, .ride-pause-button { min-height: 42px; border-radius: 9px; padding: 6px 9px; font-size: .62rem; font-weight: 1000; cursor: pointer; }
     .pip-mini { min-width: 42px; border: 1px solid #3a424d; background: #11151b; color: #cbd3dc; }
@@ -181,23 +188,23 @@
     .action-screen .pending-action { border-color: #fff; background: #07121e; color: #fff; }
     .pending-count { margin: 4px 0 0; color: #d9ca8a; font-size: .61rem; }
     .aero.active-ride { justify-content: flex-start; padding: 49px clamp(8px, 3vw, 20px) 12px; }
-    .aero-dashboard { display: grid; grid-template-rows: minmax(145px, .88fr) minmax(180px, 1fr); gap: clamp(10px, 2.5vh, 20px); width: min(100%, 900px); height: 100%; min-height: 0; }
+    .aero-dashboard { display: grid; grid-template-rows: minmax(175px, .82fr) minmax(180px, 1fr); gap: clamp(10px, 2.5vh, 20px); width: min(100%, 900px); height: 100%; min-height: 0; }
     .aero-hero { position: relative; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(12px, 2.6vh, 22px); border: 2px solid #52687b; border-radius: clamp(18px, 4vmin, 28px); background: #151c23; }
     .hero-tap-target { position: absolute; inset: 0; z-index: 3; border: 0; border-radius: inherit; padding: 0; background: transparent; cursor: pointer; }
     .hero-tap-target:active { background: rgba(125,145,163,.09); }
     .hero-tap-target:focus-visible { outline-offset: -5px; }
     .aero-interval { position: absolute; top: 12px; left: 16px; z-index: 1; color: #82a7ba; font-size: clamp(.55rem, 1.5vw, .7rem); font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
-    .aero-title { position: relative; z-index: 1; margin: 0; color: #9db1c3; font-size: clamp(2rem, 6.2vmin, 3.15rem); line-height: .9; font-weight: 1000; letter-spacing: .02em; }
-    .aero-subtitle { position: relative; z-index: 1; margin: clamp(8px, 1.8vh, 12px) 0 clamp(13px, 2.5vh, 20px); color: var(--hud-muted); font-size: clamp(.62rem, 2vmin, .88rem); font-weight: 750; letter-spacing: .22em; text-transform: uppercase; }
+    .aero-title { position: relative; z-index: 1; margin: 0 0 clamp(8px, 1.7vh, 13px); color: #9db1c3; font-size: clamp(.85rem, 2.5vmin, 1.15rem); line-height: 1; font-weight: 950; letter-spacing: .18em; text-transform: uppercase; }
+    .aero-subtitle { position: relative; z-index: 1; margin: clamp(10px, 2vh, 16px) 0 0; color: var(--hud-muted); font-size: clamp(.58rem, 1.7vmin, .76rem); font-weight: 750; letter-spacing: .22em; text-transform: uppercase; }
     .aero-clock { position: relative; z-index: 1; display: flex; align-items: baseline; justify-content: center; gap: 8px; }
-    .aero-clock .timer { color: var(--hud-white); font-family: var(--hud-mono); font-size: clamp(2rem, 6vmin, 2.8rem); line-height: 1; letter-spacing: -.055em; }
-    .aero-clock .timer.message { color: var(--hud-due); font-family: inherit; font-size: clamp(1.65rem, 5.2vmin, 2.45rem); letter-spacing: -.03em; }
+    .aero-clock .timer { color: var(--hud-white); font-family: var(--hud-mono); font-size: clamp(3.2rem, 13.5vw, 6.8rem); line-height: .92; letter-spacing: -.07em; }
+    .aero-clock .timer.message { color: var(--hud-due); font-family: inherit; font-size: clamp(2.2rem, 8vw, 4.5rem); letter-spacing: -.03em; }
     .aero-percentage { color: #91aa9d; font-family: var(--hud-mono); font-size: clamp(.82rem, 2.3vmin, 1.05rem); font-weight: 1000; }
-    .hero-metrics { position: relative; z-index: 1; display: flex; gap: clamp(10px, 3vw, 24px); margin-top: clamp(11px, 2vh, 17px); color: #788390; font-size: clamp(.55rem, 1.55vw, .68rem); font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .hero-metrics { display: none; }
     .hero-metrics strong { color: #b9c3cd; font-family: var(--hud-mono); }
     .reminder-zone { display: flex; min-height: 0; flex-direction: column; gap: 8px; }
     .reminder-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex: 1 1 auto; min-height: 0; gap: clamp(6px, 1.7vw, 14px); }
-    .dashboard-card { --card-accent: var(--hud-aero); position: relative; width: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(8px, 2vh, 16px) clamp(5px, 1.5vw, 13px); overflow: hidden; border: 1px solid #2a3039; border-radius: clamp(14px, 3vmin, 19px); background: var(--hud-panel); color: var(--hud-white); text-align: center; cursor: pointer; }
+    .dashboard-card { --card-accent: var(--hud-aero); position: relative; width: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(12px, 2.5vh, 22px) clamp(5px, 1.5vw, 13px); overflow: hidden; border: 1px solid #2a3039; border-radius: clamp(14px, 3vmin, 19px); background: var(--hud-panel); color: var(--hud-white); text-align: center; cursor: pointer; }
     .dashboard-card.type-stretch { --card-accent: var(--hud-stretch); border-color: #4c435a; }
     .dashboard-card.type-fuel { --card-accent: var(--hud-fuel); border-color: #59462f; }
     .dashboard-card.type-water { --card-accent: var(--hud-water); border-color: #3c5063; }
@@ -207,15 +214,15 @@
     .dashboard-card:disabled { cursor: default; }
     .card-queue-badge { position: absolute; top: 7px; right: 8px; border-radius: 999px; padding: 3px 6px; background: rgba(255,255,255,.08); color: #b8c4da; font-size: .52rem; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
     .dashboard-card.due .card-queue-badge { color: #ff91b1; }
-    .status-ring { --ring-progress: 0deg; position: relative; display: block; width: clamp(52px, 10vmin, 76px); aspect-ratio: 1; flex: 0 0 auto; border-radius: 50%; background: conic-gradient(from -90deg, var(--card-accent) var(--ring-progress), var(--hud-track) 0); }
-    .status-ring::after { content: ""; position: absolute; inset: 6px; border-radius: inherit; background: var(--hud-panel); }
+    .status-ring { --ring-progress: 0deg; position: relative; display: grid; width: min(78%, 132px); aspect-ratio: 1; flex: 0 0 auto; place-items: center; border-radius: 50%; background: conic-gradient(from -90deg, var(--card-accent) var(--ring-progress), var(--hud-track) 0); }
+    .status-ring::after { content: ""; position: absolute; inset: 8px; z-index: 0; border-radius: inherit; background: var(--hud-panel); }
     .dashboard-card.due .status-ring { background: conic-gradient(from -90deg, var(--hud-due) var(--ring-progress), #4a2836 0); }
     .dashboard-card.due .status-ring::after { background: #2d1724; }
-    .card-time { margin-top: clamp(8px, 1.6vh, 12px); color: var(--hud-white); font-family: var(--hud-mono); font-size: clamp(1.05rem, 3.2vmin, 1.45rem); line-height: 1; font-weight: 900; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+    .card-time { position: relative; z-index: 1; margin: 0; color: var(--hud-white); font-family: var(--hud-mono); font-size: clamp(.85rem, 3.4vw, 1.6rem); line-height: 1; font-weight: 700; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
     .dashboard-card.due .card-time { color: #fff; }
-    .card-label { margin-top: 7px; color: var(--hud-muted); font-size: clamp(.55rem, 1.5vmin, .67rem); font-weight: 850; letter-spacing: .16em; text-transform: uppercase; }
-    .card-detail { display: -webkit-box; min-height: 2.4em; margin: clamp(7px, 1.6vh, 12px) 0 8px; overflow: hidden; color: var(--card-accent); font-size: clamp(.58rem, 1.55vmin, .72rem); line-height: 1.2; font-weight: 800; text-align: center; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-    .card-action { min-width: 78px; min-height: 32px; display: grid; place-items: center; margin-top: auto; border: 1px solid #3a424d; border-radius: 999px; padding: 6px 11px; background: #1b2028; color: #c6ced8; font-size: clamp(.58rem, 1.55vmin, .7rem); font-weight: 900; letter-spacing: .04em; }
+    .card-label { margin-top: clamp(11px, 2.2vh, 18px); color: #939ba5; font-size: clamp(.78rem, 2.5vmin, 1.12rem); font-weight: 650; letter-spacing: .01em; }
+    .card-action { position: absolute; bottom: clamp(7px, 1.5vh, 12px); min-height: 25px; display: grid; place-items: center; border: 1px solid #3a424d; border-radius: 999px; padding: 4px 9px; background: #1b2028; color: #c6ced8; font-size: clamp(.5rem, 1.3vmin, .62rem); font-weight: 900; letter-spacing: .04em; }
+    .card-action:empty { display: none; }
     .dashboard-card.due .card-action { border-color: #8f5965; background: #342128; color: #d8adb6; }
     .dashboard-card:disabled .card-action { color: #89939f; }
     .reminder-resolution { display: flex; min-height: 38px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; border: 1px solid #343d50; border-radius: 12px; padding: 5px 8px; background: #111623; }
@@ -277,23 +284,22 @@
       .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr); gap: 7px; }
       .aero-hero { padding: 8px 6px; border-radius: 17px; }
       .aero-interval { display: none; }
-      .aero-title { font-size: 1.8rem; }
-      .aero-subtitle { margin: 5px 0 9px; font-size: .55rem; }
+      .aero-title { margin-bottom: 6px; font-size: .72rem; }
+      .aero-subtitle { margin: 7px 0 0; font-size: .5rem; }
       .aero-clock { gap: 5px; }
-      .aero-clock .timer { font-size: 1.68rem; }
-      .aero-clock .timer.message { font-size: 1.35rem; }
+      .aero-clock .timer { font-size: 2.55rem; }
+      .aero-clock .timer.message { font-size: 1.65rem; }
       .aero-percentage { font-size: .68rem; }
       .hero-metrics { gap: 7px; margin-top: 9px; font-size: .46rem; letter-spacing: .03em; }
       .reminder-zone { gap: 5px; }
       .reminder-card-grid { gap: 5px; }
-      .dashboard-card { padding: 6px 3px 5px; border-radius: 13px; }
+      .dashboard-card { padding: 9px 3px 7px; border-radius: 13px; }
       .card-queue-badge { top: 4px; right: 4px; padding: 2px 4px; font-size: .42rem; }
-      .status-ring { width: 43px; }
-      .status-ring::after { inset: 5px; }
-      .card-time { margin-top: 7px; font-size: .91rem; }
-      .card-label { margin-top: 5px; font-size: .47rem; letter-spacing: .11em; }
-      .card-detail { min-height: 1.15em; margin: 5px 0 5px; font-size: .5rem; line-height: 1.1; -webkit-line-clamp: 1; }
-      .card-action { min-width: 68px; min-height: 30px; padding: 5px 8px; font-size: .52rem; }
+      .status-ring { width: min(78%, 72px); }
+      .status-ring::after { inset: 6px; }
+      .card-time { font-size: .76rem; }
+      .card-label { margin-top: 8px; font-size: .68rem; }
+      .card-action { bottom: 5px; min-height: 22px; padding: 3px 7px; font-size: .46rem; }
       .reminder-resolution { min-height: 34px; gap: 4px; padding: 3px 5px; border-radius: 10px; }
       .resolution-label { font-size: .48rem; }
       .resolution-action { min-height: 28px; padding: 3px 7px; font-size: .49rem; }
@@ -302,6 +308,11 @@
       .aero .pip-mini { min-width: 38px; }
       .aero .ride-pause-button { min-width: 58px; min-height: 42px; }
       .aero .camera-badge { top: 19px; max-width: 126px; overflow: hidden; font-size: .5rem; text-overflow: ellipsis; white-space: nowrap; }
+      .camera-learning-prompt { grid-template-columns: minmax(0, 1fr) repeat(2, 62px); gap: 5px; bottom: 68px; padding: 6px; }
+      .aero .camera-learning-prompt { bottom: 7px; }
+      .camera-learning-copy strong { font-size: .61rem; }
+      .camera-learning-copy span { font-size: .49rem; }
+      .camera-learning-answer { min-height: 43px; padding: 5px; font-size: .65rem; }
       .ride-pause-panel { margin-top: 12px; padding: 11px; }
       .ride-resume-action { min-height: 58px; }
     }
@@ -317,12 +328,10 @@
       .hint { display: none; }
       .aero.active-ride { padding: 44px 6px 5px; }
       .aero-dashboard { grid-template-rows: 104px minmax(0, 1fr); gap: 5px; }
-      .aero-title { font-size: 1.45rem; }
-      .aero-subtitle { margin: 3px 0 5px; }
-      .aero-clock .timer { font-size: 1.35rem; }
-      .hero-metrics, .card-detail { display: none; }
-      .status-ring { width: 36px; }
-      .card-time { margin-top: 5px; }
+      .aero-title { font-size: .65rem; }
+      .aero-subtitle { margin-top: 4px; }
+      .aero-clock .timer { font-size: 1.9rem; }
+      .status-ring { width: min(72%, 56px); }
       .card-action { min-height: 26px; }
     }
     @media (prefers-reduced-motion: reduce) { .ride-progress-fill { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
@@ -369,6 +378,9 @@
       "Chest Opener (Sit Up, Hands Behind Back)",
       "Standing Flush (Heavy Gear, Out of Saddle)"
     ]; // Pick one at random for each break
+
+    const CAMERA_LEARNING_PROMPT_MS = 12000;
+    const CAMERA_LEARNING_COOLDOWN_MS = 90000;
 
     const ACTION_META = {
       fuel: { title: "FUEL", ready: "FUEL COMPLETE!", className: "fuel" },
@@ -436,6 +448,9 @@
       cameraStep: "permission",
       cameraError: "",
       cameraSnapshot: { status: "off", stableState: "uncertain", confidence: 0, reason: "Camera off" },
+      cameraLearningPrompt: null,
+      cameraLearningLastAsked: { aero: -Infinity, upright: -Infinity },
+      cameraLearningApplying: false,
       pendingRideValues: null
     };
 
@@ -444,9 +459,11 @@
     const cameraObserver = new CameraObserver({
       video: document.getElementById("camera-video"),
       onUpdate: snapshot => {
+        const previousStableState = model.cameraSnapshot.stableState;
         model.cameraSnapshot = snapshot;
+        const promptChanged = maybeOfferCameraLearningPrompt(previousStableState, snapshot);
         handleCameraControl(snapshot);
-        updateCameraUi(activeDocument());
+        if (promptChanged) render(); else updateCameraUi(activeDocument());
       }
     });
     const activeDocument = () => model.pipWindow && !model.pipWindow.closed ? model.pipWindow.document : document;
@@ -540,7 +557,19 @@
       return feedback ? `<div class="action-toast">${feedback.text}</div>` : "";
     }
 
-    function activeRideChromeMarkup() { return actionFeedbackMarkup() + quickActionDockMarkup(); }
+    function cameraLearningPromptMarkup() {
+      const prompt = model.cameraLearningPrompt;
+      if (!prompt || now() >= prompt.expiresAt || !["aero", "paused"].includes(model.state)) return "";
+      const detected = prompt.detectedState;
+      const opposite = detected === "aero" ? "upright" : "aero";
+      return `<div class="camera-learning-prompt" id="camera-learning-prompt" role="group" aria-label="Camera posture check">
+        <div class="camera-learning-copy"><strong>${detected.toUpperCase()}?</strong><span>Is the camera right? No teaches ${opposite}.</span></div>
+        <button class="camera-learning-answer yes" type="button" data-camera-learning-answer="yes">YES</button>
+        <button class="camera-learning-answer" type="button" data-camera-learning-answer="no">NO</button>
+      </div>`;
+    }
+
+    function activeRideChromeMarkup() { return actionFeedbackMarkup() + cameraLearningPromptMarkup() + quickActionDockMarkup(); }
 
     function learningCardsMarkup(history, settings, plannedRideSec, mode) {
       if (mode !== "coach") return "";
@@ -652,14 +681,9 @@
     }
 
     function scheduleMarkup() {
-      const visualOrder = ["stretch", "fuel", "water"];
+      const visualOrder = ["water", "fuel", "stretch"];
       const labels = { stretch: "Stretch", fuel: "Fuel", water: "Water" };
       const shortcuts = { water: 1, fuel: 2, stretch: 3 };
-      const details = {
-        stretch: model.remindersEnabled ? model.currentMobility : "Manual tracking",
-        fuel: model.remindersEnabled ? model.currentFuel : "Manual tracking",
-        water: model.remindersEnabled ? "Hydration" : "Manual tracking"
-      };
       const rows = Object.fromEntries(getReminderRows().map(item => [item.type, item]));
       const pending = getDueActions();
       const elapsed = rideMs() / 1000;
@@ -677,10 +701,9 @@
         const actionAttributes = reminder
           ? `class="dashboard-card type-${type} due${isUrgent ? " urgent" : ""} reminder-done" data-reminder-id="${reminder.id}" aria-label="Complete ${labels[type]} reminder"`
           : `class="dashboard-card type-${type}" data-log-action="${type}" aria-label="Record ${labels[type]} completed"`;
-        return `<button ${actionAttributes} type="button" data-dashboard-card="${type}" data-action-type="${type}" data-default-label="${reminder ? "TAP WHEN DONE" : "TAP TO LOG"}" aria-keyshortcuts="${shortcuts[type]}" ${locked ? "disabled" : ""}>
-          ${queueBadge}<span class="status-ring" data-reminder-ring="${type}" style="--ring-progress:${progressDegrees}deg" aria-hidden="true"></span>
-          <strong class="card-time reminder-time${reminder ? " due" : ""}" data-reminder="${type}">${model.remindersEnabled ? formatTime(remaining) : "—:—"}</strong>
-          <span class="card-label">${labels[type]}</span><span class="card-detail">${details[type]}</span><span class="card-action">${locked ? "✓ LOGGED" : reminder ? "TAP WHEN DONE" : "TAP TO LOG"}</span>
+        return `<button ${actionAttributes} type="button" data-dashboard-card="${type}" data-action-type="${type}" data-default-label="${reminder ? "TAP WHEN DONE" : ""}" aria-keyshortcuts="${shortcuts[type]}" ${locked ? "disabled" : ""}>
+          ${queueBadge}<span class="status-ring" data-reminder-ring="${type}" style="--ring-progress:${progressDegrees}deg" aria-hidden="true"><strong class="card-time reminder-time${reminder ? " due" : ""}" data-reminder="${type}">${model.remindersEnabled ? formatTime(remaining) : "—:—"}</strong></span>
+          <span class="card-label">${labels[type]}</span><span class="card-action">${locked ? "✓ LOGGED" : reminder ? "TAP WHEN DONE" : ""}</span>
         </button>`;
       }).join("");
       const urgent = pending[0];
@@ -716,11 +739,11 @@
           <section class="aero-hero" aria-label="Current Aero interval">
             <button class="hero-tap-target" id="aero-hero-action" type="button" aria-label="${advanceLabel}" aria-keyshortcuts="Enter Space"><span class="visually-hidden">${advanceLabel}</span></button>
             <span class="aero-interval">Interval ${model.intervalNumber} • ${formatTime(model.currentIntervalTargetSec)} target</span>
-            <h1 class="aero-title">${title}</h1><p class="aero-subtitle">${subtitle}</p>
-            <div class="aero-clock"><span class="timer${model.intervalComplete || model.rideTargetReached ? " message" : ""}" id="aero-timer">${headline}</span><span class="aero-percentage" id="aero-percentage">(${aeroAdherencePercent()}%)</span></div>
+            <h1 class="aero-title">${title}</h1><div class="aero-clock"><span class="timer${model.intervalComplete || model.rideTargetReached ? " message" : ""}" id="aero-timer">${headline}</span><span class="aero-percentage" id="aero-percentage">(${aeroAdherencePercent()}%)</span></div>
+            <p class="aero-subtitle">${subtitle}</p>
             <div class="hero-metrics"><span>Total <strong id="total-aero">${formatTime(totalSec)}</strong></span><span>Goal <strong>${formatTime(model.aeroGoalSec)}</strong></span><span>Best <strong>${formatTime(model.bestIntervalMs / 1000)}</strong></span></div>
           </section>${scheduleMarkup()}
-        </div>${actionFeedbackMarkup()}
+        </div>${cameraLearningPromptMarkup()}${actionFeedbackMarkup()}
       </section>`;
     }
 
@@ -890,6 +913,10 @@
       doc.getElementById("pause-ride")?.addEventListener("click", event => { event.stopPropagation(); pauseRide(); });
       doc.getElementById("resume-ride")?.addEventListener("click", event => { event.stopPropagation(); resumeRide(); });
       doc.getElementById("camera-auto-toggle")?.addEventListener("click", event => { event.stopPropagation(); toggleCameraAutoControl(); });
+      doc.querySelectorAll("[data-camera-learning-answer]").forEach(button => button.addEventListener("click", event => {
+        event.stopPropagation();
+        handleCameraLearningResponse(button.dataset.cameraLearningAnswer === "yes");
+      }));
       doc.getElementById("camera-enabled")?.addEventListener("change", event => { event.stopPropagation(); updateCameraSetupUi(doc); });
       doc.getElementById("finish-ride")?.addEventListener("click", event => { event.stopPropagation(); requestRideExit("review"); });
       doc.getElementById("ride-main-menu")?.addEventListener("click", event => { event.stopPropagation(); requestRideExit("menu"); });
@@ -1056,6 +1083,61 @@
       if (countdown && snapshot.capture) countdown.textContent = Math.max(0, Math.ceil(snapshot.capture.remaining));
     }
 
+    function maybeOfferCameraLearningPrompt(previousStableState, snapshot) {
+      const timestamp = now();
+      if (model.cameraLearningPrompt && timestamp >= model.cameraLearningPrompt.expiresAt) model.cameraLearningPrompt = null;
+      const detectedState = snapshot.stableState;
+      if (model.cameraLearningPrompt && detectedState !== model.cameraLearningPrompt.detectedState) model.cameraLearningPrompt = null;
+      if (model.cameraLearningApplying || !model.cameraEnabled || !["aero", "paused"].includes(model.state)) return false;
+      if (!["aero", "upright"].includes(detectedState) || detectedState === previousStableState) return false;
+      if (model.intervalComplete || model.rideTargetReached || getDueActions().length || model.cameraLearningPrompt) return false;
+      if (timestamp - model.cameraLearningLastAsked[detectedState] < CAMERA_LEARNING_COOLDOWN_MS) return false;
+      const candidate = cameraObserver.stageLearningCandidate(timestamp);
+      if (candidate.count < 5) return false;
+      model.cameraLearningLastAsked[detectedState] = timestamp;
+      model.cameraLearningPrompt = { detectedState, expiresAt: timestamp + CAMERA_LEARNING_PROMPT_MS };
+      model.events.push({ type: "camera-learning-prompt", detectedState, at: rideMs() / 1000 });
+      return true;
+    }
+
+    function handleCameraLearningResponse(isCorrect) {
+      const prompt = model.cameraLearningPrompt;
+      if (!prompt || now() >= prompt.expiresAt) { model.cameraLearningPrompt = null; render(); return; }
+      const learnedState = isCorrect ? prompt.detectedState : prompt.detectedState === "aero" ? "upright" : "aero";
+      model.cameraLearningPrompt = null;
+      model.cameraLearningApplying = true;
+      model.cameraControlHoldUntil = now() + CAMERA_MANUAL_HOLD_MS;
+      const result = cameraObserver.applyLearningFeedback(learnedState);
+      model.cameraLearningApplying = false;
+      model.cameraSnapshot = cameraObserver.getSnapshot();
+      model.actionFeedback = {
+        text: result.learned ? `Camera learned ${learnedState.toUpperCase()}` : "Hold the position a little longer next time",
+        expiresAt: now() + 3000
+      };
+      model.events.push({
+        type: "camera-learning-feedback",
+        detectedState: prompt.detectedState,
+        confirmedState: learnedState,
+        accepted: isCorrect,
+        sampleCount: result.count,
+        at: rideMs() / 1000
+      });
+      if (result.learned && model.cameraAutoControl && !getDueActions().length && !model.intervalComplete && !model.rideTargetReached) {
+        if (learnedState === "upright" && model.state === "aero") {
+          pauseAero();
+          model.state = "paused";
+          model.cameraPauseReason = "You confirmed Upright.";
+        } else if (learnedState === "aero" && model.state === "paused") {
+          model.cameraPauseReason = "";
+          startOrResumeAero("camera");
+          announce("Camera learned Aero and resumed the Aero clock.");
+          return;
+        }
+      }
+      announce(result.learned ? `Camera learned ${learnedState}.` : "Camera needs a steadier sample to learn.");
+      render();
+    }
+
     function handleCameraControl(snapshot) {
       const action = decideCameraTimerAction({
         enabled: model.cameraEnabled && model.cameraAutoControl,
@@ -1167,9 +1249,10 @@
         actionLocks: { water: 0, fuel: 0, stretch: 0 }, actionFeedback: null, reviewReasonEditorDismissed: false, currentReminderId: null,
         acceptedRecommendations: values.acceptedRecommendations, intervalSources: values.intervalSources, historySaveError: "",
         nutritionIndex: 0, currentFuel: nutritionPlan[0], currentMobility: randomMobility(),
-        rideTargetReached: false, summary: null, cameraEnabled,
-        cameraAutoControl: autoControl, cameraAutoEverEnabled: autoControl,
-        cameraControlHoldUntil: 0, cameraPauseReason: autoControl ? "Waiting for a stable Aero position." : ""
+         rideTargetReached: false, summary: null, cameraEnabled,
+         cameraAutoControl: autoControl, cameraAutoEverEnabled: autoControl,
+         cameraControlHoldUntil: 0, cameraPauseReason: autoControl ? "Waiting for a stable Aero position." : "",
+         cameraLearningPrompt: null, cameraLearningLastAsked: { aero: -Infinity, upright: -Infinity }, cameraLearningApplying: false
       });
       document.body.classList.remove("camera-preview");
       if (cameraEnabled) cameraObserver.beginSession();
@@ -1563,6 +1646,7 @@
       model.ridePausedFromState = null; model.pausedActionRemainingMs = 0; model.rideExitConfirmation = null; model.summary = null; model.cameraEnabled = false;
       model.reviewReasonEditorDismissed = false;
       model.cameraAutoControl = false; model.cameraAutoEverEnabled = false; model.cameraControlHoldUntil = 0; model.pendingRideValues = null;
+      model.cameraLearningPrompt = null; model.cameraLearningLastAsked = { aero: -Infinity, upright: -Infinity }; model.cameraLearningApplying = false;
       document.body.classList.remove("camera-preview");
       render();
       announce("Main menu ready.");
@@ -1633,7 +1717,9 @@
         const buttons = doc.querySelectorAll(`[data-action-type="${type}"]`);
         const locked = now() < model.actionLocks[type];
         buttons.forEach(button => {
-          const defaultLabel = button.dataset.defaultLabel || ({ water: "DRANK", fuel: "FUEL TAKEN", stretch: "STRETCH DONE" })[type];
+          const defaultLabel = button.hasAttribute("data-default-label")
+            ? button.dataset.defaultLabel
+            : ({ water: "DRANK", fuel: "FUEL TAKEN", stretch: "STRETCH DONE" })[type];
           button.disabled = locked;
           button.classList.toggle("locked", locked);
           const label = button.querySelector(".card-action") || button;
@@ -1643,6 +1729,10 @@
       if (model.actionFeedback && now() >= model.actionFeedback.expiresAt) {
         model.actionFeedback = null;
         doc.querySelector(".action-toast")?.remove();
+      }
+      if (model.cameraLearningPrompt && now() >= model.cameraLearningPrompt.expiresAt) {
+        model.cameraLearningPrompt = null;
+        doc.getElementById("camera-learning-prompt")?.remove();
       }
     }
 
@@ -1701,6 +1791,9 @@
         intervalRemainingSeconds: Math.round(intervalRemainingSec() * 10) / 10,
         aeroClockPaused: model.state !== "aero" || model.intervalComplete || model.rideTargetReached
       },
+      cameraLearningPrompt: model.cameraLearningPrompt && now() < model.cameraLearningPrompt.expiresAt
+        ? { detectedState: model.cameraLearningPrompt.detectedState, answers: ["Yes", "No"] }
+        : null,
       action: model.state === "action" || model.ridePausedFromState === "action" ? {
         type: model.currentAction,
         finished: model.actionFinished,
