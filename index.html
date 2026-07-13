@@ -1,0 +1,1714 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚴</text></svg>">
+  <title>Triathlon Training HUD</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      --hud-bg: #0b0f19;
+      --hud-panel: #151a28;
+      --hud-panel-soft: #111725;
+      --hud-track: #2d313e;
+      --hud-cyan: #00ccff;
+      --hud-green: #00ff66;
+      --hud-muted: #96a5c8;
+      --hud-due-bg: #2f1625;
+      --hud-due-border: #d31f59;
+      --hud-due: #ff3366;
+      --hud-white: #f8fbff;
+      --hud-mono: "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body, #app { width: 100%; height: 100%; margin: 0; }
+    html, body { overflow: hidden; background: var(--hud-bg); }
+    button, input { font: inherit; }
+    button { touch-action: manipulation; }
+    button:focus-visible, input:focus-visible, [tabindex="0"]:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    .screen {
+      position: relative; width: 100%; height: 100%; min-height: 300px; overflow: hidden;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 28px clamp(12px, 4vmin, 20px) 34px; text-align: center; user-select: none;
+      cursor: pointer; transition: background-color 140ms ease, color 140ms ease;
+    }
+    .setup, .review { overflow-y: auto; justify-content: flex-start; cursor: default; background: var(--hud-bg); color: #fff; }
+    .setup { overflow: hidden; padding: 16px clamp(12px, 3vw, 24px) 0; }
+    .setup-header { width: min(100%, 820px); }
+    .brand { margin: 0; font-size: clamp(2rem, 7vmin, 2.85rem); line-height: .9; letter-spacing: -.07em; font-weight: 1000; }
+    .subtitle { margin: 7px 0 13px; color: #9eb2c9; font-size: .8rem; font-weight: 750; }
+    .setup-shell { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1 1 auto; min-height: 0; align-items: start; gap: 12px; width: min(100%, 820px); overflow-y: auto; padding: 0 2px 4px; scrollbar-color: #5b6675 transparent; scrollbar-gutter: stable; scrollbar-width: thin; }
+    .setup-shell::-webkit-scrollbar { width: 8px; }
+    .setup-shell::-webkit-scrollbar-track { background: transparent; }
+    .setup-shell::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: #5b6675; background-clip: padding-box; }
+    .setup-section { width: 100%; margin: 0; padding: 13px; border: 1px solid #252d3e; border-radius: 16px; background: var(--hud-panel); }
+    .setup-span { grid-column: 1 / -1; }
+    .section-title { margin: 0 0 9px; color: #6dffad; text-align: left; font-size: .72rem; font-weight: 1000; letter-spacing: .16em; text-transform: uppercase; }
+    .section-optional { color: #7990a8; font-weight: 800; }
+    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .field { text-align: left; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { display: block; margin: 0 0 4px; color: #c7d6e8; font-size: .64rem; line-height: 1.1; font-weight: 950; letter-spacing: .07em; text-transform: uppercase; }
+    .field input { width: 100%; min-width: 0; border: 2px solid #365d88; border-radius: 9px; padding: 7px 8px; background: #fff; color: #07101d; text-align: center; font-size: 1.1rem; font-weight: 1000; outline: 0; }
+    .field input:focus { border-color: #35f08a; box-shadow: 0 0 0 3px rgba(53,240,138,.18); }
+    .fixed-note { margin: 7px 0 0; color: #8fa5bd; text-align: left; font-size: .67rem; font-weight: 700; }
+    .setup-actions { display: grid; width: min(100%, 420px); gap: 8px; padding-bottom: 18px; }
+    .setup > .setup-actions { position: relative; z-index: 40; flex: 0 0 auto; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); width: min(100%, 820px); margin-top: 8px; padding: 8px 0 max(10px, env(safe-area-inset-bottom)); background: var(--hud-bg); }
+    .setup > .setup-actions.has-history { grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); }
+    .action { border: 0; border-radius: 12px; padding: 12px; background: #35f08a; color: #04130b; font-size: 1.05rem; font-weight: 1000; cursor: pointer; }
+    .action.secondary { background: #d5e4f6; color: #07101d; font-size: .85rem; }
+    .action.danger { background: #ffdb4d; color: #1a1300; }
+    .action:active { transform: scale(.985); }
+    .pip-note { grid-column: 1 / -1; min-height: 1em; margin: 0; color: #ffdb4d; font-size: .68rem; }
+    .ride-progress { position: absolute; top: 8px; left: 50%; z-index: 20; width: min(calc(100% - 24px), 900px); height: 7px; overflow: hidden; transform: translateX(-50%); border-radius: 999px; background: var(--hud-track); }
+    .ride-progress-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--hud-cyan), var(--hud-green)); transition: width .25s linear; }
+    .ride-progress-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+    .aero, .paused, .fuel, .water, .stretch { background: var(--hud-bg); color: var(--hud-white); }
+    .aero.alert .aero-hero { animation: hero-alert 850ms ease-in-out 3; }
+    .action-screen.finished { animation: light-alert 850ms ease-in-out 3; }
+    @keyframes hero-alert { 50% { border-color: var(--hud-green); box-shadow: 0 0 32px rgba(0,255,102,.3); } }
+    @keyframes light-alert { 50% { background: #fff; color: #d20000; } }
+    .eyebrow { margin: 5px 0 3px; font-size: clamp(.78rem, 3.8vmin, 1rem); font-weight: 1000; letter-spacing: .16em; text-transform: uppercase; }
+    .timer { margin: 0; font-variant-numeric: tabular-nums; font-size: clamp(3.7rem, 25vmin, 6.8rem); line-height: .9; font-weight: 1000; letter-spacing: -.085em; }
+    .timer.message { max-width: 100%; color: #ffe000; font-size: clamp(2.2rem, 15vmin, 4rem); line-height: .86; letter-spacing: -.055em; animation: message-pulse 850ms ease-in-out 3; }
+    @keyframes message-pulse { 50% { color: #fff; transform: scale(1.035); } }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); width: min(100%, 380px); margin-top: 8px; border-radius: 11px; overflow: hidden; background: rgba(0,0,0,.22); }
+    .stat { padding: 6px 3px; border-right: 1px solid rgba(255,255,255,.13); }
+    .stat:last-child { border: 0; }
+    .stat-label { display: block; color: #a9c2df; font-size: .55rem; font-weight: 1000; letter-spacing: .08em; text-transform: uppercase; }
+    .stat-value { display: block; margin-top: 2px; font-size: clamp(.78rem, 4vmin, 1rem); font-weight: 950; font-variant-numeric: tabular-nums; }
+    .schedule { width: min(100%, 380px); margin-top: 9px; padding: 8px 10px; border: 1px solid rgba(255,255,255,.22); border-radius: 12px; background: rgba(1,13,31,.48); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-align: left; }
+    .schedule-title { margin: 0 0 5px; color: #7dffb1; font-size: .64rem; font-weight: 1000; letter-spacing: .16em; text-transform: uppercase; }
+    .reminder-row { display: grid; grid-template-columns: 62px 1fr auto; align-items: center; gap: 6px; margin: 4px 0; font-size: clamp(.68rem, 3.3vmin, .83rem); font-weight: 850; }
+    .reminder-type { color: #b6cce5; font-size: .72em; font-weight: 1000; letter-spacing: .09em; text-transform: uppercase; }
+    .reminder-time { color: #fff; font-variant-numeric: tabular-nums; font-weight: 1000; }
+    .reminder-time.due { color: #ffe000; }
+    .hint { position: absolute; bottom: 72px; margin: 0; opacity: .72; font-size: clamp(.62rem, 3vmin, .78rem); font-weight: 950; letter-spacing: .06em; text-transform: uppercase; }
+    .action-title { margin: 0 0 7px; font-size: clamp(2.6rem, 18vmin, 4.7rem); line-height: .82; font-weight: 1000; letter-spacing: -.065em; }
+    .action-screen .timer { margin-bottom: 13px; }
+    .action-screen .instruction { max-width: 96%; margin: 0; font-size: clamp(1.25rem, 7.5vmin, 2rem); line-height: 1.02; font-weight: 950; }
+    .paused .timer { font-size: clamp(3.1rem, 21vmin, 5.5rem); }
+    .paused-copy { width: min(100%, 350px); margin: 12px 0 0; padding: 10px; border-radius: 12px; background: rgba(0,0,0,.25); font-size: .78rem; line-height: 1.35; font-weight: 750; }
+    .finish-button { min-height: 36px; margin-top: 8px; border: 1px solid rgba(255,255,255,.3); border-radius: 8px; padding: 7px 10px; background: rgba(0,0,0,.28); color: inherit; font-size: .65rem; font-weight: 950; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+    .review { padding: 18px 14px; }
+    .review h1 { margin: 0; font-size: 2rem; letter-spacing: -.05em; }
+    .review-date { margin: 4px 0 12px; color: #93aac3; font-size: .7rem; }
+    .review-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; width: min(100%, 420px); }
+    .review-card { padding: 10px 6px; border: 1px solid #28425f; border-radius: 11px; background: #0b192b; }
+    .review-card strong { display: block; color: #69f7a3; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+    .review-card span { color: #9fb3ca; font-size: .6rem; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+    .interval-list { width: min(100%, 420px); margin: 12px 0; padding: 10px; border-radius: 12px; background: #0b192b; text-align: left; }
+    .interval-list h2 { margin: 0 0 7px; color: #dbe8f7; font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; }
+    .interval-line { display: flex; justify-content: space-between; padding: 5px 0; border-top: 1px solid #1d334c; color: #b8c9dc; font-size: .72rem; font-weight: 800; }
+    .interval-line b { color: #6dffad; }
+    .camera-choice { display: flex; align-items: center; gap: 9px; padding: 9px; border: 1px solid #2f587d; border-radius: 10px; background: #0e2238; text-align: left; }
+    .camera-choice input { width: 22px; height: 22px; accent-color: #35f08a; }
+    .camera-choice strong { display: block; color: #fff; font-size: .78rem; }
+    .camera-choice span { display: block; margin-top: 2px; color: #95abc3; font-size: .62rem; line-height: 1.25; }
+    .camera-choice + .camera-choice { margin-top: 7px; }
+    #camera-host { display: none; position: fixed; inset: 0; z-index: 1; overflow: hidden; background: #02060b; }
+    #camera-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    body.camera-preview #camera-host { display: block; }
+    body.camera-preview #app { position: relative; z-index: 2; }
+    .camera-setup { justify-content: flex-end; padding: 18px 14px; color: #fff; background: linear-gradient(transparent 15%, rgba(2,8,16,.25) 42%, rgba(2,8,16,.96) 76%); cursor: default; }
+    .camera-panel { width: min(100%, 420px); padding: 13px; border: 1px solid rgba(255,255,255,.22); border-radius: 15px; background: rgba(3,13,25,.84); backdrop-filter: blur(13px); }
+    .camera-panel h1 { margin: 0; font-size: clamp(1.6rem, 8vmin, 2.3rem); line-height: .92; letter-spacing: -.045em; }
+    .camera-panel p { margin: 7px 0; color: #c0d0e2; font-size: .75rem; line-height: 1.35; font-weight: 700; }
+    .camera-step { margin: 7px 0; color: #6dffad; font-size: .64rem; font-weight: 1000; letter-spacing: .14em; text-transform: uppercase; }
+    .camera-countdown { margin: 4px 0; color: #fff; font-size: 2.4rem; line-height: 1; font-weight: 1000; font-variant-numeric: tabular-nums; }
+    .camera-actions { display: grid; gap: 7px; margin-top: 9px; }
+    .camera-error { color: #ffcf55 !important; }
+    .camera-badge { position: absolute; top: 27px; left: 10px; z-index: 5; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 7px; background: rgba(0,0,0,.42); color: #d9e6f4; font-size: .56rem; font-weight: 1000; letter-spacing: .08em; text-transform: uppercase; }
+    .camera-badge.aero { border-color: #45f797; color: #65ffab; }
+    .camera-badge.upright { border-color: #ffe15a; color: #ffe15a; }
+    .camera-badge.uncertain { border-color: #ff9d62; color: #ffc09a; }
+    .ride-utility-controls { position: absolute; top: 27px; right: 10px; z-index: 18; display: flex; align-items: center; gap: 6px; }
+    .pip-mini, .camera-auto-toggle, .ride-pause-button { min-height: 42px; border-radius: 9px; padding: 6px 9px; font-size: .62rem; font-weight: 1000; cursor: pointer; }
+    .pip-mini { min-width: 42px; border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.38); color: #fff; }
+    .camera-auto-toggle { border: 1px solid #55f39a; background: rgba(0,0,0,.46); color: #6dffad; }
+    .camera-auto-toggle.off { border-color: #a4b2c2; color: #d5deea; }
+    .ride-pause-button { min-width: 68px; border: 1px solid #ffe36a; background: #493800; color: #fff2a8; letter-spacing: .06em; }
+    .camera-review { width: min(100%, 420px); margin: 0 0 12px; padding: 10px; border: 1px solid #285b4a; border-radius: 12px; background: #09231d; text-align: left; }
+    .camera-review h2 { margin: 0 0 7px; color: #6dffad; font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; }
+    .camera-review p { margin: 4px 0; color: #bed6ce; font-size: .7rem; line-height: 1.3; }
+    .mode-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .mode-tab { position: relative; min-width: 0; }
+    .mode-tab input { position: absolute; opacity: 0; pointer-events: none; }
+    .mode-tab span { display: grid; min-height: 44px; place-items: center; border: 1px solid #365d88; border-radius: 9px; color: #b8cce0; font-size: .66rem; font-weight: 1000; text-align: center; }
+    .mode-tab input:checked + span { border-color: #35f08a; background: #12392e; color: #6dffad; }
+    .mode-tab input:focus-visible + span { outline: 3px solid #fff; outline-offset: 2px; }
+    .mode-description { min-height: 2.5em; margin: 8px 0 0; color: #9fb3ca; text-align: left; font-size: .68rem; line-height: 1.3; }
+    .observation-toggle { display: none; margin-top: 8px; }
+    .setup[data-mode="observation"] .observation-toggle { display: flex; }
+    .learning-cards { display: grid; gap: 7px; margin-top: 9px; }
+    .learning-cards:empty { display: none; }
+    .learning-card { padding: 8px; border: 1px solid #27445f; border-radius: 9px; background: #091522; text-align: left; }
+    .learning-card-head { display: flex; justify-content: space-between; gap: 6px; color: #dce8f5; font-size: .65rem; font-weight: 1000; text-transform: uppercase; }
+    .source-badge { color: #6dffad; }
+    .learning-card p { margin: 4px 0; color: #9fb3ca; font-size: .64rem; line-height: 1.25; }
+    .learning-card-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+    .mini-action { min-height: 32px; border: 1px solid #3b638b; border-radius: 7px; padding: 5px 8px; background: #11263c; color: #e8f1fb; font-size: .6rem; font-weight: 950; cursor: pointer; }
+    .coach-empty { margin: 9px 0 0; padding: 8px 9px; border-radius: 9px; background: #0d2133; color: #9fb3ca; text-align: left; font-size: .66rem; line-height: 1.35; }
+    .camera-options { margin-top: 8px; }
+    .advanced-disclosure { grid-column: 1 / -1; width: 100%; border: 1px solid #252d3e; border-radius: 13px; background: #101625; text-align: left; }
+    .advanced-disclosure summary { display: flex; min-height: 44px; align-items: center; justify-content: space-between; padding: 9px 12px; color: #b8c8da; font-size: .7rem; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; list-style: none; }
+    .advanced-disclosure summary::-webkit-details-marker { display: none; }
+    .advanced-disclosure summary::after { content: "+"; color: #6dffad; font-size: 1rem; }
+    .advanced-disclosure[open] summary::after { content: "−"; }
+    .advanced-content { padding: 0 10px 10px; }
+    .advanced-content > p { margin: 0 0 8px; color: #8fa5bd; font-size: .65rem; line-height: 1.35; }
+    .learning-management { display: grid; gap: 6px; }
+    .learning-management-row { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 8px; border: 1px solid #243b53; border-radius: 8px; background: #091522; }
+    .learning-management-row span { color: #c8d6e6; font-size: .65rem; font-weight: 850; }
+    .learning-management-row .learning-card-actions { margin: 0; }
+    .active-ride { padding: 46px clamp(10px, 3vmin, 18px) 72px; }
+    .quick-action-dock { position: absolute; left: 6px; right: 6px; bottom: 5px; z-index: 12; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; padding: 5px; border: 1px solid #252d3e; border-radius: 13px; background: rgba(11,15,25,.94); backdrop-filter: blur(12px); }
+    .quick-action { min-width: 0; min-height: 48px; border: 1px solid rgba(255,255,255,.23); border-radius: 9px; padding: 5px 2px; color: #fff; font-size: .65rem; line-height: 1.05; font-weight: 1000; cursor: pointer; }
+    .quick-action.water-button { background: #087fa4; }
+    .quick-action.fuel-button { background: #5f5000; }
+    .quick-action.stretch-button { background: #147b3a; }
+    .quick-action.locked { background: #263445; color: #91a3b7; }
+    .action-toast { position: absolute; left: 50%; bottom: 68px; z-index: 14; transform: translateX(-50%); width: max-content; max-width: 94%; border-radius: 999px; padding: 7px 11px; background: #052418; color: #68ffad; font-size: .64rem; font-weight: 1000; }
+    .pending-card { width: min(100%,380px); margin-top: 7px; padding: 8px; border: 1px solid #ffd94a; border-radius: 11px; background: rgba(31,24,0,.78); text-align: left; }
+    .pending-head { display: flex; justify-content: space-between; gap: 8px; color: #ffe768; font-size: .68rem; font-weight: 1000; text-transform: uppercase; }
+    .pending-actions { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; margin-top: 7px; }
+    .pending-action { min-height: 40px; border: 1px solid rgba(255,255,255,.25); border-radius: 8px; background: rgba(255,255,255,.12); color: #fff; font-size: .62rem; font-weight: 1000; cursor: pointer; }
+    .action-screen .pending-action { border-color: #fff; background: #07121e; color: #fff; }
+    .pending-count { margin: 4px 0 0; color: #d9ca8a; font-size: .61rem; }
+    .aero.active-ride { justify-content: flex-start; padding: 49px clamp(8px, 3vw, 20px) 12px; }
+    .aero-dashboard { display: grid; grid-template-rows: minmax(145px, .88fr) minmax(180px, 1fr); gap: clamp(10px, 2.5vh, 20px); width: min(100%, 900px); height: 100%; min-height: 0; }
+    .aero-hero { position: relative; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(12px, 2.6vh, 22px); border: 2px solid var(--hud-cyan); border-radius: clamp(18px, 4vmin, 28px); background: linear-gradient(115deg, #0a3947 0%, #093b39 55%, #06422e 100%); box-shadow: 0 18px 45px rgba(0,0,0,.25), inset 0 1px rgba(255,255,255,.04); }
+    .aero-hero::after { content: ""; position: absolute; inset: auto -12% -65% 28%; height: 150%; border-radius: 50%; background: radial-gradient(circle, rgba(0,255,102,.12), transparent 62%); pointer-events: none; }
+    .aero-interval { position: absolute; top: 12px; left: 16px; z-index: 1; color: #82a7ba; font-size: clamp(.55rem, 1.5vw, .7rem); font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+    .aero-title { position: relative; z-index: 1; margin: 0; color: var(--hud-cyan); font-size: clamp(2rem, 6.2vmin, 3.15rem); line-height: .9; font-weight: 1000; letter-spacing: .02em; text-shadow: 0 0 16px rgba(0,204,255,.25); }
+    .aero-subtitle { position: relative; z-index: 1; margin: clamp(8px, 1.8vh, 12px) 0 clamp(13px, 2.5vh, 20px); color: var(--hud-muted); font-size: clamp(.62rem, 2vmin, .88rem); font-weight: 750; letter-spacing: .22em; text-transform: uppercase; }
+    .aero-clock { position: relative; z-index: 1; display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+    .aero-clock .timer { color: var(--hud-white); font-family: var(--hud-mono); font-size: clamp(2rem, 6vmin, 2.8rem); line-height: 1; letter-spacing: -.055em; }
+    .aero-clock .timer.message { color: var(--hud-due); font-family: inherit; font-size: clamp(1.65rem, 5.2vmin, 2.45rem); letter-spacing: -.03em; }
+    .aero-percentage { color: var(--hud-green); font-family: var(--hud-mono); font-size: clamp(.82rem, 2.3vmin, 1.05rem); font-weight: 1000; }
+    .hero-metrics { position: relative; z-index: 1; display: flex; gap: clamp(10px, 3vw, 24px); margin-top: clamp(11px, 2vh, 17px); color: #9eb0cb; font-size: clamp(.55rem, 1.55vw, .68rem); font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .hero-metrics strong { color: #edf7ff; font-family: var(--hud-mono); }
+    .reminder-zone { display: flex; min-height: 0; flex-direction: column; gap: 8px; }
+    .reminder-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex: 1 1 auto; min-height: 0; gap: clamp(6px, 1.7vw, 14px); }
+    .dashboard-card { --card-accent: var(--hud-cyan); position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(8px, 2vh, 16px) clamp(5px, 1.5vw, 13px); overflow: hidden; border: 1px solid #202738; border-radius: clamp(14px, 3vmin, 19px); background: var(--hud-panel); box-shadow: 0 12px 28px rgba(0,0,0,.18); }
+    .dashboard-card.type-stretch { --card-accent: var(--hud-cyan); }
+    .dashboard-card.type-fuel { --card-accent: #ffd24a; }
+    .dashboard-card.type-water { --card-accent: #37d9ff; }
+    .dashboard-card.due { --card-accent: var(--hud-due); border-color: var(--hud-due-border); background: linear-gradient(145deg, var(--hud-due-bg), #281420); }
+    .dashboard-card.urgent { box-shadow: 0 0 24px rgba(255,51,102,.2), 0 12px 28px rgba(0,0,0,.2); }
+    .card-queue-badge { position: absolute; top: 7px; right: 8px; border-radius: 999px; padding: 3px 6px; background: rgba(255,255,255,.08); color: #b8c4da; font-size: .52rem; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+    .dashboard-card.due .card-queue-badge { color: #ff91b1; }
+    .status-ring { --ring-progress: 0deg; position: relative; width: clamp(52px, 10vmin, 76px); aspect-ratio: 1; flex: 0 0 auto; border-radius: 50%; background: conic-gradient(from -90deg, var(--hud-green) var(--ring-progress), var(--hud-track) 0); }
+    .status-ring::after { content: ""; position: absolute; inset: 6px; border-radius: inherit; background: var(--hud-panel); }
+    .dashboard-card.due .status-ring { background: conic-gradient(from -90deg, var(--hud-due) var(--ring-progress), #4a2836 0); }
+    .dashboard-card.due .status-ring::after { background: #2d1724; }
+    .card-time { margin-top: clamp(8px, 1.6vh, 12px); color: var(--hud-white); font-family: var(--hud-mono); font-size: clamp(1.05rem, 3.2vmin, 1.45rem); line-height: 1; font-weight: 900; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+    .dashboard-card.due .card-time { color: #fff; }
+    .card-label { margin-top: 7px; color: var(--hud-muted); font-size: clamp(.55rem, 1.5vmin, .67rem); font-weight: 850; letter-spacing: .16em; text-transform: uppercase; }
+    .card-detail { display: -webkit-box; min-height: 2.4em; margin: clamp(7px, 1.6vh, 12px) 0 8px; overflow: hidden; color: var(--card-accent); font-size: clamp(.58rem, 1.55vmin, .72rem); line-height: 1.2; font-weight: 800; text-align: center; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    .card-done { min-width: 68px; min-height: 36px; margin-top: auto; border: 0; border-radius: 999px; padding: 7px 13px; background: #282d3a; color: #f3f6fb; font-size: clamp(.62rem, 1.7vmin, .76rem); font-weight: 900; cursor: pointer; }
+    .dashboard-card.due .card-done { background: var(--hud-due); color: #fff; box-shadow: 0 0 18px rgba(255,51,102,.4); }
+    .card-done:disabled { background: #303746; color: #96a2b4; box-shadow: none; cursor: default; }
+    .reminder-resolution { display: flex; min-height: 38px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; border: 1px solid #343d50; border-radius: 12px; padding: 5px 8px; background: #111623; }
+    .resolution-label { margin-right: auto; overflow: hidden; color: #ff9ab8; font-size: clamp(.57rem, 1.5vmin, .68rem); font-weight: 950; letter-spacing: .08em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+    .resolution-action { min-height: 28px; flex: 0 0 auto; border: 1px solid #3a4457; border-radius: 999px; padding: 4px 10px; background: #222938; color: #eaf1fb; font-size: clamp(.54rem, 1.35vmin, .63rem); font-weight: 900; cursor: pointer; }
+    .aero .action-toast { bottom: 10px; }
+    .screen-advance-control { position: absolute; top: 20px; left: 50%; z-index: 30; min-height: 30px; transform: translateX(-50%); border: 1px solid #4e627d; border-radius: 999px; padding: 5px 11px; opacity: 0; pointer-events: none; background: #101826; color: #fff; font-size: .58rem; font-weight: 950; letter-spacing: .07em; text-transform: uppercase; }
+    .screen-advance-control:focus-visible { opacity: 1; pointer-events: auto; }
+    .paused { background: radial-gradient(circle at 50% 34%, #1b2839, var(--hud-bg) 62%); }
+    .paused .eyebrow { color: var(--hud-cyan); }
+    .paused .timer, .ride-session-paused .timer, .action-screen .timer { font-family: var(--hud-mono); }
+    .ride-session-paused { cursor: default; background: radial-gradient(circle at 50% 34%, #243148, var(--hud-bg) 64%); }
+    .ride-session-paused .eyebrow { color: #ffe36a; }
+    .ride-pause-panel { display: grid; width: min(100%, 390px); gap: 10px; margin-top: 18px; padding: 14px; border: 1px solid #34445e; border-radius: 16px; background: rgba(8,14,25,.82); }
+    .ride-pause-copy { margin: 0 0 2px; color: #b9c9dc; font-size: .76rem; line-height: 1.4; font-weight: 750; }
+    .ride-resume-action, .ride-exit-action { min-height: 54px; border: 0; border-radius: 11px; padding: 10px 12px; font-weight: 1000; cursor: pointer; }
+    .ride-resume-action { min-height: 64px; background: #35f08a; color: #04130b; font-size: 1.1rem; }
+    .ride-exit-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .ride-exit-action { border: 1px solid #53657d; background: #182235; color: #e7eef7; font-size: .72rem; line-height: 1.15; }
+    .ride-exit-action.end { border-color: #d9b630; color: #ffe36a; }
+    .ride-exit-action.confirm { border-color: #ffe36a; background: #493800; color: #fff5bd; }
+    .ride-save-note { margin: -2px 0 0; color: #8194aa; font-size: .61rem; font-weight: 800; }
+    .action-screen { background: radial-gradient(circle at 50% 34%, #172438, var(--hud-bg) 64%); }
+    .action-screen.water .action-title { color: var(--hud-cyan); }
+    .action-screen.fuel .action-title { color: #ffd24a; }
+    .action-screen.stretch .action-title { color: var(--hud-green); }
+    .action-screen .instruction { color: #d8e3f2; }
+    .action-screen .pending-actions { width: min(100%, 360px); }
+    .review-section { width: min(100%,420px); margin: 0 0 10px; padding: 10px; border: 1px solid #28425f; border-radius: 12px; background: #0b192b; text-align: left; }
+    .review-section h2 { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 7px; color: #6dffad; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
+    .review-stats { display: grid; grid-template-columns: repeat(2,1fr); gap: 5px; color: #b8c9dc; font-size: .68rem; }
+    .review-stats strong { color: #fff; }
+    .review-detail { margin: 6px 0 0; color: #9fb3ca; font-size: .65rem; line-height: 1.35; }
+    .review-reason-editor { border-color: #087fa4; background: linear-gradient(145deg, #0a1b2c, #0a2029); }
+    .review-reason-action { margin: 9px 0 7px; color: #fff; font-family: var(--hud-mono); font-size: .8rem; }
+    .review-reason-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .review-reason-chip { min-height: 38px; border: 1px solid #496b8d; border-radius: 999px; padding: 6px 10px; background: #11263c; color: #fff; font-size: .64rem; font-weight: 850; cursor: pointer; }
+    .coaching-box { width: min(100%,420px); margin: 0 0 10px; padding: 10px; border: 1px solid #3b6a55; border-radius: 12px; background: #09231d; text-align: left; }
+    .coaching-box h2 { margin: 0 0 7px; color: #6dffad; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
+    .coaching-box p { margin: 5px 0; color: #c0d7cd; font-size: .68rem; line-height: 1.35; }
+    @media (max-width: 700px) {
+      .setup-shell { grid-template-columns: 1fr; width: min(100%, 480px); }
+      .setup-span, .advanced-disclosure { grid-column: auto; }
+      .setup > .setup-actions, .setup > .setup-actions.has-history { grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(100%, 480px); }
+      .setup > .setup-actions #start-ride { grid-column: 1 / -1; }
+      .setup > .setup-actions:not(.has-history) #pop-out { grid-column: 1 / -1; }
+    }
+    @media (max-width: 480px) {
+      .setup { padding: 13px 10px 0; }
+      .setup-header { width: min(100%, 480px); }
+      .brand { font-size: 2rem; }
+      .subtitle { margin-bottom: 10px; font-size: .7rem; }
+      .setup-shell { gap: 9px; }
+      .setup-section { padding: 10px; border-radius: 13px; }
+      .field label { font-size: .58rem; }
+      .field input { padding: 6px 7px; font-size: 1rem; }
+      .setup > .setup-actions { margin-top: 9px; }
+      .aero.active-ride { padding: 49px 7px 7px; }
+      .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr); gap: 7px; }
+      .aero-hero { padding: 8px 6px; border-radius: 17px; }
+      .aero-interval { display: none; }
+      .aero-title { font-size: 1.8rem; }
+      .aero-subtitle { margin: 5px 0 9px; font-size: .55rem; }
+      .aero-clock { gap: 5px; }
+      .aero-clock .timer { font-size: 1.68rem; }
+      .aero-clock .timer.message { font-size: 1.35rem; }
+      .aero-percentage { font-size: .68rem; }
+      .hero-metrics { gap: 7px; margin-top: 9px; font-size: .46rem; letter-spacing: .03em; }
+      .reminder-zone { gap: 5px; }
+      .reminder-card-grid { gap: 5px; }
+      .dashboard-card { padding: 6px 3px 5px; border-radius: 13px; }
+      .card-queue-badge { top: 4px; right: 4px; padding: 2px 4px; font-size: .42rem; }
+      .status-ring { width: 43px; }
+      .status-ring::after { inset: 5px; }
+      .card-time { margin-top: 7px; font-size: .91rem; }
+      .card-label { margin-top: 5px; font-size: .47rem; letter-spacing: .11em; }
+      .card-detail { min-height: 1.15em; margin: 5px 0 5px; font-size: .5rem; line-height: 1.1; -webkit-line-clamp: 1; }
+      .card-done { min-width: 58px; min-height: 32px; padding: 5px 8px; font-size: .57rem; }
+      .reminder-resolution { min-height: 34px; gap: 4px; padding: 3px 5px; border-radius: 10px; }
+      .resolution-label { font-size: .48rem; }
+      .resolution-action { min-height: 28px; padding: 3px 7px; font-size: .49rem; }
+      .aero .ride-utility-controls { top: 19px; right: 7px; gap: 4px; }
+      .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { min-height: 38px; padding: 4px 6px; font-size: .53rem; }
+      .aero .pip-mini { min-width: 38px; }
+      .aero .ride-pause-button { min-width: 58px; min-height: 42px; }
+      .aero .camera-badge { top: 19px; max-width: 126px; overflow: hidden; font-size: .5rem; text-overflow: ellipsis; white-space: nowrap; }
+      .ride-pause-panel { margin-top: 12px; padding: 11px; }
+      .ride-resume-action { min-height: 58px; }
+    }
+    @media (max-height: 430px) {
+      .aero.active-ride { padding-top: 49px; }
+      .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr); gap: 7px; }
+      .aero-hero { padding-block: 7px; }
+      .action-screen > .timer, .paused > .timer { font-size: 3.2rem; }
+      .stats { margin-top: 5px; }
+      .action-title { font-size: 2.7rem; }
+    }
+    @media (max-height: 340px) {
+      .hint { display: none; }
+      .aero.active-ride { padding: 44px 6px 5px; }
+      .aero-dashboard { grid-template-rows: 104px minmax(0, 1fr); gap: 5px; }
+      .aero-title { font-size: 1.45rem; }
+      .aero-subtitle { margin: 3px 0 5px; }
+      .aero-clock .timer { font-size: 1.35rem; }
+      .hero-metrics, .card-detail { display: none; }
+      .status-ring { width: 36px; }
+      .card-time { margin-top: 5px; }
+      .card-done { min-height: 28px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .ride-progress-fill { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div id="camera-host" aria-hidden="true"><video id="camera-video" playsinline muted></video></div>
+  <main id="app"></main>
+  <div id="hud-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script type="module">
+    import { CameraObserver } from "/src/camera-observer.js";
+    import { CAMERA_MANUAL_HOLD_MS, decideCameraTimerAction, shouldWaitForAeroAfterBreak } from "/src/camera-control.js";
+    import {
+      ACTION_LABELS,
+      ACTION_REASONS,
+      ACTION_TYPES,
+      RIDE_SCHEMA_VERSION,
+      buildCoachingObservations,
+      buildRecommendations,
+      calculateActionStats,
+      calculateReminderStats,
+      completeReminderRecord,
+      createCompletedAction,
+      createReminder,
+      findReminderForAction,
+      getActiveReminders,
+      isDuplicateAction,
+      materializeReminderOccurrences,
+      skipReminderRecord,
+      snoozeReminderRecord,
+      updateCompletedActionReason
+    } from "/src/habit-learning.js";
+    import { loadHistory, loadSettings, resetLearningFor, saveRide, saveSettings } from "/src/history-store.js";
+    const nutritionPlan = [
+      "Take 1 Gel + Big Drink of Water",
+      "Drink 1/2 Bottle of Carb Mix",
+      "Take 1 Gel + Big Drink of Water",
+      "Finish Bottle of Carb Mix"
+    ]; // Loop this sequentially
+
+    const mobilityPlan = [
+      "Standing Hip Drive (Drop Heel, Push Hips)",
+      "Turtle Shell (Round Spine, Tuck Chin)",
+      "Chest Opener (Sit Up, Hands Behind Back)",
+      "Standing Flush (Heavy Gear, Out of Saddle)"
+    ]; // Pick one at random for each break
+
+    const ACTION_META = {
+      fuel: { title: "FUEL", ready: "FUEL COMPLETE!", className: "fuel" },
+      water: { title: "DRINK", prompt: "DRINK NOW", className: "water" },
+      stretch: { title: "MOBILITY", prompt: "MOVE & RESET", className: "stretch" }
+    };
+
+    const model = {
+      state: "setup",
+      pipWindow: null,
+      rideStartedAt: 0,
+      rideStartedIso: "",
+      ridePausedAt: 0,
+      accumulatedRidePauseMs: 0,
+      ridePausedFromState: null,
+      pausedActionRemainingMs: 0,
+      rideExitConfirmation: null,
+      plannedRideSec: 90 * 60,
+      aeroGoalSec: 60 * 60,
+      baseIntervalSec: 10 * 60,
+      progressionSec: 60,
+      currentIntervalTargetSec: 10 * 60,
+      intervalNumber: 1,
+      intervalAccumulatedMs: 0,
+      intervalComplete: false,
+      intervalRecorded: false,
+      aeroSegmentStartedAt: 0,
+      accumulatedAeroMs: 0,
+      bestIntervalMs: 0,
+      fuelEverySec: 30 * 60,
+      waterEverySec: 10 * 60,
+      stretchEverySec: 20 * 60,
+      fuelDurationSec: 60,
+      nextDue: { fuel: 30 * 60, water: 10 * 60, stretch: 20 * 60 },
+      notified: new Set(),
+      currentAction: null,
+      actionScheduled: false,
+      actionEndsAt: 0,
+      actionFinished: false,
+      nutritionIndex: 0,
+      currentFuel: nutritionPlan[0],
+      currentMobility: mobilityPlan[0],
+      intervals: [],
+      events: [],
+      rideMode: null,
+      remindersEnabled: true,
+      reminders: [],
+      completedActions: [],
+      actionLocks: { water: 0, fuel: 0, stretch: 0 },
+      actionFeedback: null,
+      reviewReasonEditorDismissed: false,
+      learningResetConfirmType: null,
+      ignoredRecommendations: {},
+      currentReminderId: null,
+      acceptedRecommendations: {},
+      intervalSources: { water: "athlete-entered", fuel: "athlete-entered", stretch: "athlete-entered" },
+      historySaveError: "",
+      rideTargetReached: false,
+      summary: null,
+      cameraEnabled: false,
+      cameraAutoControl: false,
+      cameraAutoEverEnabled: false,
+      cameraControlHoldUntil: 0,
+      cameraPauseReason: "",
+      cameraStep: "permission",
+      cameraError: "",
+      cameraSnapshot: { status: "off", stableState: "uncertain", confidence: 0, reason: "Camera off" },
+      pendingRideValues: null
+    };
+
+    let audioContext = null;
+    const shortcutDocuments = new WeakSet();
+    const cameraObserver = new CameraObserver({
+      video: document.getElementById("camera-video"),
+      onUpdate: snapshot => {
+        model.cameraSnapshot = snapshot;
+        handleCameraControl(snapshot);
+        updateCameraUi(activeDocument());
+      }
+    });
+    const activeDocument = () => model.pipWindow && !model.pipWindow.closed ? model.pipWindow.document : document;
+    const activeRoot = () => activeDocument().getElementById("app");
+    const now = () => performance.now();
+
+    function formatTime(totalSeconds) {
+      const numeric = Number(totalSeconds);
+      const safe = Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
+      const hours = Math.floor(safe / 3600);
+      const minutes = Math.floor((safe % 3600) / 60);
+      const seconds = safe % 60;
+      return hours > 0
+        ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+        : `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function formatHeroTime(totalSeconds) {
+      const numeric = Number(totalSeconds);
+      const safe = Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
+      const hours = Math.floor(safe / 3600);
+      const minutes = Math.floor((safe % 3600) / 60);
+      const seconds = safe % 60;
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function rideMs() {
+      if (!model.rideStartedAt) return 0;
+      const end = model.ridePausedAt || now();
+      return Math.max(0, end - model.rideStartedAt - model.accumulatedRidePauseMs);
+    }
+    function liveAeroMs() {
+      if (model.state !== "aero" || !model.aeroSegmentStartedAt || model.intervalComplete) return 0;
+      const remaining = Math.max(0, model.currentIntervalTargetSec * 1000 - model.intervalAccumulatedMs);
+      return Math.min(now() - model.aeroSegmentStartedAt, remaining);
+    }
+    function totalAeroMs() { return model.accumulatedAeroMs + liveAeroMs(); }
+    function currentIntervalMs() { return model.intervalAccumulatedMs + liveAeroMs(); }
+    function intervalRemainingSec() { return Math.max(0, model.currentIntervalTargetSec - currentIntervalMs() / 1000); }
+    function aeroAdherencePercent() {
+      const elapsed = rideMs();
+      return elapsed > 0 ? Math.min(100, Math.round(totalAeroMs() / elapsed * 100)) : 0;
+    }
+    function reminderCadence(type) {
+      return type === "water" ? model.waterEverySec : type === "fuel" ? model.fuelEverySec : model.stretchEverySec;
+    }
+
+    function getReminderRows() {
+      const elapsed = rideMs() / 1000;
+      if (!model.remindersEnabled) return [];
+      return ACTION_TYPES.map(type => {
+        const pending = model.reminders
+          .filter(reminder => reminder.type === type && ["pending", "snoozed"].includes(reminder.status))
+          .sort((a, b) => a.dueAtSec - b.dueAtSec)[0];
+        const dueAt = pending?.dueAtSec ?? model.nextDue[type];
+        return { type, dueAt, remaining: dueAt - elapsed, reminderId: pending?.id || null };
+      }).sort((a, b) => a.dueAt - b.dueAt);
+    }
+
+    function getDueActions() {
+      return getActiveReminders(model.reminders, rideMs() / 1000);
+    }
+
+    function materializeDueReminders() {
+      return materializeReminderOccurrences({
+        reminders: model.reminders,
+        nextDue: model.nextDue,
+        elapsedSec: rideMs() / 1000,
+        cadences: { water: model.waterEverySec, fuel: model.fuelEverySec, stretch: model.stretchEverySec },
+        sources: model.intervalSources,
+        enabled: model.remindersEnabled
+      });
+    }
+
+    function progressMarkup() {
+      const elapsedSec = rideMs() / 1000;
+      const progress = Math.min(100, elapsedSec / model.plannedRideSec * 100);
+      return `<div class="ride-progress" role="progressbar" aria-label="Total ride time" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress)}" aria-valuetext="${formatTime(elapsedSec)} of ${formatTime(model.plannedRideSec)}"><div class="ride-progress-fill" style="width:${progress}%"></div><div class="ride-progress-text" id="ride-progress-text">RIDE ${formatTime(elapsedSec)} / ${formatTime(model.plannedRideSec)}</div></div>`;
+    }
+
+    function quickActionDockMarkup() {
+      const labels = { water: "DRANK", fuel: "FUEL TAKEN", stretch: "STRETCH DONE" };
+      return `<div class="quick-action-dock" aria-label="Completed actions">${ACTION_TYPES.map((type, index) => {
+        const locked = now() < model.actionLocks[type];
+        return `<button class="quick-action ${type}-button${locked ? " locked" : ""}" type="button" data-log-action="${type}" data-action-type="${type}" data-default-label="${labels[type]}" aria-label="${labels[type]}" aria-keyshortcuts="${index + 1}" ${locked ? "disabled" : ""}>${locked ? "✓ LOGGED" : labels[type]}</button>`;
+      }).join("")}</div>`;
+    }
+
+    function actionFeedbackMarkup() {
+      const feedback = model.actionFeedback && now() < model.actionFeedback.expiresAt ? model.actionFeedback : null;
+      return feedback ? `<div class="action-toast">${feedback.text}</div>` : "";
+    }
+
+    function activeRideChromeMarkup() { return actionFeedbackMarkup() + quickActionDockMarkup(); }
+
+    function learningCardsMarkup(history, settings, plannedRideSec, mode) {
+      if (mode !== "coach") return "";
+      const recommendations = buildRecommendations(history, plannedRideSec, settings.learningResetAt);
+      const inputIds = { water: "water-every", fuel: "fuel-every", stretch: "stretch-every" };
+      const cards = ACTION_TYPES.flatMap(type => {
+        const recommendation = recommendations[type];
+        const accepted = settings.acceptedIntervals[type];
+        const ignored = model.ignoredRecommendations[type] === recommendation.suggestedSec;
+        const usingSuggestion = recommendation.sufficient && accepted?.source === "history" && accepted.seconds === recommendation.suggestedSec;
+        if (recommendation.sufficient && ignored) {
+          return [`<div class="learning-card" data-learning-card="${type}"><div class="learning-card-head"><span>${ACTION_LABELS[type]}</span><span class="source-badge">HIDDEN</span></div><p>Recommendation hidden for this setup.</p><div class="learning-card-actions"><button class="mini-action show-recommendation" type="button" data-type="${type}">SHOW AGAIN</button></div></div>`];
+        }
+        if (recommendation.sufficient) {
+          const actionButtons = usingSuggestion
+            ? `<button class="mini-action edit-recommendation" type="button" data-type="${type}" data-input="${inputIds[type]}">EDIT CURRENT</button>`
+            : `<button class="mini-action use-recommendation" type="button" data-type="${type}" data-input="${inputIds[type]}" data-seconds="${recommendation.suggestedSec}" data-rides="${recommendation.ridesUsed}">USE ${Math.round(recommendation.suggestedSec / 60)}m</button><button class="mini-action edit-recommendation" type="button" data-type="${type}" data-input="${inputIds[type]}">EDIT</button><button class="mini-action ignore-recommendation" type="button" data-type="${type}" data-seconds="${recommendation.suggestedSec}">IGNORE</button>`;
+          return [`<div class="learning-card" data-learning-card="${type}"><div class="learning-card-head"><span>${ACTION_LABELS[type]}</span><span class="source-badge">${usingSuggestion ? "IN USE" : "SUGGESTION"}</span></div><p>Observed median ${Math.round(recommendation.observedMedianSec / 60)} min across ${recommendation.ridesUsed} similar rides. Suggested reminder ${Math.round(recommendation.suggestedSec / 60)} min.</p><div class="learning-card-actions">${actionButtons}</div></div>`];
+        }
+        if (accepted?.source === "history") {
+          return [`<div class="learning-card" data-learning-card="${type}"><div class="learning-card-head"><span>${ACTION_LABELS[type]}</span><span class="source-badge">IN USE</span></div><p>Using a ${Math.round(accepted.seconds / 60)} min history-based interval from ${accepted.ridesUsed || 0} similar rides.</p><div class="learning-card-actions"><button class="mini-action edit-recommendation" type="button" data-type="${type}" data-input="${inputIds[type]}">EDIT CURRENT</button></div></div>`];
+        }
+        return [];
+      });
+      return cards.length ? cards.join("") : '<p class="coach-empty">No history-based changes are ready yet. Your current intervals remain unchanged while the HUD learns from comparable rides.</p>';
+    }
+
+    function learningManagementMarkup() {
+      return ACTION_TYPES.map(type => model.learningResetConfirmType === type
+        ? `<div class="learning-management-row"><span>Reset ${ACTION_LABELS[type].toLowerCase()} learning from today?</span><div class="learning-card-actions"><button class="mini-action confirm-reset-learning" type="button" data-type="${type}">CONFIRM</button><button class="mini-action cancel-reset-learning" type="button">CANCEL</button></div></div>`
+        : `<div class="learning-management-row"><span>${ACTION_LABELS[type]} learning</span><button class="mini-action reset-learning" type="button" data-type="${type}">RESET</button></div>`
+      ).join("");
+    }
+
+    function setupMarkup() {
+      const pipSupported = "documentPictureInPicture" in window;
+      const history = loadHistory();
+      const settings = loadSettings();
+      const mode = model.rideMode || settings.preferredMode;
+      const waterValue = Math.round((settings.acceptedIntervals.water?.seconds || 10 * 60) / 60);
+      const fuelValue = Math.round((settings.acceptedIntervals.fuel?.seconds || 30 * 60) / 60);
+      const stretchValue = Math.round((settings.acceptedIntervals.stretch?.seconds || 20 * 60) / 60);
+      return `<section class="screen setup" data-mode="${mode}" data-camera-enabled="false">
+        <header class="setup-header"><h1 class="brand">TRI HUD</h1><p class="subtitle">Aero progression and race-day timing</p></header>
+        <div class="setup-shell">
+          <div class="setup-section setup-span"><p class="section-title">Training mode</p>
+            <div class="mode-tabs" role="radiogroup" aria-label="Training mode">
+              <label class="mode-tab"><input type="radio" name="ride-mode" value="fixed" ${mode === "fixed" ? "checked" : ""}><span>FIXED</span></label>
+              <label class="mode-tab"><input type="radio" name="ride-mode" value="observation" ${mode === "observation" ? "checked" : ""}><span>OBSERVE</span></label>
+              <label class="mode-tab"><input type="radio" name="ride-mode" value="coach" ${mode === "coach" ? "checked" : ""}><span>COACH</span></label>
+            </div>
+            <p class="mode-description" id="mode-description"></p>
+            <label class="camera-choice observation-toggle" for="observation-reminders"><input id="observation-reminders" type="checkbox" ${settings.observationReminders ? "checked" : ""}><span><strong>Use fixed reminders while observing</strong><span>Off by default so natural actions can be learned without prompts.</span></span></label>
+            <div class="learning-cards" id="learning-cards">${learningCardsMarkup(history, settings, 90 * 60, mode)}</div>
+          </div>
+          <div class="setup-section"><p class="section-title">Ride plan</p><div class="fields">
+            <div class="field"><label for="ride-minutes">Planned ride (min)</label><input id="ride-minutes" type="number" min="1" max="600" value="90"></div>
+            <div class="field"><label for="aero-goal">Total Aero goal (min)</label><input id="aero-goal" type="number" min="1" max="600" value="60"></div>
+            <div class="field"><label for="interval-minutes">First Aero interval (min)</label><input id="interval-minutes" type="number" min="1" max="180" value="10"></div>
+            <div class="field"><label for="progression-minutes">Add each interval (min)</label><input id="progression-minutes" type="number" min="0" max="60" value="1"></div>
+          </div></div>
+          <div class="setup-section"><p class="section-title">Race execution</p><div class="fields">
+            <div class="field"><label for="water-every">Water every (min)</label><input id="water-every" type="number" min="1" max="180" value="${waterValue}"></div>
+            <div class="field"><label for="fuel-every">Fuel every (min)</label><input id="fuel-every" type="number" min="1" max="180" value="${fuelValue}"></div>
+            <div class="field"><label for="stretch-every">Mobility every (min)</label><input id="stretch-every" type="number" min="1" max="180" value="${stretchValue}"></div>
+            <div class="field"><label for="fuel-seconds">Fuel break (sec)</label><input id="fuel-seconds" type="number" min="1" max="600" value="60"></div>
+          </div><p class="fixed-note">Water and mobility are one-tap records. Only fueling uses a countdown.</p></div>
+          <div class="setup-section setup-span"><p class="section-title">Camera <span class="section-optional">Optional</span></p>
+            <label class="camera-choice" for="camera-enabled"><input id="camera-enabled" type="checkbox"><span><strong>Use position detection</strong><span>Compare Aero and upright positions locally. No video is uploaded or saved.</span></span></label>
+            <div class="camera-options" id="camera-options" hidden>
+              <label class="camera-choice" for="camera-auto"><input id="camera-auto" type="checkbox" checked disabled><span><strong>Automatically control Aero clock</strong><span>Stable upright pauses; stable Aero resumes. Uncertain readings preserve the current clock.</span></span></label>
+            </div>
+          </div>
+          <details class="advanced-disclosure"><summary>Learning & data</summary><div class="advanced-content">
+            <p>Maintenance controls only. Resetting learning keeps your saved ride reviews but starts future recommendations from today.</p>
+            <div class="learning-management" id="learning-management">${learningManagementMarkup()}</div>
+          </div></details>
+        </div>
+        <div class="setup-actions${history.length ? " has-history" : ""}">
+          <button class="action" id="start-ride" type="button">START RIDE</button>
+          <button class="action secondary" id="pop-out" type="button" ${pipSupported ? "" : "disabled"}>${pipSupported ? "POP OUT (PiP)" : "PiP NOT SUPPORTED"}</button>
+          ${history.length ? '<button class="action secondary" id="view-history" type="button">VIEW RIDE HISTORY</button>' : ""}
+          ${history.length ? `<p class="pip-note">Last ride: ${formatTime(history[0].rideSeconds)} • ${formatTime(history[0].aeroSeconds)} Aero</p>` : pipSupported ? "" : '<p class="pip-note" id="pip-note">Use recent Chrome or Edge for Pop Out.</p>'}
+        </div>
+      </section>`;
+    }
+
+    function cameraSetupMarkup() {
+      const snapshot = model.cameraSnapshot;
+      const capturing = snapshot.capture;
+      const armsTracked = snapshot.calibrationFeatures?.some(feature => feature.startsWith("arm"));
+      const trackingSummary = armsTracked ? "Torso and arm support are both tracking." : "Torso is tracking; move slightly farther back if you want arm support included.";
+      const controlSummary = model.pendingRideValues?.cameraAuto
+        ? "Stable upright will pause the Aero clock and stable Aero will resume it. Manual override remains available."
+        : "Camera control is off; manual clicks will control every timer.";
+      const content = {
+        permission: { step: "Camera setup", title: "POSITION CHECK", copy: "Place the laptop to your side or at a three-quarter angle. The camera needs a clear view of your shoulders, hips and arms.", button: '<button class="action" id="enable-camera" type="button">ENABLE CAMERA</button>' },
+        loading: { step: "Loading local pose model", title: "ONE MOMENT", copy: "Preparing private on-device position tracking. No video is uploaded or saved.", button: "" },
+        upright: { step: "Calibration 1 of 2", title: "RIDE UPRIGHT", copy: "Pedal easily in your normal seated upright position. When settled, capture a short sample.", button: '<button class="action" id="capture-upright" type="button">CAPTURE UPRIGHT</button>' },
+        aero: { step: "Calibration 2 of 2", title: "HOLD AERO", copy: "Move into your normal Aero position and keep pedalling steadily during the capture.", button: '<button class="action" id="capture-aero" type="button">CAPTURE AERO</button>' },
+        ready: { step: `Calibration quality ${snapshot.calibrationQuality || 0}%`, title: "CAMERA READY", copy: `${trackingSummary} ${controlSummary}`, button: '<button class="action" id="begin-calibrated-ride" type="button">START RIDE</button>' },
+        error: { step: "Calibration needs attention", title: "TRY AGAIN", copy: model.cameraError || snapshot.error || "The camera could not be calibrated.", button: '<button class="action" id="retry-camera" type="button">RETRY CAMERA SETUP</button>' }
+      }[model.cameraStep];
+      return `<section class="screen camera-setup"><div class="camera-panel">
+        <p class="camera-step">${content.step}</p><h1>${capturing ? `HOLD ${capturing.label.toUpperCase()}` : content.title}</h1>
+        ${capturing ? `<p class="camera-countdown" id="camera-countdown">${Math.ceil(capturing.remaining)}</p><p>Stay steady and keep your shoulders and hips visible.</p>` : `<p class="${model.cameraStep === "error" ? "camera-error" : ""}">${content.copy}</p>`}
+        <div class="camera-actions">${capturing ? "" : content.button}<button class="action secondary" id="skip-camera" type="button">CONTINUE WITHOUT CAMERA</button></div>
+      </div></section>`;
+    }
+
+    function scheduleMarkup() {
+      const visualOrder = ["stretch", "fuel", "water"];
+      const labels = { stretch: "Stretch", fuel: "Fuel", water: "Water" };
+      const shortcuts = { water: 1, fuel: 2, stretch: 3 };
+      const details = {
+        stretch: model.remindersEnabled ? model.currentMobility : "Manual tracking",
+        fuel: model.remindersEnabled ? model.currentFuel : "Manual tracking",
+        water: model.remindersEnabled ? "Hydration" : "Manual tracking"
+      };
+      const rows = Object.fromEntries(getReminderRows().map(item => [item.type, item]));
+      const pending = getDueActions();
+      const elapsed = rideMs() / 1000;
+      const cards = visualOrder.map(type => {
+        const row = rows[type];
+        const reminder = pending.find(item => item.type === type) || null;
+        const locked = now() < model.actionLocks[type];
+        const remaining = model.remindersEnabled ? Math.max(0, row?.remaining ?? model.nextDue[type] - elapsed) : 0;
+        const progressDegrees = model.remindersEnabled ? Math.max(0, Math.min(360, remaining / reminderCadence(type) * 360)) : 0;
+        const sameTypePending = pending.filter(item => item.type === type).length;
+        const isUrgent = reminder?.id === pending[0]?.id;
+        const queueBadge = reminder
+          ? `<span class="card-queue-badge">${isUrgent ? `1 / ${pending.length}` : sameTypePending > 1 ? `+${sameTypePending - 1}` : "Queued"}</span>`
+          : "";
+        const button = reminder
+          ? `<button class="card-done reminder-done" type="button" data-reminder-id="${reminder.id}" data-action-type="${type}" data-default-label="DONE" aria-label="Complete ${labels[type]} reminder" aria-keyshortcuts="${shortcuts[type]}" ${locked ? "disabled" : ""}>${locked ? "✓ DONE" : "DONE"}</button>`
+          : `<button class="card-done" type="button" data-log-action="${type}" data-action-type="${type}" data-default-label="DONE" aria-label="Record ${labels[type]} completed" aria-keyshortcuts="${shortcuts[type]}" ${locked ? "disabled" : ""}>${locked ? "✓ DONE" : "DONE"}</button>`;
+        return `<article class="dashboard-card type-${type}${reminder ? " due" : ""}${isUrgent ? " urgent" : ""}" data-dashboard-card="${type}">
+          ${queueBadge}<div class="status-ring" data-reminder-ring="${type}" style="--ring-progress:${progressDegrees}deg" aria-hidden="true"></div>
+          <strong class="card-time reminder-time${reminder ? " due" : ""}" data-reminder="${type}">${model.remindersEnabled ? formatTime(remaining) : "—:—"}</strong>
+          <span class="card-label">${labels[type]}</span><p class="card-detail">${details[type]}</p>${button}
+        </article>`;
+      }).join("");
+      const urgent = pending[0];
+      const resolution = urgent ? `<div class="reminder-resolution" aria-label="${ACTION_LABELS[urgent.type]} reminder controls">
+        <span class="resolution-label"><span data-resolution-overdue="${urgent.id}">${formatTime(Math.max(0, elapsed - urgent.dueAtSec))} late</span> • ${ACTION_LABELS[urgent.type]} • 1 of ${pending.length}</span>
+        <button class="resolution-action reminder-snooze" type="button" data-reminder-id="${urgent.id}">SNOOZE 5m</button>
+        <button class="resolution-action reminder-skip" type="button" data-reminder-id="${urgent.id}">SKIP</button>
+      </div>` : "";
+      return `<div class="reminder-zone"><div class="reminder-card-grid" aria-label="Stretch, fuel and hydration timers">${cards}</div>${resolution}</div>`;
+    }
+
+    function rideControlsMarkup() {
+      const camera = model.cameraSnapshot;
+      const cameraBadge = model.cameraEnabled
+        ? `<div class="camera-badge ${camera.stableState || "uncertain"}" id="camera-badge">CAMERA ${(camera.stableState || "uncertain").toUpperCase()} ${Math.round((camera.confidence || 0) * 100)}%</div>`
+        : "";
+      const autoToggle = model.cameraEnabled
+        ? `<button class="camera-auto-toggle${model.cameraAutoControl ? "" : " off"}" id="camera-auto-toggle" type="button">${model.cameraAutoControl ? "AUTO ON" : "AUTO OFF"}</button>`
+        : "";
+      const pip = "documentPictureInPicture" in window ? '<button class="pip-mini" id="pip-ride" type="button">PiP</button>' : "";
+      return `${cameraBadge}<div class="ride-utility-controls">${autoToggle}${pip}<button class="ride-pause-button" id="pause-ride" type="button" aria-label="Pause the entire ride" aria-keyshortcuts="P">PAUSE</button></div>`;
+    }
+
+    function aeroMarkup() {
+      const totalSec = totalAeroMs() / 1000;
+      const due = getDueActions();
+      const title = model.rideTargetReached ? "RIDE COMPLETE" : model.intervalComplete ? "BREAK TIME" : "AERO";
+      const subtitle = model.rideTargetReached ? "TAP TO FINISH & REVIEW" : model.intervalComplete ? "TAP TO RECOVER" : due.length ? `${ACTION_LABELS[due[0].type].toUpperCase()} DUE • TAP TO SIT UP` : "TAP TO SIT UP";
+      const headline = formatHeroTime(model.intervalComplete || model.rideTargetReached ? 0 : intervalRemainingSec());
+      const advanceLabel = model.rideTargetReached ? "Finish and review" : model.intervalComplete ? "Start recovery" : due.length ? "Start next due break" : "Pause Aero";
+      return `<section class="screen active-ride aero${model.intervalComplete || model.rideTargetReached ? " alert" : ""}" data-advance="true" role="region" aria-label="Aero training dashboard. Click the background to advance.">
+        ${progressMarkup()}${rideControlsMarkup()}<button class="screen-advance-control" type="button" aria-keyshortcuts="Enter Space">${advanceLabel}</button><div class="aero-dashboard">
+          <section class="aero-hero" aria-label="Current Aero interval">
+            <span class="aero-interval">Interval ${model.intervalNumber} • ${formatTime(model.currentIntervalTargetSec)} target</span>
+            <h1 class="aero-title">${title}</h1><p class="aero-subtitle">${subtitle}</p>
+            <div class="aero-clock"><span class="timer${model.intervalComplete || model.rideTargetReached ? " message" : ""}" id="aero-timer">${headline}</span><span class="aero-percentage" id="aero-percentage">(${aeroAdherencePercent()}%)</span></div>
+            <div class="hero-metrics"><span>Total <strong id="total-aero">${formatTime(totalSec)}</strong></span><span>Goal <strong>${formatTime(model.aeroGoalSec)}</strong></span><span>Best <strong>${formatTime(model.bestIntervalMs / 1000)}</strong></span></div>
+          </section>${scheduleMarkup()}
+        </div>${actionFeedbackMarkup()}
+      </section>`;
+    }
+
+    function pausedMarkup() {
+      const cameraState = model.cameraSnapshot.stableState || "uncertain";
+      const due = getDueActions()[0];
+      const dueLabel = due ? ({ water: "water", fuel: "fuel", stretch: "mobility" })[due.type] : "";
+      const pauseCopy = due
+        ? `${dueLabel[0].toUpperCase() + dueLabel.slice(1)} is due. Your Aero clock is paused; click anywhere to begin this break.`
+        : model.cameraAutoControl
+        ? cameraState === "upright"
+          ? "Camera detected upright and paused your Aero clock. Return to Aero to resume automatically, or click for manual control."
+          : cameraState === "uncertain"
+            ? "Camera is uncertain. Your clock remains paused; return clearly to Aero or click to override manually."
+            : "A manual override is holding the clock paused briefly. Click again or remain clearly in Aero to continue."
+        : "Your Aero interval is preserved. Take a quick adjustment, then click anywhere to continue the same interval.";
+      return `<section class="screen active-ride paused" data-advance="true" role="region" aria-label="Aero paused. Click the background to resume.">
+        ${progressMarkup()}${rideControlsMarkup()}<button class="screen-advance-control" type="button" aria-keyshortcuts="Enter Space">${due ? `Start ${dueLabel} break` : "Resume Aero"}</button><p class="eyebrow">Aero Paused</p><p class="timer">${formatTime(intervalRemainingSec())}</p>
+        <div class="stats"><div class="stat"><span class="stat-label">Interval</span><span class="stat-value">${formatTime(currentIntervalMs()/1000)}</span></div><div class="stat"><span class="stat-label">Total Aero</span><span class="stat-value">${formatTime(totalAeroMs()/1000)}</span></div><div class="stat"><span class="stat-label">Ride</span><span class="stat-value" id="paused-ride">${formatTime(rideMs()/1000)}</span></div></div>
+        <p class="paused-copy">${pauseCopy}</p>
+        <p class="hint">${due ? `Click anywhere • Start ${dueLabel}` : model.cameraAutoControl ? "Return to Aero • Or click to override" : "Click anywhere • Resume Aero"}</p>${activeRideChromeMarkup()}
+      </section>`;
+    }
+
+    function rideSessionPausedMarkup() {
+      const confirmingReview = model.rideExitConfirmation === "review";
+      const confirmingMenu = model.rideExitConfirmation === "menu";
+      return `<section class="screen active-ride ride-session-paused" role="region" aria-label="Ride paused. Ride time, reminders and Aero time are stopped.">
+        ${progressMarkup()}<p class="eyebrow">Ride Paused</p><p class="timer">${formatTime(rideMs() / 1000)}</p>
+        <div class="ride-pause-panel">
+          <p class="ride-pause-copy">Ride time, reminders and your Aero interval are frozen until you resume.</p>
+          <button class="ride-resume-action" id="resume-ride" type="button" aria-keyshortcuts="P">RESUME RIDE</button>
+          <div class="ride-exit-actions">
+            <button class="ride-exit-action end${confirmingReview ? " confirm" : ""}" id="finish-ride" type="button">${confirmingReview ? "CONFIRM END" : "END &amp; REVIEW"}</button>
+            <button class="ride-exit-action${confirmingMenu ? " confirm" : ""}" id="ride-main-menu" type="button">${confirmingMenu ? "CONFIRM MENU" : "BACK TO MAIN MENU"}</button>
+          </div>
+          <p class="ride-save-note">${model.rideExitConfirmation ? "Ride is still paused. Tap the highlighted option again to confirm." : "Ending or returning to the menu saves this ride first."}</p>
+        </div>
+      </section>`;
+    }
+
+    function actionMarkup() {
+      const type = model.currentAction;
+      const meta = ACTION_META[type];
+      const timed = type === "fuel";
+      const remaining = timed && !model.actionFinished ? Math.ceil((model.actionEndsAt - now()) / 1000) : 0;
+      const status = timed ? (model.actionFinished ? meta.ready : formatTime(remaining)) : meta.prompt;
+      const instruction = type === "fuel" ? model.currentFuel : type === "water" ? "Take a proper drink now" : model.currentMobility;
+      const otherPending = Math.max(0, getDueActions().filter(reminder => reminder.id !== model.currentReminderId).length);
+      const resolutionButtons = model.currentReminderId
+        ? '<button class="pending-action action-done" type="button">DONE</button><button class="pending-action action-snooze" type="button">SNOOZE 5m</button><button class="pending-action action-skip" type="button">SKIP</button>'
+        : '<button class="pending-action action-done" type="button" style="grid-column:1/-1">DONE</button>';
+      return `<section class="screen active-ride action-screen ${meta.className}${model.actionFinished ? " finished" : ""}" data-advance="true" role="region" aria-label="${meta.title} break. Click the background when complete.">
+        ${progressMarkup()}${rideControlsMarkup()}<button class="screen-advance-control" type="button" aria-keyshortcuts="Enter Space">Complete break</button><p class="action-title">${meta.title}</p>
+        <p class="timer${!timed || model.actionFinished ? " message" : ""}"${timed ? ' id="action-timer"' : ""}>${status}</p>
+        <p class="instruction">${instruction}</p>${otherPending ? `<p class="pending-count">+${otherPending} reminder${otherPending === 1 ? "" : "s"} queued</p>` : ""}
+        <div class="pending-actions">${resolutionButtons}</div>
+        <p class="hint">Use Done, Snooze or Skip</p>${activeRideChromeMarkup()}
+      </section>`;
+    }
+
+    function reviewActionSection(summary, type) {
+      if (summary.legacy?.actionDetailsUnavailable) {
+        const historicCount = Number(summary.legacy.counts?.[type] || 0);
+        return `<div class="review-section"><h2><span>${ACTION_LABELS[type]}</span><span>${historicCount} recorded</span></h2><p class="review-detail">This older ride saved the total only. Detailed timestamps, intervals, reasons and reminder outcomes were not available, so they have not been invented.</p></div>`;
+      }
+      const stats = summary.actionStats?.[type] || calculateActionStats(summary.actions || [], type, summary.rideSeconds);
+      const reminders = summary.reminderStats?.[type] || calculateReminderStats(summary.reminders || [], type);
+      const reasons = Object.entries(stats.reasons || {}).sort((a, b) => b[1] - a[1]).map(([reason, count]) => `${reason} ${count}`).join(" • ") || "None selected";
+      const later = stats.laterRideChange === "longer" ? `Intervals widened ${Math.abs(stats.laterRideChangePercent)}% later in the ride.`
+        : stats.laterRideChange === "shorter" ? `Intervals shortened ${Math.abs(stats.laterRideChangePercent)}% later in the ride.`
+        : stats.laterRideChange === "stable" ? "Intervals remained broadly stable later in the ride." : "More actions are needed to compare early and late patterns.";
+      const aeroLinked = type === "stretch" ? (summary.actions || []).filter(action => action.type === "stretch" && action.aeroIntervalNumber).length : null;
+      const value = seconds => Number.isFinite(seconds) ? formatTime(seconds) : "—";
+      return `<div class="review-section"><h2><span>${ACTION_LABELS[type]}</span><span>${stats.totalActions} completed</span></h2><div class="review-stats">
+        <span>Average <strong>${value(stats.averageIntervalSec)}</strong></span><span>Median <strong>${value(stats.medianIntervalSec)}</strong></span>
+        <span>Shortest <strong>${value(stats.shortestIntervalSec)}</strong></span><span>Longest <strong>${value(stats.longestIntervalSec)}</strong></span>
+        <span>First <strong>${value(stats.firstActionSec)}</strong></span><span>Final <strong>${value(stats.finalActionSec)}</strong></span>
+      </div><p class="review-detail"><strong>Consistency:</strong> ${stats.consistencyLabel}${Number.isFinite(stats.consistencyScore) ? ` (${stats.consistencyScore}%)` : ""}<br><strong>Reminders:</strong> ${reminders.planned} planned • ${reminders.completed} done • ${reminders.skipped} skipped • ${reminders.missed} missed • ${reminders.snoozed} snoozes<br><strong>Reasons:</strong> ${reasons}<br>${later}${type === "stretch" ? `<br><strong>Aero context:</strong> ${aeroLinked} stretch actions were linked to an Aero interval number.` : ""}</p></div>`;
+    }
+
+    function reviewReasonEditorMarkup(summary) {
+      if (model.reviewReasonEditorDismissed || summary.legacy?.actionDetailsUnavailable) return "";
+      const pending = (summary.actions || [])
+        .filter(action => ACTION_TYPES.includes(action.type) && !action.reason)
+        .sort((a, b) => Number(a.rideElapsedSec) - Number(b.rideElapsedSec));
+      const action = pending[0];
+      if (!action) return "";
+      const completedLabel = { water: "DRANK", fuel: "FUEL TAKEN", stretch: "STRETCH DONE" }[action.type];
+      return `<div class="review-section review-reason-editor"><h2><span>Optional ride context</span><span>1 of ${pending.length}</span></h2>
+        <p class="review-detail">Add a reason only if it will improve future coaching. This question was deliberately postponed until after the ride.</p>
+        <div class="review-reason-action"><strong>${completedLabel} • ${formatTime(action.rideElapsedSec)}</strong></div>
+        <div class="review-reason-chips" role="group" aria-label="Reason for ${completedLabel.toLowerCase()}">${ACTION_REASONS[action.type].map(reason => `<button class="review-reason-chip" type="button" data-review-action-id="${action.id}" data-reason="${reason}">${reason}</button>`).join("")}</div>
+        <button class="mini-action" id="dismiss-review-reasons" type="button">NOT NOW</button>
+      </div>`;
+    }
+
+    function reviewMarkup() {
+      const s = model.summary;
+      const historicCounts = s.legacy?.counts || {};
+      const waterCount = Number.isFinite(Number(s.waterCount)) ? Number(s.waterCount) : Number(historicCounts.water || 0);
+      const fuelCount = Number.isFinite(Number(s.fuelCount)) ? Number(s.fuelCount) : Number(historicCounts.fuel || 0);
+      const stretchCount = Number.isFinite(Number(s.stretchCount)) ? Number(s.stretchCount) : Number(historicCounts.stretch || 0);
+      const intervalLines = s.intervals?.length ? s.intervals.map(item => `<div class="interval-line"><span>Interval ${item.number} • target ${formatTime(item.targetSeconds)}</span><b>${formatTime(item.seconds)} ${item.success ? "✓" : ""}</b></div>`).join("") : `<div class="interval-line"><span>No completed intervals</span><b>—</b></div>`;
+      const cameraReview = s.camera?.enabled ? `<div class="camera-review"><h2>Camera comparison${s.camera.autoControlUsed ? " • Auto control" : " • Observation"}</h2>
+        <p><strong>Detected Aero:</strong> ${formatTime(s.camera.detectedAeroSeconds)} (${s.camera.detectedAeroPercent}% of classifiable camera time)</p>
+        <p><strong>Camera/timer agreement:</strong> ${s.camera.agreementPercent}% • <strong>Coverage:</strong> ${s.camera.coveragePercent}%</p>
+        <p><strong>Uncertain:</strong> ${formatTime(s.camera.uncertainSeconds)} • <strong>Longest detected Aero:</strong> ${formatTime(s.camera.longestAeroSeconds)}</p>
+        ${s.camera.autoControlUsed ? `<p><strong>Automatic changes:</strong> ${s.camera.autoPauseCount} pauses • ${s.camera.autoResumeCount} resumes • ${s.camera.manualOverrideCount} manual overrides</p>` : ""}
+        <p>Calibration quality ${s.camera.calibrationQuality}%.</p></div>` : "";
+      const observations = s.coachingObservations || [];
+      const coaching = observations.length
+        ? `<div class="coaching-box"><h2>Coaching summary • ${s.mode || "fixed"} mode</h2>${observations.map(text => `<p>${text}</p>`).join("")}<p>These are patterns in recorded data, not medical advice or proof of cause.</p></div>`
+        : `<div class="coaching-box"><h2>Learning status</h2><p>More completed actions and comparable rides are needed before personalised observations can be supported.</p></div>`;
+      return `<section class="screen review"><h1>RIDE REVIEW</h1><p class="review-date">${new Date(s.startedIso).toLocaleString()} • ${(s.mode || "fixed").toUpperCase()} MODE</p>
+        <div class="review-grid">
+          <div class="review-card"><strong>${formatTime(s.rideSeconds)}</strong><span>Total ride</span></div>
+          <div class="review-card"><strong>${formatTime(s.aeroSeconds)}</strong><span>Total Aero</span></div>
+          <div class="review-card"><strong>${s.aeroPercent}%</strong><span>Ride in Aero</span></div>
+          <div class="review-card"><strong>${formatTime(s.bestIntervalSeconds)}</strong><span>Best interval</span></div>
+          <div class="review-card"><strong>${s.completedIntervals}</strong><span>Intervals hit</span></div>
+          <div class="review-card"><strong>${waterCount} / ${fuelCount} / ${stretchCount}</strong><span>Water / Fuel / Stretch</span></div>
+        </div>
+        ${model.historySaveError ? `<div class="coaching-box"><p>${model.historySaveError}</p></div>` : ""}${coaching}${reviewReasonEditorMarkup(s)}
+        ${reviewActionSection(s, "fuel")}${reviewActionSection(s, "water")}${reviewActionSection(s, "stretch")}
+        ${cameraReview}
+        <div class="interval-list"><h2>Aero intervals</h2>${intervalLines}</div>
+        <div class="setup-actions"><button class="action secondary" id="view-history" type="button">VIEW RIDE HISTORY</button><button class="action" id="new-ride" type="button">START ANOTHER RIDE</button></div>
+      </section>`;
+    }
+
+    function historyMarkup() {
+      const history = loadHistory();
+      return `<section class="screen review"><h1>RIDE HISTORY</h1><p class="review-date">Stored locally on this browser</p>
+        <div class="interval-list"><h2>Recent rides</h2>${history.length ? history.map((ride, index) => `<button class="interval-line history-ride" type="button" data-history-index="${index}" style="width:100%;background:none;border-right:0;border-left:0;border-bottom:0;cursor:pointer"><span>${new Date(ride.startedIso).toLocaleDateString()} • ${formatTime(ride.rideSeconds)} • ${(ride.mode || "fixed").toUpperCase()}</span><b>${Math.round(ride.aeroPercent || 0)}% Aero</b></button>`).join("") : '<div class="interval-line"><span>No saved rides</span><b>—</b></div>'}</div>
+        <div class="setup-actions"><button class="action secondary" id="history-back" type="button">BACK TO SETUP</button></div>
+      </section>`;
+    }
+
+    function screenMarkup() {
+      if (model.state === "setup") return setupMarkup();
+      if (model.state === "camera-setup") return cameraSetupMarkup();
+      if (model.state === "aero") return aeroMarkup();
+      if (model.state === "paused") return pausedMarkup();
+      if (model.state === "ride-paused") return rideSessionPausedMarkup();
+      if (model.state === "action") return actionMarkup();
+      if (model.state === "history") return historyMarkup();
+      return reviewMarkup();
+    }
+
+    function render() {
+      document.body.classList.toggle("camera-preview", model.state === "camera-setup" && model.cameraStep !== "permission");
+      const root = activeRoot();
+      if (!root) return;
+      root.innerHTML = screenMarkup();
+      bindControls(activeDocument());
+      if (model.state === "setup") updateModeUi(activeDocument());
+    }
+
+    function bindControls(doc) {
+      bindDocumentShortcuts(doc);
+      doc.getElementById("start-ride")?.addEventListener("click", event => { event.stopPropagation(); startRide(doc); });
+      doc.getElementById("pop-out")?.addEventListener("click", async event => { event.stopPropagation(); await openPictureInPicture(doc); });
+      doc.getElementById("pip-ride")?.addEventListener("click", async event => { event.stopPropagation(); await openPictureInPicture(doc); });
+      doc.querySelector(".screen-advance-control")?.addEventListener("click", event => { event.stopPropagation(); advance("manual"); });
+      doc.getElementById("pause-ride")?.addEventListener("click", event => { event.stopPropagation(); pauseRide(); });
+      doc.getElementById("resume-ride")?.addEventListener("click", event => { event.stopPropagation(); resumeRide(); });
+      doc.getElementById("camera-auto-toggle")?.addEventListener("click", event => { event.stopPropagation(); toggleCameraAutoControl(); });
+      doc.getElementById("camera-enabled")?.addEventListener("change", event => { event.stopPropagation(); updateCameraSetupUi(doc); });
+      doc.getElementById("finish-ride")?.addEventListener("click", event => { event.stopPropagation(); requestRideExit("review"); });
+      doc.getElementById("ride-main-menu")?.addEventListener("click", event => { event.stopPropagation(); requestRideExit("menu"); });
+      doc.getElementById("new-ride")?.addEventListener("click", event => { event.stopPropagation(); resetToSetup(); });
+      doc.getElementById("view-history")?.addEventListener("click", event => { event.stopPropagation(); model.state = "history"; render(); });
+      doc.getElementById("history-back")?.addEventListener("click", event => { event.stopPropagation(); model.state = "setup"; render(); });
+      doc.querySelectorAll(".history-ride").forEach(button => button.addEventListener("click", event => {
+        event.stopPropagation();
+        const ride = loadHistory()[Number(button.dataset.historyIndex)];
+        if (ride) { model.summary = ride; model.historySaveError = ""; model.reviewReasonEditorDismissed = false; model.state = "review"; render(); }
+      }));
+      doc.getElementById("enable-camera")?.addEventListener("click", event => { event.stopPropagation(); prepareCamera(); });
+      doc.getElementById("retry-camera")?.addEventListener("click", event => { event.stopPropagation(); retryCamera(); });
+      doc.getElementById("capture-upright")?.addEventListener("click", event => { event.stopPropagation(); captureCalibration("upright"); });
+      doc.getElementById("capture-aero")?.addEventListener("click", event => { event.stopPropagation(); captureCalibration("aero"); });
+      doc.getElementById("begin-calibrated-ride")?.addEventListener("click", event => { event.stopPropagation(); beginRide(model.pendingRideValues, true); });
+      doc.getElementById("skip-camera")?.addEventListener("click", event => { event.stopPropagation(); skipCamera(); });
+      doc.querySelectorAll("[name='ride-mode']").forEach(input => input.addEventListener("change", event => { event.stopPropagation(); model.rideMode = input.value; updateModeUi(doc); }));
+      doc.getElementById("observation-reminders")?.addEventListener("change", () => updateModeUi(doc));
+      doc.getElementById("ride-minutes")?.addEventListener("change", () => updateModeUi(doc));
+      for (const [type, inputId] of Object.entries({ water: "water-every", fuel: "fuel-every", stretch: "stretch-every" })) {
+        doc.getElementById(inputId)?.addEventListener("change", () => {
+          const settings = loadSettings();
+          const seconds = Number(doc.getElementById(inputId)?.value) * 60;
+          if (settings.acceptedIntervals[type]?.seconds !== seconds) delete settings.acceptedIntervals[type];
+          model.ignoredRecommendations[type] = null;
+          saveSettings(settings);
+          updateModeUi(doc);
+        });
+      }
+      bindLearningControls(doc);
+      doc.querySelectorAll("[data-log-action]").forEach(button => button.addEventListener("click", event => {
+        event.stopPropagation();
+        const type = button.dataset.logAction;
+        const result = recordCompletedAction(type, { source: "manual", recordedVia: "manual-button" });
+        if (!result.duplicate && model.state === "action" && model.currentAction === type) continueAfterActionResolution();
+      }));
+      doc.querySelectorAll(".review-reason-chip").forEach(button => button.addEventListener("click", event => { event.stopPropagation(); setReviewActionReason(button.dataset.reviewActionId, button.dataset.reason); }));
+      doc.getElementById("dismiss-review-reasons")?.addEventListener("click", event => { event.stopPropagation(); model.reviewReasonEditorDismissed = true; render(); });
+      doc.querySelectorAll(".reminder-done").forEach(button => button.addEventListener("click", event => {
+        event.stopPropagation();
+        const reminder = model.reminders.find(item => item.id === button.dataset.reminderId);
+        if (reminder) recordCompletedAction(reminder.type, { source: "reminder", recordedVia: "reminder-done", reminderId: reminder.id });
+      }));
+      doc.querySelectorAll(".reminder-snooze").forEach(button => button.addEventListener("click", event => { event.stopPropagation(); snoozeReminder(button.dataset.reminderId); }));
+      doc.querySelectorAll(".reminder-skip").forEach(button => button.addEventListener("click", event => { event.stopPropagation(); skipReminder(button.dataset.reminderId); }));
+      doc.querySelector(".action-done")?.addEventListener("click", event => { event.stopPropagation(); completeActionAndContinue(); });
+      doc.querySelector(".action-snooze")?.addEventListener("click", event => { event.stopPropagation(); if (model.currentReminderId) snoozeReminder(model.currentReminderId); });
+      doc.querySelector(".action-skip")?.addEventListener("click", event => { event.stopPropagation(); if (model.currentReminderId) skipReminder(model.currentReminderId); });
+    }
+
+    function bindDocumentShortcuts(doc) {
+      if (shortcutDocuments.has(doc)) return;
+      shortcutDocuments.add(doc);
+      doc.addEventListener("keydown", event => {
+        const target = event.target;
+        if (target?.closest?.("input, textarea, select, button")) return;
+        if (!["aero", "paused", "ride-paused", "action"].includes(model.state)) return;
+        if (event.key.toLowerCase() === "p") {
+          event.preventDefault();
+          if (model.state === "ride-paused") resumeRide(); else pauseRide();
+          return;
+        }
+        if (model.state === "ride-paused") {
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); resumeRide(); }
+          return;
+        }
+        const shortcutType = ({ "1": "water", "2": "fuel", "3": "stretch" })[event.key];
+        if (shortcutType) {
+          event.preventDefault();
+          const result = recordCompletedAction(shortcutType, { source: "manual", recordedVia: "keyboard" });
+          if (!result.duplicate && model.state === "action" && model.currentAction === shortcutType) continueAfterActionResolution();
+          return;
+        }
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault(); advance("manual");
+        }
+      });
+    }
+
+    function bindLearningControls(doc) {
+      doc.querySelectorAll(".use-recommendation").forEach(button => button.addEventListener("click", event => {
+        event.stopPropagation();
+        const input = doc.getElementById(button.dataset.input);
+        if (input) input.value = Math.round(Number(button.dataset.seconds) / 60);
+        const settings = loadSettings();
+        settings.acceptedIntervals[button.dataset.type] = { seconds: Number(button.dataset.seconds), source: "history", ridesUsed: Number(button.dataset.rides), acceptedAtIso: new Date().toISOString() };
+        model.ignoredRecommendations[button.dataset.type] = null;
+        saveSettings(settings);
+        updateModeUi(doc);
+      }));
+      doc.querySelectorAll(".ignore-recommendation").forEach(button => button.addEventListener("click", event => {
+        event.stopPropagation();
+        model.ignoredRecommendations[button.dataset.type] = Number(button.dataset.seconds);
+        updateModeUi(doc);
+      }));
+      doc.querySelectorAll(".show-recommendation").forEach(button => button.addEventListener("click", event => {
+        event.stopPropagation();
+        model.ignoredRecommendations[button.dataset.type] = null;
+        updateModeUi(doc);
+      }));
+      doc.querySelectorAll(".edit-recommendation").forEach(button => button.addEventListener("click", event => {
+        event.stopPropagation();
+        const input = doc.getElementById(button.dataset.input);
+        input?.focus();
+        input?.select();
+        announce(`Edit the ${ACTION_LABELS[button.dataset.type].toLowerCase()} interval, then continue when ready.`);
+      }));
+      doc.querySelectorAll(".reset-learning").forEach(button => button.addEventListener("click", event => { event.stopPropagation(); model.learningResetConfirmType = button.dataset.type; updateModeUi(doc); }));
+      doc.querySelectorAll(".confirm-reset-learning").forEach(button => button.addEventListener("click", event => {
+        event.stopPropagation(); resetLearningFor(button.dataset.type); model.learningResetConfirmType = null; updateModeUi(doc);
+      }));
+      doc.querySelectorAll(".cancel-reset-learning").forEach(button => button.addEventListener("click", event => { event.stopPropagation(); model.learningResetConfirmType = null; updateModeUi(doc); }));
+    }
+
+    function updateCameraSetupUi(doc) {
+      const enabled = Boolean(doc.getElementById("camera-enabled")?.checked);
+      const setup = doc.querySelector(".setup");
+      if (setup) setup.dataset.cameraEnabled = String(enabled);
+      const options = doc.getElementById("camera-options");
+      if (options) options.hidden = !enabled;
+      const auto = doc.getElementById("camera-auto");
+      if (auto) auto.disabled = !enabled;
+    }
+
+    function updateModeUi(doc) {
+      const mode = doc.querySelector("[name='ride-mode']:checked")?.value || model.rideMode || "fixed";
+      model.rideMode = mode;
+      const setup = doc.querySelector(".setup");
+      if (setup) setup.dataset.mode = mode;
+      const descriptions = {
+        fixed: "Use your editable fixed schedules. Manual actions are still recorded for review.",
+        observation: "Learn your natural habits. Manual actions are recorded; fixed reminders are optional.",
+        coach: "Compare recent similar rides and choose whether to use any history-based suggestion."
+      };
+      const description = doc.getElementById("mode-description");
+      if (description) description.textContent = descriptions[mode];
+      const settings = loadSettings();
+      settings.preferredMode = mode;
+      settings.observationReminders = Boolean(doc.getElementById("observation-reminders")?.checked);
+      saveSettings(settings);
+      const cards = doc.getElementById("learning-cards");
+      if (cards) {
+        const plannedSec = Math.max(60, Number(doc.getElementById("ride-minutes")?.value || 90) * 60);
+        cards.innerHTML = learningCardsMarkup(loadHistory(), settings, plannedSec, mode);
+      }
+      const management = doc.getElementById("learning-management");
+      if (management) management.innerHTML = learningManagementMarkup();
+      bindLearningControls(doc);
+      updateCameraSetupUi(doc);
+    }
+
+    function updateCameraUi(doc) {
+      if (!doc) return;
+      const snapshot = model.cameraSnapshot;
+      const badge = doc.getElementById("camera-badge");
+      if (badge) {
+        const state = snapshot.stableState || "uncertain";
+        badge.className = `camera-badge ${state}`;
+        badge.textContent = `CAMERA ${state.toUpperCase()} ${Math.round((snapshot.confidence || 0) * 100)}%`;
+        badge.title = snapshot.reason || "Passive camera observation";
+      }
+      const countdown = doc.getElementById("camera-countdown");
+      if (countdown && snapshot.capture) countdown.textContent = Math.max(0, Math.ceil(snapshot.capture.remaining));
+    }
+
+    function handleCameraControl(snapshot) {
+      const action = decideCameraTimerAction({
+        enabled: model.cameraEnabled && model.cameraAutoControl,
+        stableState: snapshot.stableState,
+        rideState: model.state,
+        intervalComplete: model.intervalComplete,
+        rideTargetReached: model.rideTargetReached,
+        manualHoldActive: now() < model.cameraControlHoldUntil
+      });
+      if (action === "pause") {
+        pauseAero();
+        model.state = "paused";
+        model.cameraPauseReason = "Camera detected upright.";
+        model.events.push({ type: "camera-auto-pause", at: rideMs() / 1000, interval: model.intervalNumber });
+        render();
+      } else if (action === "resume") {
+        model.cameraPauseReason = "";
+        startOrResumeAero("camera");
+      }
+    }
+
+    function toggleCameraAutoControl() {
+      model.cameraAutoControl = !model.cameraAutoControl;
+      if (model.cameraAutoControl) {
+        model.cameraAutoEverEnabled = true;
+        model.cameraControlHoldUntil = now() + 1000;
+        model.events.push({ type: "camera-auto-enabled", at: rideMs() / 1000 });
+      } else {
+        model.cameraControlHoldUntil = 0;
+        model.events.push({ type: "camera-auto-disabled", at: rideMs() / 1000 });
+      }
+      render();
+    }
+
+    function readPositive(doc, id, allowZero = false) {
+      const input = doc.getElementById(id);
+      const value = Number(input?.value);
+      if (!Number.isFinite(value) || (allowZero ? value < 0 : value <= 0)) {
+        input?.focus(); input?.select(); throw new Error("invalid input");
+      }
+      return value;
+    }
+
+    function startRide(doc) {
+      let values;
+      try {
+        values = {
+          ride: readPositive(doc, "ride-minutes") * 60,
+          aeroGoal: readPositive(doc, "aero-goal") * 60,
+          interval: readPositive(doc, "interval-minutes") * 60,
+          progression: readPositive(doc, "progression-minutes", true) * 60,
+          waterEvery: readPositive(doc, "water-every") * 60,
+          fuelEvery: readPositive(doc, "fuel-every") * 60,
+          stretchEvery: readPositive(doc, "stretch-every") * 60,
+          fuelDuration: readPositive(doc, "fuel-seconds")
+        };
+      } catch (_) { return; }
+      values.mode = doc.querySelector("[name='ride-mode']:checked")?.value || "fixed";
+      values.remindersEnabled = values.mode !== "observation" || Boolean(doc.getElementById("observation-reminders")?.checked);
+      const savedSettings = loadSettings();
+      const selectedIntervals = { water: values.waterEvery, fuel: values.fuelEvery, stretch: values.stretchEvery };
+      values.intervalSources = Object.fromEntries(ACTION_TYPES.map(type => [type,
+        savedSettings.acceptedIntervals[type]?.source === "history" && savedSettings.acceptedIntervals[type].seconds === selectedIntervals[type]
+          ? "history-based" : values.mode === "fixed" ? "fixed" : "athlete-entered"
+      ]));
+      values.acceptedRecommendations = Object.fromEntries(ACTION_TYPES.flatMap(type => {
+        const accepted = savedSettings.acceptedIntervals[type];
+        return accepted?.source === "history" && accepted.seconds === selectedIntervals[type] ? [[type, structuredClone(accepted)]] : [];
+      }));
+      savedSettings.preferredMode = values.mode;
+      savedSettings.observationReminders = Boolean(doc.getElementById("observation-reminders")?.checked);
+      saveSettings(savedSettings);
+      const cameraEnabled = Boolean(doc.getElementById("camera-enabled")?.checked);
+      values.cameraAuto = cameraEnabled && Boolean(doc.getElementById("camera-auto")?.checked);
+      if (cameraEnabled) {
+        unlockAudio();
+        model.pendingRideValues = values;
+        model.cameraEnabled = true;
+        model.cameraStep = "permission";
+        model.cameraError = "";
+        model.state = "camera-setup";
+        if (model.pipWindow && !model.pipWindow.closed) {
+          const pip = model.pipWindow;
+          model.pipWindow = null;
+          pip.close();
+        }
+        render();
+        return;
+      }
+      beginRide(values, false);
+    }
+
+    function beginRide(values, cameraEnabled) {
+      unlockAudio();
+      const startedAt = now();
+      const autoControl = cameraEnabled && Boolean(values.cameraAuto);
+      Object.assign(model, {
+        state: autoControl ? "paused" : "aero", rideStartedAt: startedAt, rideStartedIso: new Date().toISOString(),
+        ridePausedAt: 0, accumulatedRidePauseMs: 0, ridePausedFromState: null, pausedActionRemainingMs: 0, rideExitConfirmation: null,
+        plannedRideSec: values.ride, aeroGoalSec: values.aeroGoal, baseIntervalSec: values.interval,
+        progressionSec: values.progression, currentIntervalTargetSec: values.interval,
+        fuelEverySec: values.fuelEvery, waterEverySec: values.waterEvery, stretchEverySec: values.stretchEvery,
+        fuelDurationSec: values.fuelDuration,
+        nextDue: { fuel: values.fuelEvery, water: values.waterEvery, stretch: values.stretchEvery },
+        accumulatedAeroMs: 0, intervalAccumulatedMs: 0, aeroSegmentStartedAt: autoControl ? 0 : startedAt,
+        intervalNumber: 1, intervalComplete: false, intervalRecorded: false, bestIntervalMs: 0,
+        intervals: [], events: [{ type: "ride-start", at: 0 }, ...(autoControl ? [{ type: "camera-auto-enabled", at: 0 }] : [])], notified: new Set(),
+        rideMode: values.mode, remindersEnabled: values.remindersEnabled, reminders: [], completedActions: [],
+        actionLocks: { water: 0, fuel: 0, stretch: 0 }, actionFeedback: null, reviewReasonEditorDismissed: false, currentReminderId: null,
+        acceptedRecommendations: values.acceptedRecommendations, intervalSources: values.intervalSources, historySaveError: "",
+        nutritionIndex: 0, currentFuel: nutritionPlan[0], currentMobility: randomMobility(),
+        rideTargetReached: false, summary: null, cameraEnabled,
+        cameraAutoControl: autoControl, cameraAutoEverEnabled: autoControl,
+        cameraControlHoldUntil: 0, cameraPauseReason: autoControl ? "Waiting for a stable Aero position." : ""
+      });
+      document.body.classList.remove("camera-preview");
+      if (cameraEnabled) cameraObserver.beginSession();
+      render();
+    }
+
+    async function prepareCamera() {
+      model.cameraStep = "loading";
+      model.cameraError = "";
+      render();
+      try {
+        await cameraObserver.start();
+        model.cameraStep = "upright";
+      } catch (error) {
+        model.cameraStep = "error";
+        model.cameraError = error?.message || "Camera could not start.";
+      }
+      render();
+    }
+
+    async function captureCalibration(label) {
+      model.cameraError = "";
+      try {
+        const promise = cameraObserver.capturePose(label, 4);
+        render();
+        await promise;
+        if (label === "upright") {
+          model.cameraStep = "aero";
+        } else {
+          cameraObserver.finalizeCalibration();
+          model.cameraStep = "ready";
+        }
+      } catch (error) {
+        model.cameraStep = "error";
+        model.cameraError = error?.message || "Calibration failed.";
+      }
+      render();
+    }
+
+    async function retryCamera() {
+      await cameraObserver.stop();
+      model.cameraSnapshot = cameraObserver.getSnapshot();
+      model.cameraStep = "permission";
+      model.cameraError = "";
+      render();
+    }
+
+    async function skipCamera() {
+      await cameraObserver.stop();
+      model.cameraEnabled = false;
+      beginRide(model.pendingRideValues, false);
+    }
+
+    function randomMobility() { return mobilityPlan[Math.floor(Math.random() * mobilityPlan.length)]; }
+
+    function pauseAero() {
+      const live = liveAeroMs();
+      model.accumulatedAeroMs += live;
+      model.intervalAccumulatedMs += live;
+      model.aeroSegmentStartedAt = 0;
+    }
+
+    function pauseRide() {
+      if (!["aero", "paused", "action"].includes(model.state) || model.ridePausedAt) return;
+      const pausedFrom = model.state;
+      if (pausedFrom === "aero") pauseAero();
+      model.pausedActionRemainingMs = pausedFrom === "action" && model.currentAction === "fuel" && !model.actionFinished
+        ? Math.max(0, model.actionEndsAt - now())
+        : 0;
+      model.ridePausedFromState = pausedFrom;
+      model.rideExitConfirmation = null;
+      model.ridePausedAt = now();
+      model.state = "ride-paused";
+      model.events.push({ type: "ride-pause", at: rideMs() / 1000, from: pausedFrom });
+      announce("Ride paused. All ride timers are stopped.");
+      render();
+    }
+
+    function resumeRide() {
+      if (model.state !== "ride-paused" || !model.ridePausedAt) return;
+      const resumedAt = now();
+      const pausedDuration = Math.max(0, resumedAt - model.ridePausedAt);
+      let resumeState = model.ridePausedFromState || "paused";
+      model.accumulatedRidePauseMs += pausedDuration;
+      model.ridePausedAt = 0;
+      if (resumeState === "aero" && model.cameraAutoControl && model.cameraSnapshot.stableState !== "aero") {
+        resumeState = "paused";
+        model.cameraPauseReason = "Ride resumed; waiting for Camera Aero.";
+      }
+      model.state = resumeState;
+      if (resumeState === "aero" && !model.intervalComplete && !model.rideTargetReached) model.aeroSegmentStartedAt = resumedAt;
+      if (resumeState === "action" && model.currentAction === "fuel" && !model.actionFinished) {
+        model.actionEndsAt = resumedAt + model.pausedActionRemainingMs;
+      }
+      model.events.push({ type: "ride-resume", at: rideMs() / 1000, to: resumeState, pausedSeconds: pausedDuration / 1000 });
+      model.ridePausedFromState = null;
+      model.pausedActionRemainingMs = 0;
+      model.rideExitConfirmation = null;
+      announce("Ride resumed.");
+      render();
+    }
+
+    function completeInterval() {
+      if (model.intervalComplete) return;
+      pauseAero();
+      model.intervalComplete = true;
+      model.bestIntervalMs = Math.max(model.bestIntervalMs, model.intervalAccumulatedMs);
+      if (!model.intervalRecorded) {
+        model.intervals.push({ number: model.intervalNumber, targetSeconds: model.currentIntervalTargetSec, seconds: model.intervalAccumulatedMs / 1000, success: true });
+        model.events.push({ type: "interval-complete", at: rideMs() / 1000, interval: model.intervalNumber });
+        model.intervalRecorded = true;
+      }
+      beep(); render();
+    }
+
+    function startOrResumeAero(source = "manual") {
+      if (model.intervalComplete) {
+        model.intervalNumber += 1;
+        model.currentIntervalTargetSec = model.baseIntervalSec + (model.intervalNumber - 1) * model.progressionSec;
+        model.intervalAccumulatedMs = 0;
+        model.intervalComplete = false;
+        model.intervalRecorded = false;
+      }
+      model.state = "aero";
+      model.aeroSegmentStartedAt = now();
+      model.events.push({ type: source === "camera" ? "camera-auto-resume" : "aero-resume", at: rideMs() / 1000, interval: model.intervalNumber });
+      render();
+    }
+
+    function announce(message) {
+      const status = activeDocument().getElementById("hud-status");
+      if (status) status.textContent = message;
+    }
+
+    function findOpenReminder(type, reminderId = null, elapsed = rideMs() / 1000) {
+      return findReminderForAction(model.reminders, type, elapsed, reminderId);
+    }
+
+    function createEarlyPlannedReminder(type, elapsed) {
+      if (!model.remindersEnabled) return null;
+      const cadence = type === "water" ? model.waterEverySec : type === "fuel" ? model.fuelEverySec : model.stretchEverySec;
+      const timeToNext = model.nextDue[type] - elapsed;
+      const earlyWindow = Math.min(120, cadence * .1);
+      if (timeToNext < 0 || timeToNext > earlyWindow) return null;
+      const reminder = createReminder({ type, dueAtSec: model.nextDue[type], intervalSec: cadence, source: model.intervalSources[type] || "fixed" });
+      model.reminders.push(reminder);
+      model.nextDue[type] += cadence;
+      return reminder;
+    }
+
+    function recordCompletedAction(type, { source = "manual", recordedVia = "manual-button", reminderId = null } = {}) {
+      const elapsed = rideMs() / 1000;
+      let reminder = findOpenReminder(type, reminderId, elapsed);
+      if (!reminder && source === "manual") reminder = createEarlyPlannedReminder(type, elapsed);
+      const latest = [...model.completedActions].reverse().find(action => action.type === type);
+      if (isDuplicateAction(model.completedActions, type, elapsed)) {
+        model.actionFeedback = { text: `${ACTION_LABELS[type]} already recorded`, expiresAt: now() + 2500 };
+        announce(`${ACTION_LABELS[type]} already recorded.`);
+        render();
+        return { action: latest, duplicate: true };
+      }
+
+      const triggeredByReminder = Boolean(reminder && reminder.dueAtSec <= elapsed);
+      const actionSource = triggeredByReminder ? "reminder" : reminder ? "planned" : source;
+      const posture = model.cameraEnabled ? model.cameraSnapshot.stableState || "uncertain" : model.state === "aero" ? "aero" : "upright";
+      const action = createCompletedAction({
+        type,
+        rideElapsedSec: elapsed,
+        timestampIso: new Date().toISOString(),
+        source: actionSource,
+        recordedVia,
+        planned: Boolean(reminder),
+        reminderId: reminder?.id || null,
+        posture,
+        rideState: model.state,
+        aeroIntervalNumber: model.intervalNumber
+      });
+      model.completedActions.push(action);
+      model.events.push({
+        id: action.id,
+        kind: "completed-action",
+        type: `${type}-complete`,
+        actionType: type,
+        at: elapsed,
+        timestampIso: action.timestampIso,
+        source: action.source,
+        recordedVia,
+        planned: action.planned,
+        reminderId: action.reminderId,
+        reason: null,
+        cameraState: model.cameraEnabled ? model.cameraSnapshot.stableState : "off",
+        timerState: model.state,
+        interval: model.intervalNumber
+      });
+      if (reminder) {
+        completeReminderRecord(reminder, action, elapsed);
+      }
+      if (type === "fuel") { model.nutritionIndex += 1; model.currentFuel = nutritionPlan[model.nutritionIndex % nutritionPlan.length]; }
+      if (type === "stretch") model.currentMobility = randomMobility();
+      model.actionLocks[type] = now() + 4000;
+      model.actionFeedback = { text: `${ACTION_LABELS[type]} saved`, expiresAt: now() + 4000 };
+      announce(`${ACTION_LABELS[type]} saved.`);
+      render();
+      return { action, duplicate: false };
+    }
+
+    function setReviewActionReason(actionId, reason) {
+      const summary = model.summary;
+      if (!summary) return;
+      const action = updateCompletedActionReason(summary.actions || [], actionId, reason);
+      if (!action) return;
+      const event = (summary.events || []).find(item => item.id === actionId);
+      if (event) { event.reason = reason; event.planned = action.planned; }
+      summary.actionStats = Object.fromEntries(ACTION_TYPES.map(type => [type, calculateActionStats(summary.actions || [], type, summary.rideSeconds)]));
+      summary.coachingObservations = buildCoachingObservations(summary, loadHistory());
+      try {
+        saveRide(summary);
+        model.historySaveError = "";
+      } catch (error) {
+        model.historySaveError = "Ride context could not be saved locally. Keep this screen open and try again.";
+      }
+      announce(`${reason} context saved for ${ACTION_LABELS[action.type].toLowerCase()}.`);
+      render();
+    }
+
+    function snoozeReminder(reminderId, minutes = 5) {
+      const reminder = model.reminders.find(item => item.id === reminderId && ["pending", "snoozed"].includes(item.status));
+      if (!reminder) return;
+      const elapsed = rideMs() / 1000;
+      snoozeReminderRecord(reminder, elapsed, minutes);
+      model.events.push({ type: "reminder-snoozed", reminderId, actionType: reminder.type, at: elapsed, minutes });
+      model.actionFeedback = { text: `${ACTION_LABELS[reminder.type]} snoozed ${minutes} minutes`, expiresAt: now() + 3000 };
+      announce(`${ACTION_LABELS[reminder.type]} reminder snoozed for ${minutes} minutes.`);
+      if (model.state === "action" && model.currentReminderId === reminderId) continueAfterActionResolution(); else render();
+    }
+
+    function skipReminder(reminderId) {
+      const reminder = model.reminders.find(item => item.id === reminderId && ["pending", "snoozed"].includes(item.status));
+      if (!reminder) return;
+      const elapsed = rideMs() / 1000;
+      skipReminderRecord(reminder, elapsed);
+      model.events.push({ type: "reminder-skipped", reminderId, actionType: reminder.type, at: elapsed });
+      model.actionFeedback = { text: `${ACTION_LABELS[reminder.type]} reminder skipped`, expiresAt: now() + 3000 };
+      announce(`${ACTION_LABELS[reminder.type]} reminder skipped.`);
+      if (model.state === "action" && model.currentReminderId === reminderId) continueAfterActionResolution(); else render();
+    }
+
+    function startAction(type, scheduled = true, reminderId = null) {
+      model.state = "action";
+      model.currentAction = type;
+      model.actionScheduled = scheduled;
+      model.currentReminderId = reminderId || (scheduled ? getDueActions().find(reminder => reminder.type === type)?.id || null : null);
+      model.actionFinished = false;
+      model.actionEndsAt = type === "fuel" ? now() + model.fuelDurationSec * 1000 : 0;
+      model.events.push({ type: `${type}-start`, at: rideMs() / 1000, scheduled, reminderId: model.currentReminderId });
+      render();
+    }
+
+    function completeActionAndContinue() {
+      const type = model.currentAction;
+      recordCompletedAction(type, { source: model.actionScheduled ? "reminder" : "manual", recordedVia: "action-screen", reminderId: model.currentReminderId });
+      continueAfterActionResolution();
+    }
+
+    function continueAfterActionResolution() {
+      model.currentReminderId = null;
+      const nextDue = getDueActions()[0];
+      if (nextDue) startAction(nextDue.type, true, nextDue.id);
+      else if (shouldWaitForAeroAfterBreak({ enabled: model.cameraAutoControl, stableState: model.cameraSnapshot.stableState })) {
+        model.cameraControlHoldUntil = 0;
+        model.state = "paused";
+        model.aeroSegmentStartedAt = 0;
+        model.cameraPauseReason = "Break complete; waiting for Camera Aero.";
+        model.events.push({ type: "camera-waiting-for-aero", at: rideMs() / 1000 });
+        render();
+      } else {
+        model.cameraControlHoldUntil = 0;
+        startOrResumeAero();
+      }
+    }
+
+    function advance(source = "manual") {
+      unlockAudio();
+      const manualTimerOverride = (model.state === "aero" && !model.intervalComplete && !model.rideTargetReached)
+        || (model.state === "paused" && !getDueActions().length);
+      if (source === "manual" && model.cameraAutoControl && manualTimerOverride) {
+        model.cameraControlHoldUntil = now() + CAMERA_MANUAL_HOLD_MS;
+        model.events.push({ type: "camera-manual-override", at: rideMs() / 1000, from: model.state });
+      }
+      if (model.state === "aero") {
+        pauseAero();
+        if (model.rideTargetReached) { finishRide(); return; }
+        const due = getDueActions()[0];
+        if (due) startAction(due.type, true, due.id);
+        else if (model.intervalComplete) startAction("stretch", false);
+        else { model.state = "paused"; model.events.push({ type: "aero-pause", at: rideMs() / 1000 }); render(); }
+      } else if (model.state === "paused") {
+        const due = getDueActions()[0];
+        if (due) startAction(due.type, true, due.id); else startOrResumeAero();
+      } else if (model.state === "action") completeActionAndContinue();
+    }
+
+    function finishRide({ returnToSetup = false } = {}) {
+      if (model.state === "aero") pauseAero();
+      const rideSeconds = rideMs() / 1000;
+      const endedIso = new Date().toISOString();
+      if (model.intervalAccumulatedMs > 0 && !model.intervalRecorded) {
+        model.intervals.push({ number: model.intervalNumber, targetSeconds: model.currentIntervalTargetSec, seconds: model.intervalAccumulatedMs / 1000, success: false });
+      }
+      model.reminders.forEach(reminder => { if (["pending", "snoozed"].includes(reminder.status)) reminder.status = "missed"; });
+      const count = type => model.completedActions.filter(action => action.type === type).length;
+      const actionStats = Object.fromEntries(ACTION_TYPES.map(type => [type, calculateActionStats(model.completedActions, type, rideSeconds)]));
+      const reminderStats = Object.fromEntries(ACTION_TYPES.map(type => [type, calculateReminderStats(model.reminders, type)]));
+      const cameraSummary = model.cameraEnabled ? cameraObserver.endSession(rideSeconds) : { enabled: false };
+      if (cameraSummary.enabled) Object.assign(cameraSummary, {
+        autoControlUsed: model.cameraAutoEverEnabled,
+        autoPauseCount: model.events.filter(event => event.type === "camera-auto-pause").length,
+        autoResumeCount: model.events.filter(event => event.type === "camera-auto-resume").length,
+        manualOverrideCount: model.events.filter(event => event.type === "camera-manual-override").length
+      });
+      model.summary = {
+        schemaVersion: RIDE_SCHEMA_VERSION,
+        id: `ride-${model.rideStartedIso}`,
+        startedIso: model.rideStartedIso, endedIso, rideSeconds, plannedRideSec: model.plannedRideSec, mode: model.rideMode,
+        settings: {
+          plannedRideSec: model.plannedRideSec,
+          aeroGoalSec: model.aeroGoalSec,
+          baseIntervalSec: model.baseIntervalSec,
+          progressionSec: model.progressionSec,
+          fuelDurationSec: model.fuelDurationSec,
+          remindersEnabled: model.remindersEnabled,
+          reminderIntervals: { water: model.waterEverySec, fuel: model.fuelEverySec, stretch: model.stretchEverySec },
+          intervalSources: { ...model.intervalSources }
+        },
+        acceptedRecommendations: structuredClone(model.acceptedRecommendations),
+        actions: structuredClone(model.completedActions),
+        reminders: structuredClone(model.reminders),
+        events: structuredClone(model.events),
+        actionStats,
+        reminderStats,
+        aeroSeconds: model.accumulatedAeroMs / 1000,
+        aeroPercent: rideSeconds ? Math.round(model.accumulatedAeroMs / 10 / rideSeconds) : 0,
+        bestIntervalSeconds: model.bestIntervalMs / 1000, completedIntervals: model.intervals.filter(item => item.success).length,
+        waterCount: count("water"), fuelCount: count("fuel"), stretchCount: count("stretch"),
+        intervals: model.intervals.map(item => ({ ...item })), camera: cameraSummary
+      };
+      model.summary.coachingObservations = buildCoachingObservations(model.summary, loadHistory());
+      model.reviewReasonEditorDismissed = false;
+      let rideSaved = true;
+      try {
+        saveRide(model.summary);
+      } catch (error) {
+        rideSaved = false;
+        model.historySaveError = "Ride review could not be saved locally. Keep this screen open and try again.";
+      }
+      model.state = "review";
+      document.body.classList.remove("camera-preview");
+      if (model.cameraEnabled) cameraObserver.stop();
+      closePictureInPicture();
+      if (returnToSetup && rideSaved) {
+        resetToSetup();
+        announce("Ride saved. Main menu ready.");
+        return;
+      }
+      render();
+      announce(rideSaved ? "Ride saved. Review ready." : model.historySaveError);
+    }
+
+    function requestRideExit(destination) {
+      if (model.state !== "ride-paused") return;
+      if (model.rideExitConfirmation !== destination) {
+        model.rideExitConfirmation = destination;
+        announce(destination === "review" ? "Tap Confirm End to finish the ride." : "Tap Confirm Menu to save and return to the main menu.");
+        render();
+        return;
+      }
+      model.rideExitConfirmation = null;
+      finishRide({ returnToSetup: destination === "menu" });
+    }
+
+    function closePictureInPicture() {
+      const pip = model.pipWindow;
+      model.pipWindow = null;
+      if (pip && !pip.closed) pip.close();
+    }
+
+    function resetToSetup() {
+      cameraObserver.stop();
+      closePictureInPicture();
+      model.state = "setup"; model.rideStartedAt = 0; model.ridePausedAt = 0; model.accumulatedRidePauseMs = 0;
+      model.ridePausedFromState = null; model.pausedActionRemainingMs = 0; model.rideExitConfirmation = null; model.summary = null; model.cameraEnabled = false;
+      model.reviewReasonEditorDismissed = false;
+      model.cameraAutoControl = false; model.cameraAutoEverEnabled = false; model.cameraControlHoldUntil = 0; model.pendingRideValues = null;
+      document.body.classList.remove("camera-preview");
+      render();
+      announce("Main menu ready.");
+    }
+
+    function handleScreenClick(event) {
+      if (event.target.closest("button, input")) return;
+      if (event.target.closest("[data-advance='true']")) advance("manual");
+    }
+
+    function unlockAudio() {
+      try {
+        audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === "suspended") audioContext.resume();
+      } catch (_) {}
+    }
+
+    function beep() {
+      if (!audioContext) return;
+      const start = audioContext.currentTime;
+      [0, .22, .44].forEach(offset => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = "square"; oscillator.frequency.value = 1046;
+        gain.gain.setValueAtTime(.0001, start + offset);
+        gain.gain.exponentialRampToValueAtTime(.72, start + offset + .012);
+        gain.gain.exponentialRampToValueAtTime(.0001, start + offset + .17);
+        oscillator.connect(gain).connect(audioContext.destination);
+        oscillator.start(start + offset); oscillator.stop(start + offset + .18);
+      });
+    }
+
+    function updateLiveText(doc) {
+      const elapsedSec = rideMs() / 1000;
+      const progressText = doc.getElementById("ride-progress-text");
+      if (progressText) progressText.textContent = `RIDE ${formatTime(elapsedSec)} / ${formatTime(model.plannedRideSec)}`;
+      const fill = doc.querySelector(".ride-progress-fill");
+      if (fill) fill.style.width = `${Math.min(100, elapsedSec / model.plannedRideSec * 100)}%`;
+      const progress = doc.querySelector(".ride-progress");
+      if (progress) {
+        progress.setAttribute("aria-valuenow", String(Math.round(Math.min(100, elapsedSec / model.plannedRideSec * 100))));
+        progress.setAttribute("aria-valuetext", `${formatTime(elapsedSec)} of ${formatTime(model.plannedRideSec)}`);
+      }
+      if (model.state === "aero") {
+        const timer = doc.getElementById("aero-timer");
+        if (timer && !model.intervalComplete && !model.rideTargetReached) timer.textContent = formatHeroTime(intervalRemainingSec());
+        const total = doc.getElementById("total-aero");
+        if (total) total.textContent = formatTime(totalAeroMs() / 1000);
+        const percentage = doc.getElementById("aero-percentage");
+        if (percentage) percentage.textContent = `(${aeroAdherencePercent()}%)`;
+        getReminderRows().forEach(item => {
+          const node = doc.querySelector(`[data-reminder="${item.type}"]`);
+          if (node) { node.textContent = item.remaining <= 0 ? "00:00" : formatTime(item.remaining); node.classList.toggle("due", item.remaining <= 0); }
+          const ring = doc.querySelector(`[data-reminder-ring="${item.type}"]`);
+          if (ring) ring.style.setProperty("--ring-progress", `${Math.max(0, Math.min(360, Math.max(0, item.remaining) / reminderCadence(item.type) * 360))}deg`);
+        });
+        const urgent = getDueActions()[0];
+        if (urgent) {
+          const overdue = doc.querySelector(`[data-resolution-overdue="${urgent.id}"]`);
+          if (overdue) overdue.textContent = `${formatTime(Math.max(0, elapsedSec - urgent.dueAtSec))} late`;
+        }
+      } else if (model.state === "paused") {
+        const ride = doc.getElementById("paused-ride"); if (ride) ride.textContent = formatTime(elapsedSec);
+      } else if (model.state === "action" && model.currentAction === "fuel" && !model.actionFinished) {
+        const timer = doc.getElementById("action-timer"); if (timer) timer.textContent = formatTime(Math.ceil((model.actionEndsAt - now()) / 1000));
+      }
+      for (const type of ACTION_TYPES) {
+        const buttons = doc.querySelectorAll(`[data-action-type="${type}"]`);
+        const locked = now() < model.actionLocks[type];
+        buttons.forEach(button => {
+          const defaultLabel = button.dataset.defaultLabel || ({ water: "DRANK", fuel: "FUEL TAKEN", stretch: "STRETCH DONE" })[type];
+          button.disabled = locked;
+          button.classList.toggle("locked", locked);
+          button.textContent = locked ? defaultLabel === "DONE" ? "✓ DONE" : "✓ LOGGED" : defaultLabel;
+        });
+      }
+      if (model.actionFeedback && now() >= model.actionFeedback.expiresAt) {
+        model.actionFeedback = null;
+        doc.querySelector(".action-toast")?.remove();
+      }
+    }
+
+    function tick() {
+      if (["aero", "paused", "action"].includes(model.state)) {
+        const createdReminders = materializeDueReminders();
+        if (createdReminders.length) {
+          beep();
+          announce(`${ACTION_LABELS[createdReminders[0].type]} reminder due${createdReminders.length > 1 ? `, with ${createdReminders.length - 1} more queued` : ""}.`);
+          render();
+        }
+        if (model.cameraEnabled) cameraObserver.setSessionContext({
+          rideSec: rideMs() / 1000,
+          manualAero: model.state === "aero" && model.aeroSegmentStartedAt > 0 && !model.intervalComplete && !model.rideTargetReached
+        });
+        const doc = activeDocument();
+        updateLiveText(doc);
+        if (!model.rideTargetReached && rideMs() >= model.plannedRideSec * 1000) {
+          if (model.state === "aero") pauseAero();
+          model.rideTargetReached = true; beep(); render();
+        } else if (model.state === "aero" && !model.intervalComplete && intervalRemainingSec() <= 0) {
+          completeInterval();
+        } else if (model.state === "action" && model.currentAction === "fuel" && !model.actionFinished && now() >= model.actionEndsAt) {
+          model.actionFinished = true; beep(); render();
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    async function openPictureInPicture(sourceDoc) {
+      const note = sourceDoc.getElementById("pip-note");
+      if (!("documentPictureInPicture" in window)) return;
+      try {
+        if (model.pipWindow && !model.pipWindow.closed) { model.pipWindow.focus(); return; }
+        const pip = await window.documentPictureInPicture.requestWindow({ width: 300, height: 400 });
+        model.pipWindow = pip; pip.document.title = "Triathlon HUD";
+        document.querySelectorAll("style").forEach(style => pip.document.head.append(style.cloneNode(true)));
+        pip.document.body.innerHTML = '<main id="app"></main><div id="hud-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>';
+        pip.document.addEventListener("click", handleScreenClick);
+        pip.addEventListener("pagehide", () => { model.pipWindow = null; render(); }, { once: true });
+        render();
+      } catch (_) { if (note) note.textContent = "Pop Out was blocked. Try again."; }
+    }
+
+    window.render_game_to_text = () => JSON.stringify({
+      coordinateSystem: "DOM interface; no world coordinates",
+      state: model.state,
+      ride: {
+        elapsedSeconds: Math.round(rideMs() / 100) / 10,
+        plannedSeconds: model.plannedRideSec,
+        fullyPaused: model.state === "ride-paused",
+        pausedFromState: model.state === "ride-paused" ? model.ridePausedFromState : null
+      },
+      aero: {
+        elapsedSeconds: Math.round(totalAeroMs() / 100) / 10,
+        intervalRemainingSeconds: Math.round(intervalRemainingSec() * 10) / 10,
+        aeroClockPaused: model.state !== "aero" || model.intervalComplete || model.rideTargetReached
+      },
+      action: model.state === "action" || model.ridePausedFromState === "action" ? {
+        type: model.currentAction,
+        finished: model.actionFinished,
+        countdownRemainingSeconds: model.currentAction === "fuel" && !model.actionFinished
+          ? Math.round((model.state === "ride-paused" ? model.pausedActionRemainingMs : Math.max(0, model.actionEndsAt - now())) / 100) / 10
+          : null
+      } : null,
+      availableControls: model.state === "ride-paused"
+        ? ["Resume Ride", "End & Review", "Back to Main Menu"]
+        : ["aero", "paused", "action"].includes(model.state)
+          ? ["Pause", "Water", "Fuel", "Stretch"]
+          : []
+    });
+
+    document.addEventListener("click", handleScreenClick);
+    render();
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>

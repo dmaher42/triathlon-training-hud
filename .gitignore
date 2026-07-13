@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.playwright-cli/
+.agents/
+.codex/
+.http-server.pid
+.vite-server.pid
+.hud-port
+npm-debug.log*
+progress.md
+public/wasm/
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.pfx
