@@ -18,7 +18,7 @@ import {
   snoozeReminderRecord,
   updateCompletedActionReason
 } from "../src/habit-learning.js";
-import { HISTORY_KEY, loadHistory, resetLearningFor, saveRide } from "../src/history-store.js";
+import { HISTORY_KEY, SETTINGS_KEY, loadHistory, loadSettings, resetLearningFor, saveRide, saveSettings } from "../src/history-store.js";
 
 class MemoryStorage {
   constructor(initial = {}) { this.data = new Map(Object.entries(initial)); }
@@ -228,6 +228,17 @@ test("per-action learning reset does not delete ride history", () => {
   assert.equal(settings.acceptedIntervals.water.seconds, 1200);
   assert.equal(settings.acceptedIntervals.water.source, "athlete-entered");
   assert.equal(JSON.parse(storage.getItem(HISTORY_KEY)).length, 1);
+});
+
+test("dashboard style persists and invalid values fall back to practical", () => {
+  const storage = new MemoryStorage();
+  const settings = loadSettings(storage);
+  assert.equal(settings.dashboardStyle, "practical");
+  settings.dashboardStyle = "immersive";
+  saveSettings(settings, storage);
+  assert.equal(loadSettings(storage).dashboardStyle, "immersive");
+  storage.setItem(SETTINGS_KEY, JSON.stringify({ dashboardStyle: "unknown" }));
+  assert.equal(loadSettings(storage).dashboardStyle, "practical");
 });
 
 test("coaching observations only appear when statistics support them", () => {

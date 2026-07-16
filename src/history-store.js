@@ -24,6 +24,7 @@ export function loadSettings(storage = localStorage) {
   try { parsed = JSON.parse(storage.getItem(SETTINGS_KEY) || "{}"); } catch (_) {}
   return {
     preferredMode: ["fixed", "observation", "coach"].includes(parsed.preferredMode) ? parsed.preferredMode : "fixed",
+    dashboardStyle: ["practical", "immersive"].includes(parsed.dashboardStyle) ? parsed.dashboardStyle : "practical",
     observationReminders: Boolean(parsed.observationReminders),
     acceptedIntervals: parsed.acceptedIntervals || {},
     learningResetAt: Object.fromEntries(ACTION_TYPES.map(type => [type, parsed.learningResetAt?.[type] || null]))

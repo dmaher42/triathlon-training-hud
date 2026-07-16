@@ -157,6 +157,12 @@
     .mode-tab span { display: grid; min-height: 44px; place-items: center; border: 1px solid #365d88; border-radius: 9px; color: #b8cce0; font-size: .66rem; font-weight: 1000; text-align: center; }
     .mode-tab input:checked + span { border-color: #35f08a; background: #12392e; color: #6dffad; }
     .mode-tab input:focus-visible + span { outline: 3px solid #fff; outline-offset: 2px; }
+    .dashboard-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dashboard-tabs .mode-tab span { align-content: center; gap: 3px; min-height: 54px; }
+    .dashboard-tabs .mode-tab strong { font-size: .7rem; letter-spacing: .08em; }
+    .dashboard-tabs .mode-tab small { color: #7f95aa; font-size: .58rem; font-weight: 750; }
+    .dashboard-tabs .mode-tab input[value="immersive"]:checked + span { border-color: #789fba; background: #142b3a; color: #a9d4ee; }
+    .dashboard-tabs .mode-tab input:checked + span small { color: currentColor; opacity: .72; }
     .mode-description { min-height: 2.5em; margin: 8px 0 0; color: #9fb3ca; text-align: left; font-size: .68rem; line-height: 1.3; }
     .observation-toggle { display: none; margin-top: 8px; }
     .setup[data-mode="observation"] .observation-toggle { display: flex; }
@@ -276,6 +282,53 @@
     .reminder-resolution { grid-column: 1 / -1; grid-row: 3; display: flex; min-height: 38px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; border: 1px solid #343d50; border-radius: 12px; padding: 5px 8px; background: #111623; }
     .resolution-label { margin-right: auto; overflow: hidden; color: #ff9ab8; font-size: clamp(.57rem, 1.5vmin, .68rem); font-weight: 950; letter-spacing: .08em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
     .resolution-action { min-height: 28px; flex: 0 0 auto; border: 1px solid #3a4457; border-radius: 999px; padding: 4px 10px; background: #222938; color: #eaf1fb; font-size: clamp(.54rem, 1.35vmin, .63rem); font-weight: 900; cursor: pointer; }
+    .immersive-card-data, .immersive-road { display: none; }
+    .aero.immersive { background-color: #071018; background-image: linear-gradient(180deg, rgba(2,8,13,.34), rgba(2,8,13,.05) 45%, rgba(2,7,11,.3)), url("%BASE_URL%assets/immersive-training-room.webp"); background-position: center; background-size: cover; }
+    .aero.immersive::before { background: linear-gradient(90deg, rgba(3,9,14,.56), rgba(3,9,14,.05) 25% 72%, rgba(3,9,14,.58)), linear-gradient(180deg, rgba(3,8,13,.28), transparent 58%, rgba(3,8,13,.26)); }
+    .immersive .ride-phase-header { position: relative; z-index: 5; width: min(92%, 1120px); margin-top: 15px; }
+    .immersive .ride-phase-strip { border-color: rgba(130,169,195,.48); background: rgba(5,14,22,.62); backdrop-filter: blur(13px); -webkit-backdrop-filter: blur(13px); }
+    .immersive .ride-phase.current { background: rgba(69,112,142,.74); }
+    .immersive .pip-mini, .immersive .camera-auto-toggle, .immersive .ride-pause-button, .immersive .camera-badge { background: rgba(6,15,23,.7); backdrop-filter: blur(13px); -webkit-backdrop-filter: blur(13px); }
+    .immersive .aero-dashboard { grid-template-columns: minmax(205px, .62fr) minmax(450px, 1.7fr) minmax(220px, .66fr); grid-template-rows: minmax(270px, .9fr) minmax(145px, .48fr) auto auto; width: min(94%, 1160px); }
+    .immersive .aero-dashboard > * { position: relative; z-index: 2; }
+    .immersive .aero-hero { grid-column: 2; grid-row: 1; border-color: rgba(132,180,209,.62); background: rgba(4,14,23,.53); box-shadow: inset 0 0 36px rgba(93,155,191,.08); }
+    .immersive .aero-hero::before { border-color: rgba(148,202,233,.16); }
+    .immersive .aero-title { color: #c2dbea; text-shadow: 0 1px 8px rgba(49,130,177,.4); }
+    .immersive .aero-clock .timer { color: #edf7ff; text-shadow: 0 0 16px rgba(92,175,219,.24); }
+    .immersive .challenge-progress { background: rgba(3,11,18,.7); }
+    .immersive .hero-metrics { border-color: rgba(117,166,194,.52); background: rgba(3,12,19,.7); }
+    .immersive .trainer-metrics { border-color: rgba(86,137,121,.55); background: rgba(3,15,13,.7); }
+    .immersive .dashboard-card { border-color: rgba(120,170,199,.58); background: rgba(4,15,23,.58); box-shadow: inset 0 0 24px rgba(92,163,204,.06); }
+    .immersive .dashboard-card.type-water { grid-column: 1; grid-row: 1; border-color: rgba(113,159,190,.68); }
+    .immersive .dashboard-card.type-fuel { grid-column: 1; grid-row: 2; display: grid; grid-template-columns: 82px minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 4px 10px; border-color: rgba(191,137,82,.68); text-align: left; }
+    .immersive .dashboard-card.type-stretch { grid-column: 3; grid-row: 1 / span 2; border-color: rgba(141,123,168,.7); }
+    .immersive .dashboard-card.type-fuel .status-ring { grid-column: 1; grid-row: 1 / span 2; width: 82px; }
+    .immersive .dashboard-card.type-fuel .card-label { grid-column: 2; grid-row: 1; margin: 0; }
+    .immersive .dashboard-card.type-water .status-ring { width: min(68%, 118px); }
+    .immersive .dashboard-card.type-stretch .status-ring { width: min(70%, 136px); }
+    .immersive .card-label { color: #d1dde7; }
+    .immersive .immersive-card-data { display: flex; width: min(92%, 205px); min-width: 0; flex-direction: column; gap: 5px; margin-top: 11px; color: #839caf; font-size: .5rem; font-weight: 850; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
+    .immersive .immersive-card-data small { overflow: hidden; color: #a8bac7; font-size: .52rem; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+    .immersive .immersive-card-data span { display: flex; justify-content: space-between; gap: 8px; }
+    .immersive .immersive-card-data b { color: var(--card-accent); }
+    .immersive .immersive-card-data i { display: block; height: 4px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.1); }
+    .immersive .immersive-card-data em { display: block; height: 100%; border-radius: inherit; background: var(--card-accent); }
+    .immersive .type-fuel .immersive-card-data { grid-column: 2; grid-row: 2; width: 100%; margin-top: 0; }
+    .immersive .type-fuel .immersive-card-data small { white-space: normal; }
+    .immersive-extra { display: none; }
+    .immersive .immersive-extra { display: grid; width: min(92%, 210px); margin-top: 14px; }
+    .immersive .water-schedule { gap: 6px; }
+    .immersive .water-schedule span { display: grid; grid-template-columns: 1fr auto; gap: 8px; border-top: 1px solid rgba(113,159,190,.22); padding: 6px 3px 0; color: #7894a8; font-size: .48rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+    .immersive .water-schedule b { color: #b8cede; font-family: var(--hud-mono); font-size: .58rem; }
+    .immersive .mobility-plan { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .immersive .mobility-plan span { display: grid; min-height: 46px; place-items: center; border: 1px solid rgba(141,123,168,.25); border-radius: 7px; padding: 5px; color: #8f829f; font-size: .46rem; font-weight: 900; line-height: 1.15; letter-spacing: .05em; text-align: center; text-transform: uppercase; }
+    .immersive .mobility-plan span.current { border-color: rgba(169,143,199,.7); background: rgba(92,70,112,.26); color: #cbb8df; }
+    .immersive .immersive-road { grid-column: 2; grid-row: 2; z-index: 1; display: block; align-self: stretch; justify-self: center; width: min(76%, 480px); overflow: hidden; clip-path: polygon(26% 0, 74% 0, 100% 100%, 0 100%); opacity: .48; background: linear-gradient(90deg, transparent 48%, rgba(98,188,230,.48) 49% 51%, transparent 52%), repeating-linear-gradient(90deg, rgba(76,147,184,.14) 0 1px, transparent 1px 24%), linear-gradient(180deg, rgba(47,114,151,.28), rgba(3,14,22,.08)); }
+    .immersive .immersive-road span { position: absolute; top: 0; bottom: 0; width: 1px; background: linear-gradient(rgba(127,208,245,.7), transparent); }
+    .immersive .immersive-road span:nth-child(1) { left: 25%; transform: rotate(8deg); transform-origin: top; }
+    .immersive .immersive-road span:nth-child(2) { left: 50%; }
+    .immersive .immersive-road span:nth-child(3) { right: 25%; transform: rotate(-8deg); transform-origin: top; }
+    .immersive .ride-plan-status { align-self: center; justify-self: center; border: 1px solid rgba(111,153,179,.35); border-radius: 999px; padding: 3px 12px; background: rgba(3,12,19,.58); backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px); }
     .aero .action-toast { bottom: 10px; }
     .screen-advance-control { position: absolute; top: 20px; left: 50%; z-index: 30; min-height: 30px; transform: translateX(-50%); border: 1px solid #4e627d; border-radius: 999px; padding: 5px 11px; opacity: 0; pointer-events: none; background: #101826; color: #fff; font-size: .58rem; font-weight: 950; letter-spacing: .07em; text-transform: uppercase; }
     .screen-advance-control:focus-visible { opacity: 1; pointer-events: auto; }
@@ -312,16 +365,25 @@
     .coaching-box h2 { margin: 0 0 7px; color: #6dffad; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
     .coaching-box p { margin: 5px 0; color: #c0d7cd; font-size: .68rem; line-height: 1.35; }
     @media (max-width: 900px), (max-height: 520px) {
-      .aero-dashboard { grid-template-columns: 1fr; grid-template-rows: minmax(175px, .9fr) minmax(180px, 1fr) auto; }
-      .aero-hero { grid-column: 1; grid-row: 1; }
+      .aero.immersive { background-color: #080b10; background-image: radial-gradient(circle at 50% 45%, rgba(52,88,112,.13), transparent 42%); }
+      .immersive .ride-phase-header, .immersive .aero-dashboard { width: min(100%, 1180px); }
+      .aero-dashboard, .immersive .aero-dashboard { grid-template-columns: 1fr; grid-template-rows: minmax(175px, .9fr) minmax(180px, 1fr) auto; }
+      .aero-hero, .immersive .aero-hero { grid-column: 1; grid-row: 1; background: rgba(17,25,33,.88); }
       .reminder-zone { display: flex; min-height: 0; flex-direction: column; gap: 8px; }
       .reminder-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex: 1 1 auto; min-height: 0; gap: clamp(6px, 1.7vw, 14px); }
       .dashboard-card.type-water, .dashboard-card.type-fuel, .dashboard-card.type-stretch { grid-column: auto; grid-row: auto; }
+      .immersive .dashboard-card.type-water, .immersive .dashboard-card.type-fuel, .immersive .dashboard-card.type-stretch { grid-column: auto; grid-row: auto; background: rgba(16,22,29,.86); }
       .dashboard-card.type-fuel { flex-direction: column; gap: 0; }
+      .immersive .dashboard-card.type-fuel { display: flex; flex-direction: column; gap: 0; text-align: center; }
       .dashboard-card.type-fuel .status-ring { width: min(78%, 132px); }
       .dashboard-card.type-fuel .card-label { margin-top: clamp(11px, 2.2vh, 18px); font-size: clamp(.78rem, 2.5vmin, 1.12rem); }
       .reminder-resolution { grid-column: auto; grid-row: auto; }
       .ride-plan-status { grid-column: 1; grid-row: 3; }
+      .immersive .immersive-card-data, .immersive .immersive-road { display: none; }
+      .immersive .immersive-extra { display: none; }
+      .immersive .dashboard-card.type-water .status-ring, .immersive .dashboard-card.type-fuel .status-ring, .immersive .dashboard-card.type-stretch .status-ring { width: min(78%, 132px); }
+      .immersive .dashboard-card.type-fuel .status-ring, .immersive .dashboard-card.type-fuel .card-label { grid-column: auto; grid-row: auto; }
+      .immersive .dashboard-card.type-fuel .card-label { margin-top: clamp(11px, 2.2vh, 18px); }
     }
     @media (max-width: 700px) {
       .setup-shell { grid-template-columns: 1fr; width: min(100%, 480px); }
@@ -349,7 +411,7 @@
       .aero .ride-control-cluster { gap: 4px; }
       .aero .ride-control-cluster .camera-badge { display: none; }
       .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { min-height: 46px; padding: 4px 6px; }
-      .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr) auto; gap: 6px; }
+      .aero-dashboard, .immersive .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr) auto; gap: 6px; }
       .aero-hero { padding: 8px 6px; border-radius: 17px; }
       .aero-interval { display: none; }
       .aero-title { margin-bottom: 6px; font-size: .72rem; }
@@ -402,7 +464,7 @@
     }
     @media (max-height: 430px) {
       .aero.active-ride { padding-top: 18px; }
-      .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr) auto; gap: 6px; }
+      .aero-dashboard, .immersive .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr) auto; gap: 6px; }
       .aero-hero { padding-block: 7px; }
       .action-screen > .timer, .paused > .timer { font-size: 3.2rem; }
       .stats { margin-top: 5px; }
@@ -414,7 +476,7 @@
       .ride-phase-header { margin-top: 15px; margin-bottom: 5px; }
       .ride-phase-strip ol { min-height: 39px; }
       .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { min-height: 39px; }
-      .aero-dashboard { grid-template-rows: 108px minmax(0, 1fr); gap: 5px; }
+      .aero-dashboard, .immersive .aero-dashboard { grid-template-rows: 108px minmax(0, 1fr); gap: 5px; }
       .ride-plan-status { display: none; }
       .aero-title { font-size: .65rem; }
       .aero-subtitle { margin-top: 4px; }
@@ -519,6 +581,7 @@
       intervals: [],
       events: [],
       rideMode: null,
+      dashboardStyle: null,
       remindersEnabled: true,
       reminders: [],
       completedActions: [],
@@ -762,6 +825,7 @@
       const history = loadHistory();
       const settings = loadSettings();
       const mode = model.rideMode || settings.preferredMode;
+      const dashboardStyle = model.dashboardStyle || settings.dashboardStyle;
       const waterValue = Math.round((settings.acceptedIntervals.water?.seconds || 10 * 60) / 60);
       const fuelValue = Math.round((settings.acceptedIntervals.fuel?.seconds || 30 * 60) / 60);
       const stretchValue = Math.round((settings.acceptedIntervals.stretch?.seconds || 20 * 60) / 60);
@@ -777,6 +841,13 @@
             <p class="mode-description" id="mode-description"></p>
             <label class="camera-choice observation-toggle" for="observation-reminders"><input id="observation-reminders" type="checkbox" ${settings.observationReminders ? "checked" : ""}><span><strong>Use fixed reminders while observing</strong><span>Off by default so natural actions can be learned without prompts.</span></span></label>
             <div class="learning-cards" id="learning-cards">${learningCardsMarkup(history, settings, 90 * 60, mode)}</div>
+          </div>
+          <div class="setup-section setup-span"><p class="section-title">Dashboard</p>
+            <div class="mode-tabs dashboard-tabs" role="radiogroup" aria-label="Dashboard style">
+              <label class="mode-tab"><input type="radio" name="dashboard-style" value="practical" ${dashboardStyle === "practical" ? "checked" : ""}><span><strong>PRACTICAL</strong><small>Maximum clarity</small></span></label>
+              <label class="mode-tab"><input type="radio" name="dashboard-style" value="immersive" ${dashboardStyle === "immersive" ? "checked" : ""}><span><strong>IMMERSIVE</strong><small>Cinematic rider view</small></span></label>
+            </div>
+            <p class="fixed-note" id="dashboard-description">${dashboardStyle === "immersive" ? "Rider backdrop with floating translucent controls. Compact PiP remains distraction-free." : "Low-glare three-zone riding screen with the strongest timer contrast."}</p>
           </div>
           <div class="setup-section"><p class="section-title">Ride plan</p><div class="fields">
             <div class="field"><label for="ride-minutes">Planned ride (min)</label><input id="ride-minutes" type="number" min="1" max="600" value="90"></div>
@@ -856,6 +927,14 @@
         const locked = now() < model.actionLocks[type];
         const remaining = model.remindersEnabled ? Math.max(0, row?.remaining ?? model.nextDue[type] - elapsed) : 0;
         const progressDegrees = model.remindersEnabled ? Math.max(0, Math.min(360, remaining / reminderCadence(type) * 360)) : 0;
+        const progressPercent = model.remindersEnabled ? Math.max(0, Math.min(100, 100 - remaining / reminderCadence(type) * 100)) : 0;
+        const logged = model.completedActions.filter(action => action.type === type).length;
+        const detail = type === "fuel" ? model.currentFuel : type === "stretch" ? model.currentMobility : "Hydration schedule";
+        const extra = type === "water"
+          ? `<span class="immersive-extra water-schedule" aria-hidden="true"><span>NEXT <b>${formatTime(model.nextDue.water)}</b></span><span>AFTER <b>${formatTime(model.nextDue.water + reminderCadence(type))}</b></span><span>THEN <b>${formatTime(model.nextDue.water + reminderCadence(type) * 2)}</b></span></span>`
+          : type === "stretch"
+            ? `<span class="immersive-extra mobility-plan" aria-hidden="true">${mobilityPlan.map(item => `<span class="${item === model.currentMobility ? "current" : ""}">${item.split(" (")[0]}</span>`).join("")}</span>`
+            : "";
         const sameTypePending = pending.filter(item => item.type === type).length;
         const isUrgent = reminder?.id === pending[0]?.id;
         const queueBadge = reminder
@@ -866,7 +945,7 @@
           : `class="dashboard-card type-${type}" data-log-action="${type}" aria-label="Record ${labels[type]} completed"`;
         return `<button ${actionAttributes} type="button" data-dashboard-card="${type}" data-action-type="${type}" data-default-label="${reminder ? "TAP WHEN DONE" : ""}" aria-keyshortcuts="${shortcuts[type]}" ${locked ? "disabled" : ""}>
           ${queueBadge}<span class="status-ring" data-reminder-ring="${type}" style="--ring-progress:${progressDegrees}deg" aria-hidden="true">${icons[type]}<strong class="card-time reminder-time${reminder ? " due" : ""}" data-reminder="${type}">${model.remindersEnabled ? formatTime(remaining) : "—:—"}</strong></span>
-          <span class="card-label">${labels[type]}</span><span class="card-action">${locked ? "✓ LOGGED" : reminder ? "TAP WHEN DONE" : ""}</span>
+          <span class="card-label">${labels[type]}</span><span class="immersive-card-data"><small>${detail}</small><span><b>${logged}</b> LOGGED <b>${Math.round(progressPercent)}%</b> TO NEXT</span><i><em style="width:${progressPercent}%"></em></i></span>${extra}<span class="card-action">${locked ? "✓ LOGGED" : reminder ? "TAP WHEN DONE" : ""}</span>
         </button>`;
       }).join("");
       const urgent = pending[0];
@@ -931,7 +1010,7 @@
       const challengeProgress = personalBestSec
         ? Math.min(100, currentIntervalMs() / 10 / personalBestSec)
         : Math.min(100, currentIntervalMs() / 10 / Math.max(1, model.currentIntervalTargetSec));
-      return `<section class="screen active-ride aero${model.intervalComplete || model.rideTargetReached ? " alert" : ""}" data-advance="true" role="region" aria-label="Aero training dashboard. Click the background to advance.">
+      return `<section class="screen active-ride aero ${model.dashboardStyle === "immersive" ? "immersive" : "practical"}${model.intervalComplete || model.rideTargetReached ? " alert" : ""}" data-dashboard-style="${model.dashboardStyle || "practical"}" data-advance="true" role="region" aria-label="Aero training dashboard. Click the background to advance.">
         ${progressMarkup()}<div class="ride-phase-header">${ridePhasesMarkup()}${rideControlsMarkup()}</div><button class="screen-advance-control" type="button" aria-keyshortcuts="Enter Space">${advanceLabel}</button><div class="aero-dashboard">
           <section class="aero-hero" aria-label="Current Aero interval">
             <button class="hero-tap-target" id="aero-hero-action" type="button" aria-label="${advanceLabel}" aria-keyshortcuts="Enter Space"><span class="visually-hidden">${advanceLabel}</span></button>
@@ -941,7 +1020,7 @@
             <p class="challenge-best" id="challenge-best">${personalBestMarkup()}</p>
             ${subtitle ? `<p class="aero-subtitle">${subtitle}</p>` : ""}
             <div class="hero-metrics" aria-label="Ride position times"><span>Overall <strong id="overall-time">${formatTime(positionTimes.overallMs / 1000)}</strong></span><span>Aero <strong id="total-aero">${formatTime(positionTimes.aeroMs / 1000)}</strong></span><span>Upright <strong id="upright-time">${formatTime(positionTimes.uprightMs / 1000)}</strong></span></div>${trainerMetricsMarkup()}
-          </section>${scheduleMarkup()}${planStatusMarkup()}
+          </section><div class="immersive-road" aria-hidden="true"><span></span><span></span><span></span></div>${scheduleMarkup()}${planStatusMarkup()}
         </div>${cameraLearningPromptMarkup()}${actionFeedbackMarkup()}
       </section>`;
     }
@@ -1123,6 +1202,7 @@
       doc.getElementById("begin-calibrated-ride")?.addEventListener("click", event => { event.stopPropagation(); beginRide(model.pendingRideValues, true); });
       doc.getElementById("skip-camera")?.addEventListener("click", event => { event.stopPropagation(); skipCamera(); });
       doc.querySelectorAll("[name='ride-mode']").forEach(input => input.addEventListener("change", event => { event.stopPropagation(); model.rideMode = input.value; updateModeUi(doc); }));
+      doc.querySelectorAll("[name='dashboard-style']").forEach(input => input.addEventListener("change", event => { event.stopPropagation(); updateDashboardUi(doc, input.value); }));
       doc.getElementById("observation-reminders")?.addEventListener("change", () => updateModeUi(doc));
       doc.getElementById("ride-minutes")?.addEventListener("change", () => updateModeUi(doc));
       for (const [type, inputId] of Object.entries({ water: "water-every", fuel: "fuel-every", stretch: "stretch-every" })) {
@@ -1255,6 +1335,18 @@
       if (management) management.innerHTML = learningManagementMarkup();
       bindLearningControls(doc);
       updateCameraSetupUi(doc);
+    }
+
+    function updateDashboardUi(doc, style) {
+      const selected = ["practical", "immersive"].includes(style) ? style : "practical";
+      model.dashboardStyle = selected;
+      const settings = loadSettings();
+      settings.dashboardStyle = selected;
+      saveSettings(settings);
+      const description = doc.getElementById("dashboard-description");
+      if (description) description.textContent = selected === "immersive"
+        ? "Rider backdrop with floating translucent controls. Compact PiP remains distraction-free."
+        : "Low-glare three-zone riding screen with the strongest timer contrast.";
     }
 
     function updateCameraUi(doc) {
@@ -1404,6 +1496,7 @@
         };
       } catch (_) { return; }
       values.mode = doc.querySelector("[name='ride-mode']:checked")?.value || "fixed";
+      values.dashboardStyle = doc.querySelector("[name='dashboard-style']:checked")?.value || "practical";
       values.trainerEnabled = trainer.connected;
       values.remindersEnabled = values.mode !== "observation" || Boolean(doc.getElementById("observation-reminders")?.checked);
       const savedSettings = loadSettings();
@@ -1417,6 +1510,7 @@
         return accepted?.source === "history" && accepted.seconds === selectedIntervals[type] ? [[type, structuredClone(accepted)]] : [];
       }));
       savedSettings.preferredMode = values.mode;
+      savedSettings.dashboardStyle = values.dashboardStyle;
       savedSettings.observationReminders = Boolean(doc.getElementById("observation-reminders")?.checked);
       saveSettings(savedSettings);
       const cameraEnabled = Boolean(doc.getElementById("camera-enabled")?.checked);
@@ -1455,7 +1549,7 @@
         intervalNumber: 1, intervalComplete: false, intervalRecorded: false, bestIntervalMs: 0,
         personalBestSec: getPersonalBest(loadHistory()),
         intervals: [], events: [{ type: "ride-start", at: 0 }, { type: "ride-phase-start", phase: 1, name: RIDE_PHASES[0].name, at: 0 }, ...(autoControl ? [{ type: "camera-auto-enabled", at: 0 }] : [])], notified: new Set(),
-        rideMode: values.mode, remindersEnabled: values.remindersEnabled, reminders: [], completedActions: [],
+        rideMode: values.mode, dashboardStyle: values.dashboardStyle, remindersEnabled: values.remindersEnabled, reminders: [], completedActions: [],
         actionLocks: { water: 0, fuel: 0, stretch: 0 }, actionFeedback: null, reviewReasonEditorDismissed: false, currentReminderId: null,
         acceptedRecommendations: values.acceptedRecommendations, intervalSources: values.intervalSources, historySaveError: "",
         nutritionIndex: 0, currentFuel: nutritionPlan[0], currentMobility: randomMobility(),
@@ -1805,7 +1899,8 @@
           fuelDurationSec: model.fuelDurationSec,
           remindersEnabled: model.remindersEnabled,
           reminderIntervals: { water: model.waterEverySec, fuel: model.fuelEverySec, stretch: model.stretchEverySec },
-          intervalSources: { ...model.intervalSources }
+          intervalSources: { ...model.intervalSources },
+          dashboardStyle: model.dashboardStyle || "practical"
         },
         acceptedRecommendations: structuredClone(model.acceptedRecommendations),
         actions: structuredClone(model.completedActions),
