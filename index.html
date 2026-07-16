@@ -42,10 +42,11 @@
     }
     .setup, .review { overflow-y: auto; justify-content: flex-start; cursor: default; background: var(--hud-bg); color: #fff; }
     .setup { overflow: hidden; padding: 12px clamp(10px, 3vw, 18px) 0; background-image: linear-gradient(180deg, rgba(5,10,16,.72), rgba(5,10,16,.92)), url("%BASE_URL%assets/immersive-training-room.webp"); background-position: center; background-size: cover; }
-    .setup-header { width: min(100%, 520px); margin-top: auto; padding: 7px 12px 8px; border: 1px solid rgba(125,160,188,.34); border-bottom: 0; border-radius: 13px 13px 0 0; background: rgba(5,14,23,.76); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .setup-header { width: min(96vw, 1180px); margin-top: auto; padding: 7px 12px 8px; border: 1px solid rgba(125,160,188,.34); border-bottom: 0; border-radius: 13px 13px 0 0; background: rgba(5,14,23,.76); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
     .brand { margin: 0; color: #edf4fa; font-size: clamp(1.25rem, 4.5vmin, 1.55rem); line-height: 1; letter-spacing: .04em; font-weight: 1000; }
     .subtitle { margin: 4px 0 0; color: #8298aa; font-size: .58rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-    .setup-shell { display: grid; grid-template-columns: minmax(0, 1fr); flex: 0 1 auto; min-height: 0; align-content: start; align-items: start; gap: 7px; width: min(100%, 520px); overflow-y: auto; padding: 8px; border: 1px solid rgba(125,160,188,.34); border-top: 0; background: rgba(5,14,23,.68); scrollbar-color: #5b6675 transparent; scrollbar-gutter: stable; scrollbar-width: thin; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .setup-shell { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 0 1 auto; min-height: 0; align-content: start; align-items: start; gap: 8px; width: min(96vw, 1180px); overflow-y: auto; padding: 8px; border: 1px solid rgba(125,160,188,.34); border-top: 0; background: rgba(5,14,23,.68); scrollbar-color: #5b6675 transparent; scrollbar-gutter: stable; scrollbar-width: thin; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .setup-shell > .setup-section:first-child, .setup-shell > .setup-options { grid-column: 1 / -1; }
     .setup-shell::-webkit-scrollbar { width: 8px; }
     .setup-shell::-webkit-scrollbar-track { background: transparent; }
     .setup-shell::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: #5b6675; background-clip: padding-box; }
@@ -63,7 +64,7 @@
     .field input:focus { border-color: #35f08a; box-shadow: 0 0 0 3px rgba(53,240,138,.18); }
     .fixed-note { margin: 5px 0 0; color: #8fa5bd; text-align: left; font-size: .56rem; line-height: 1.25; font-weight: 700; }
     .setup-actions { display: grid; width: min(100%, 420px); gap: 8px; padding-bottom: 18px; }
-    .setup > .setup-actions, .setup > .setup-actions.has-history { position: relative; z-index: 40; flex: 0 0 auto; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); width: min(100%, 520px); margin-top: 0; margin-bottom: auto; gap: 6px; padding: 7px 8px max(8px, env(safe-area-inset-bottom)); border: 1px solid rgba(125,160,188,.34); border-top: 0; border-radius: 0 0 13px 13px; background: rgba(5,14,23,.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .setup > .setup-actions, .setup > .setup-actions.has-history { position: relative; z-index: 40; flex: 0 0 auto; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); width: min(96vw, 1180px); margin-top: 0; margin-bottom: auto; gap: 6px; padding: 7px 8px max(8px, env(safe-area-inset-bottom)); border: 1px solid rgba(125,160,188,.34); border-top: 0; border-radius: 0 0 13px 13px; background: rgba(5,14,23,.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
     .setup > .setup-actions .action { min-height: 42px; border: 1px solid #667b8e; border-radius: 8px; padding: 8px; background: linear-gradient(180deg, #e1e6e8, #9daab4); color: #101820; font-size: .74rem; font-weight: 1000; cursor: pointer; }
     .setup > .setup-actions .action.secondary { border-color: #54677a; background: linear-gradient(180deg, #445568, #263442); color: #e0e8ee; font-size: .62rem; }
     .action { border: 0; border-radius: 12px; padding: 12px; background: #35f08a; color: #04130b; font-size: 1.05rem; font-weight: 1000; cursor: pointer; }
@@ -75,7 +76,8 @@
     .setup-options > summary { display: flex; min-height: 36px; align-items: center; justify-content: space-between; padding: 7px 10px; color: #aebfcd; font-size: .61rem; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; list-style: none; }
     .setup-options > summary::after { content: "+"; color: #7fd4ef; font-size: .85rem; }
     .setup-options[open] > summary::after { content: "–"; }
-    .setup-options-content { display: grid; gap: 7px; padding: 0 7px 7px; }
+    .setup-options-content { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 7px; padding: 0 7px 7px; }
+    .setup-options-content > .advanced-disclosure { grid-column: 1 / -1; }
     .setup-options .setup-section { background: rgba(16,27,37,.78); }
     .ride-progress { position: absolute; top: 8px; left: 50%; z-index: 20; width: min(calc(100% - 24px), 900px); height: 7px; overflow: hidden; transform: translateX(-50%); border-radius: 999px; background: var(--hud-track); }
     .ride-progress-fill { height: 100%; width: 0; border-radius: inherit; background: var(--hud-aero); transition: width .25s linear; }
@@ -413,6 +415,9 @@
     }
     @media (max-width: 700px) {
       .setup-shell { grid-template-columns: 1fr; width: min(100%, 520px); }
+      .setup-header { width: min(100%, 520px); }
+      .setup-shell > .setup-section:first-child, .setup-shell > .setup-options { grid-column: auto; }
+      .setup-options-content { grid-template-columns: 1fr; }
       .setup-span, .advanced-disclosure { grid-column: auto; }
       .setup > .setup-actions, .setup > .setup-actions.has-history { grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); width: min(100%, 520px); }
       .setup > .setup-actions #start-ride, .setup > .setup-actions:not(.has-history) #pop-out { grid-column: auto; }
