@@ -134,6 +134,7 @@
     .camera-learning-answer { min-height: 48px; border: 1px solid #4b5665; border-radius: 10px; padding: 7px 10px; background: #202630; color: #e2e8f0; font-size: .75rem; font-weight: 950; cursor: pointer; }
     .camera-learning-answer.yes { border-color: #607b6d; background: #1b2822; color: #b6cabe; }
     .camera-learning-answer:active { background: #2a313c; }
+    .ride-control-cluster { display: contents; }
     .ride-utility-controls { position: absolute; top: 27px; right: 10px; z-index: 18; display: flex; align-items: center; gap: 6px; }
     .pip-mini, .camera-auto-toggle, .ride-pause-button { min-height: 42px; border-radius: 9px; padding: 6px 9px; font-size: .62rem; font-weight: 1000; cursor: pointer; }
     .pip-mini { min-width: 42px; border: 1px solid #3a424d; background: #11151b; color: #cbd3dc; }
@@ -187,8 +188,22 @@
     .pending-action { min-height: 40px; border: 1px solid rgba(255,255,255,.25); border-radius: 8px; background: rgba(255,255,255,.12); color: #fff; font-size: .62rem; font-weight: 1000; cursor: pointer; }
     .action-screen .pending-action { border-color: #fff; background: #07121e; color: #fff; }
     .pending-count { margin: 4px 0 0; color: #d9ca8a; font-size: .61rem; }
-    .aero.active-ride { justify-content: flex-start; padding: 49px clamp(8px, 3vw, 20px) 12px; }
-    .aero-dashboard { display: grid; grid-template-rows: minmax(175px, .82fr) minmax(180px, 1fr); gap: clamp(10px, 2.5vh, 20px); width: min(100%, 900px); height: 100%; min-height: 0; }
+    .aero.active-ride { justify-content: flex-start; padding: 22px clamp(8px, 2vw, 20px) 10px; }
+    .ride-phase-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 10px; width: min(100%, 1180px); margin: 21px auto 10px; }
+    .ride-phase-strip { min-width: 0; overflow: hidden; border: 1px solid #405063; border-radius: 12px; background: #0d1117; }
+    .ride-phase-strip ol { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: 100%; min-height: 58px; margin: 0; padding: 0; list-style: none; }
+    .ride-phase { position: relative; display: flex; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 7px 5px; border-right: 1px solid #354251; color: #647184; text-align: center; text-transform: uppercase; }
+    .ride-phase:last-child { border-right: 0; }
+    .ride-phase span { font-size: clamp(.48rem, 1.3vw, .66rem); font-weight: 950; letter-spacing: .12em; white-space: nowrap; }
+    .ride-phase strong { max-width: 100%; overflow: hidden; font-size: clamp(.48rem, 1.2vw, .63rem); letter-spacing: .1em; text-overflow: ellipsis; white-space: nowrap; }
+    .ride-phase.complete { color: #8092a6; background: #101720; }
+    .ride-phase.current { color: #e4eaf1; background: #43586d; }
+    .ride-phase.current::after { content: ""; position: absolute; right: 0; bottom: 0; left: 0; height: 3px; background: #8fa8be; }
+    .aero .ride-control-cluster { display: flex; align-items: stretch; gap: 8px; }
+    .aero .ride-control-cluster .camera-badge { position: static; display: flex; max-width: 128px; align-items: center; border-radius: 12px; padding-inline: 9px; }
+    .aero .ride-utility-controls { position: static; align-items: stretch; }
+    .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { min-height: 58px; border-radius: 12px; }
+    .aero-dashboard { display: grid; grid-template-rows: minmax(175px, .9fr) minmax(180px, 1fr) auto; gap: clamp(8px, 1.8vh, 15px); width: min(100%, 1180px); height: min(100%, 800px); min-height: 0; margin: 0 auto; }
     .aero-hero { position: relative; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(12px, 2.6vh, 22px); border: 2px solid #52687b; border-radius: clamp(18px, 4vmin, 28px); background: #151c23; }
     .hero-tap-target { position: absolute; inset: 0; z-index: 3; border: 0; border-radius: inherit; padding: 0; background: transparent; cursor: pointer; }
     .hero-tap-target:active { background: rgba(125,145,163,.09); }
@@ -200,6 +215,10 @@
     .aero-clock .timer { color: var(--hud-white); font-family: var(--hud-mono); font-size: clamp(3.2rem, 13.5vw, 6.8rem); line-height: .92; letter-spacing: -.07em; }
     .aero-clock .timer.message { color: var(--hud-due); font-family: inherit; font-size: clamp(2.2rem, 8vw, 4.5rem); letter-spacing: -.03em; }
     .aero-percentage { color: #91aa9d; font-family: var(--hud-mono); font-size: clamp(.82rem, 2.3vmin, 1.05rem); font-weight: 1000; }
+    .challenge-progress { position: relative; z-index: 1; width: min(72%, 650px); height: 5px; margin-top: clamp(8px, 1.5vh, 13px); overflow: hidden; border-radius: 999px; background: #303944; }
+    .challenge-progress-fill { height: 100%; border-radius: inherit; background: var(--hud-aero); }
+    .challenge-best { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 12px; margin: clamp(7px, 1.5vh, 12px) 0 0; color: #8296aa; font-family: var(--hud-mono); font-size: clamp(.57rem, 1.6vmin, .74rem); font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+    .challenge-best strong { color: #93aa93; }
     .hero-metrics { display: none; }
     .hero-metrics strong { color: #b9c3cd; font-family: var(--hud-mono); }
     .reminder-zone { display: flex; min-height: 0; flex-direction: column; gap: 8px; }
@@ -219,6 +238,9 @@
     .dashboard-card.due .status-ring { background: conic-gradient(from -90deg, var(--hud-due) var(--ring-progress), #4a2836 0); }
     .dashboard-card.due .status-ring::after { background: #2d1724; }
     .card-time { position: relative; z-index: 1; margin: 0; color: var(--hud-white); font-family: var(--hud-mono); font-size: clamp(.85rem, 3.4vw, 1.6rem); line-height: 1; font-weight: 700; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+    .ride-plan-status { min-height: 18px; margin: 0; color: #8da48d; font-family: var(--hud-mono); font-size: clamp(.55rem, 1.6vmin, .72rem); font-weight: 950; letter-spacing: .12em; text-align: center; text-transform: uppercase; }
+    .ride-plan-status.attention { color: #c69b72; }
+    .ride-plan-status.ready { color: #718092; }
     .dashboard-card.due .card-time { color: #fff; }
     .card-label { margin-top: clamp(11px, 2.2vh, 18px); color: #939ba5; font-size: clamp(.78rem, 2.5vmin, 1.12rem); font-weight: 650; letter-spacing: .01em; }
     .card-action { position: absolute; bottom: clamp(7px, 1.5vh, 12px); min-height: 25px; display: grid; place-items: center; border: 1px solid #3a424d; border-radius: 999px; padding: 4px 9px; background: #1b2028; color: #c6ced8; font-size: clamp(.5rem, 1.3vmin, .62rem); font-weight: 900; letter-spacing: .04em; }
@@ -280,8 +302,16 @@
       .field label { font-size: .58rem; }
       .field input { padding: 6px 7px; font-size: 1rem; }
       .setup > .setup-actions { margin-top: 9px; }
-      .aero.active-ride { padding: 49px 7px 7px; }
-      .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr); gap: 7px; }
+      .aero.active-ride { padding: 18px 7px 6px; }
+      .ride-phase-header { gap: 6px; margin: 17px auto 7px; }
+      .ride-phase-strip ol { min-height: 46px; }
+      .ride-phase { gap: 2px; padding: 5px 2px; }
+      .ride-phase span { font-size: .43rem; }
+      .ride-phase strong { font-size: .4rem; }
+      .aero .ride-control-cluster { gap: 4px; }
+      .aero .ride-control-cluster .camera-badge { display: none; }
+      .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { min-height: 46px; padding: 4px 6px; }
+      .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr) auto; gap: 6px; }
       .aero-hero { padding: 8px 6px; border-radius: 17px; }
       .aero-interval { display: none; }
       .aero-title { margin-bottom: 6px; font-size: .72rem; }
@@ -290,6 +320,8 @@
       .aero-clock .timer { font-size: 2.55rem; }
       .aero-clock .timer.message { font-size: 1.65rem; }
       .aero-percentage { font-size: .68rem; }
+      .challenge-progress { margin-top: 6px; }
+      .challenge-best { margin-top: 5px; font-size: .49rem; }
       .hero-metrics { gap: 7px; margin-top: 9px; font-size: .46rem; letter-spacing: .03em; }
       .reminder-zone { gap: 5px; }
       .reminder-card-grid { gap: 5px; }
@@ -303,11 +335,10 @@
       .reminder-resolution { min-height: 34px; gap: 4px; padding: 3px 5px; border-radius: 10px; }
       .resolution-label { font-size: .48rem; }
       .resolution-action { min-height: 28px; padding: 3px 7px; font-size: .49rem; }
-      .aero .ride-utility-controls { top: 19px; right: 7px; gap: 4px; }
-      .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { min-height: 38px; padding: 4px 6px; font-size: .53rem; }
+      .aero .ride-utility-controls { gap: 4px; }
+      .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { padding: 4px 6px; font-size: .53rem; }
       .aero .pip-mini { min-width: 38px; }
       .aero .ride-pause-button { min-width: 58px; min-height: 42px; }
-      .aero .camera-badge { top: 19px; max-width: 126px; overflow: hidden; font-size: .5rem; text-overflow: ellipsis; white-space: nowrap; }
       .camera-learning-prompt { grid-template-columns: minmax(0, 1fr) repeat(2, 62px); gap: 5px; bottom: 68px; padding: 6px; }
       .aero .camera-learning-prompt { bottom: 7px; }
       .camera-learning-copy strong { font-size: .61rem; }
@@ -316,9 +347,16 @@
       .ride-pause-panel { margin-top: 12px; padding: 11px; }
       .ride-resume-action { min-height: 58px; }
     }
+    @media (max-width: 340px) {
+      .ride-phase-strip ol { grid-template-columns: 1fr; }
+      .ride-phase:not(.current) { display: none; }
+      .ride-phase.current { border-right: 0; }
+      .ride-phase span { font-size: .55rem; }
+      .ride-phase strong { font-size: .5rem; }
+    }
     @media (max-height: 430px) {
-      .aero.active-ride { padding-top: 49px; }
-      .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr); gap: 7px; }
+      .aero.active-ride { padding-top: 18px; }
+      .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr) auto; gap: 6px; }
       .aero-hero { padding-block: 7px; }
       .action-screen > .timer, .paused > .timer { font-size: 3.2rem; }
       .stats { margin-top: 5px; }
@@ -326,11 +364,17 @@
     }
     @media (max-height: 340px) {
       .hint { display: none; }
-      .aero.active-ride { padding: 44px 6px 5px; }
-      .aero-dashboard { grid-template-rows: 104px minmax(0, 1fr); gap: 5px; }
+      .aero.active-ride { padding: 17px 6px 4px; }
+      .ride-phase-header { margin-top: 15px; margin-bottom: 5px; }
+      .ride-phase-strip ol { min-height: 39px; }
+      .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { min-height: 39px; }
+      .aero-dashboard { grid-template-rows: 108px minmax(0, 1fr); gap: 5px; }
+      .ride-plan-status { display: none; }
       .aero-title { font-size: .65rem; }
       .aero-subtitle { margin-top: 4px; }
       .aero-clock .timer { font-size: 1.9rem; }
+      .challenge-progress { margin-top: 4px; }
+      .challenge-best { margin-top: 3px; }
       .status-ring { width: min(72%, 56px); }
       .card-action { min-height: 26px; }
     }
@@ -365,6 +409,7 @@
       updateCompletedActionReason
     } from "/src/habit-learning.js";
     import { loadHistory, loadSettings, resetLearningFor, saveRide, saveSettings } from "/src/history-store.js";
+    import { RIDE_PHASES, getLiveChallenge, getPersonalBest, getPlanStatus, getRidePhase } from "/src/ride-phases.js";
     const nutritionPlan = [
       "Take 1 Gel + Big Drink of Water",
       "Drink 1/2 Bottle of Carb Mix",
@@ -410,6 +455,7 @@
       aeroSegmentStartedAt: 0,
       accumulatedAeroMs: 0,
       bestIntervalMs: 0,
+      personalBestSec: 0,
       fuelEverySec: 30 * 60,
       waterEverySec: 10 * 60,
       stretchEverySec: 20 * 60,
@@ -439,6 +485,7 @@
       intervalSources: { water: "athlete-entered", fuel: "athlete-entered", stretch: "athlete-entered" },
       historySaveError: "",
       rideTargetReached: false,
+      currentPhaseIndex: 0,
       summary: null,
       cameraEnabled: false,
       cameraAutoControl: false,
@@ -542,6 +589,43 @@
       const elapsedSec = rideMs() / 1000;
       const progress = Math.min(100, elapsedSec / model.plannedRideSec * 100);
       return `<div class="ride-progress" role="progressbar" aria-label="Total ride time" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress)}" aria-valuetext="${formatTime(elapsedSec)} of ${formatTime(model.plannedRideSec)}"><div class="ride-progress-fill" style="width:${progress}%"></div><div class="ride-progress-text" id="ride-progress-text">RIDE ${formatTime(elapsedSec)} / ${formatTime(model.plannedRideSec)}</div></div>`;
+    }
+
+    function phaseContext() {
+      return getRidePhase(rideMs() / 1000, model.plannedRideSec);
+    }
+
+    function currentChallenge() {
+      return getLiveChallenge({
+        reminderRows: getReminderRows(),
+        intervalRemainingSec: intervalRemainingSec(),
+        intervalElapsedSec: currentIntervalMs() / 1000
+      });
+    }
+
+    function ridePhasesMarkup() {
+      const current = phaseContext();
+      const items = RIDE_PHASES.map((phase, index) => {
+        const state = index < current.index ? " complete" : index === current.index ? " current" : "";
+        const currentAttribute = index === current.index ? ' aria-current="step"' : "";
+        return `<li class="ride-phase${state}"${currentAttribute}><span>Phase ${index + 1}</span><strong>${phase.shortName}</strong></li>`;
+      }).join("");
+      return `<div class="ride-phase-strip" aria-label="Ride phases"><ol>${items}</ol></div>`;
+    }
+
+    function personalBestMarkup() {
+      const bestSec = Math.max(model.personalBestSec, model.bestIntervalMs / 1000);
+      const currentSec = currentIntervalMs() / 1000;
+      if (!bestSec) return `<span>FIRST TARGET</span><strong>${formatTime(model.currentIntervalTargetSec)}</strong>`;
+      const difference = bestSec - currentSec;
+      return difference > 0
+        ? `<span>BEST ${formatTime(bestSec)}</span><strong>${formatTime(difference)} TO MATCH</strong>`
+        : `<span>PERSONAL BEST</span><strong>+${formatTime(Math.abs(difference))}</strong>`;
+    }
+
+    function planStatusMarkup() {
+      const status = getPlanStatus(model.reminders, model.completedActions);
+      return `<p class="ride-plan-status ${status.tone}" id="ride-plan-status">${status.text}</p>`;
     }
 
     function quickActionDockMarkup() {
@@ -724,25 +808,32 @@
         ? `<button class="camera-auto-toggle${model.cameraAutoControl ? "" : " off"}" id="camera-auto-toggle" type="button">${model.cameraAutoControl ? "AUTO ON" : "AUTO OFF"}</button>`
         : "";
       const pip = "documentPictureInPicture" in window ? '<button class="pip-mini" id="pip-ride" type="button">PiP</button>' : "";
-      return `${cameraBadge}<div class="ride-utility-controls">${autoToggle}${pip}<button class="ride-pause-button" id="pause-ride" type="button" aria-label="Pause the entire ride" aria-keyshortcuts="P">PAUSE</button></div>`;
+      return `<div class="ride-control-cluster">${cameraBadge}<div class="ride-utility-controls">${autoToggle}${pip}<button class="ride-pause-button" id="pause-ride" type="button" aria-label="Pause the entire ride" aria-keyshortcuts="P">PAUSE</button></div></div>`;
     }
 
     function aeroMarkup() {
       const totalSec = totalAeroMs() / 1000;
       const due = getDueActions();
-      const title = model.rideTargetReached ? "RIDE COMPLETE" : model.intervalComplete ? "BREAK TIME" : "AERO";
+      const challenge = currentChallenge();
+      const title = model.rideTargetReached ? "RIDE COMPLETE" : model.intervalComplete ? "BREAK TIME" : `CURRENT CHALLENGE • ${challenge.label}`;
       const subtitle = model.rideTargetReached ? "TAP TO FINISH & REVIEW" : model.intervalComplete ? "TAP TO RECOVER" : due.length ? `${ACTION_LABELS[due[0].type].toUpperCase()} DUE • TAP TO SIT UP` : "TAP TO SIT UP";
-      const headline = formatHeroTime(model.intervalComplete || model.rideTargetReached ? 0 : intervalRemainingSec());
+      const headline = formatHeroTime(model.intervalComplete || model.rideTargetReached ? 0 : challenge.remainingSec);
       const advanceLabel = model.rideTargetReached ? "Finish and review" : model.intervalComplete ? "Start recovery" : due.length ? "Start next due break" : "Pause Aero";
+      const personalBestSec = Math.max(model.personalBestSec, model.bestIntervalMs / 1000);
+      const challengeProgress = personalBestSec
+        ? Math.min(100, currentIntervalMs() / 10 / personalBestSec)
+        : Math.min(100, currentIntervalMs() / 10 / Math.max(1, model.currentIntervalTargetSec));
       return `<section class="screen active-ride aero${model.intervalComplete || model.rideTargetReached ? " alert" : ""}" data-advance="true" role="region" aria-label="Aero training dashboard. Click the background to advance.">
-        ${progressMarkup()}${rideControlsMarkup()}<button class="screen-advance-control" type="button" aria-keyshortcuts="Enter Space">${advanceLabel}</button><div class="aero-dashboard">
+        ${progressMarkup()}<div class="ride-phase-header">${ridePhasesMarkup()}${rideControlsMarkup()}</div><button class="screen-advance-control" type="button" aria-keyshortcuts="Enter Space">${advanceLabel}</button><div class="aero-dashboard">
           <section class="aero-hero" aria-label="Current Aero interval">
             <button class="hero-tap-target" id="aero-hero-action" type="button" aria-label="${advanceLabel}" aria-keyshortcuts="Enter Space"><span class="visually-hidden">${advanceLabel}</span></button>
             <span class="aero-interval">Interval ${model.intervalNumber} • ${formatTime(model.currentIntervalTargetSec)} target</span>
             <h1 class="aero-title">${title}</h1><div class="aero-clock"><span class="timer${model.intervalComplete || model.rideTargetReached ? " message" : ""}" id="aero-timer">${headline}</span><span class="aero-percentage" id="aero-percentage">(${aeroAdherencePercent()}%)</span></div>
+            <div class="challenge-progress" aria-hidden="true"><div class="challenge-progress-fill" id="challenge-progress-fill" style="width:${challengeProgress}%"></div></div>
+            <p class="challenge-best" id="challenge-best">${personalBestMarkup()}</p>
             <p class="aero-subtitle">${subtitle}</p>
-            <div class="hero-metrics"><span>Total <strong id="total-aero">${formatTime(totalSec)}</strong></span><span>Goal <strong>${formatTime(model.aeroGoalSec)}</strong></span><span>Best <strong>${formatTime(model.bestIntervalMs / 1000)}</strong></span></div>
-          </section>${scheduleMarkup()}
+            <div class="hero-metrics"><span>Total <strong id="total-aero">${formatTime(totalSec)}</strong></span><span>Goal <strong>${formatTime(model.aeroGoalSec)}</strong></span><span>Phase <strong>${phaseContext().number} / ${RIDE_PHASES.length}</strong></span></div>
+          </section>${scheduleMarkup()}${planStatusMarkup()}
         </div>${cameraLearningPromptMarkup()}${actionFeedbackMarkup()}
       </section>`;
     }
@@ -1244,12 +1335,13 @@
         nextDue: { fuel: values.fuelEvery, water: values.waterEvery, stretch: values.stretchEvery },
         accumulatedAeroMs: 0, intervalAccumulatedMs: 0, aeroSegmentStartedAt: autoControl ? 0 : startedAt,
         intervalNumber: 1, intervalComplete: false, intervalRecorded: false, bestIntervalMs: 0,
-        intervals: [], events: [{ type: "ride-start", at: 0 }, ...(autoControl ? [{ type: "camera-auto-enabled", at: 0 }] : [])], notified: new Set(),
+        personalBestSec: getPersonalBest(loadHistory()),
+        intervals: [], events: [{ type: "ride-start", at: 0 }, { type: "ride-phase-start", phase: 1, name: RIDE_PHASES[0].name, at: 0 }, ...(autoControl ? [{ type: "camera-auto-enabled", at: 0 }] : [])], notified: new Set(),
         rideMode: values.mode, remindersEnabled: values.remindersEnabled, reminders: [], completedActions: [],
         actionLocks: { water: 0, fuel: 0, stretch: 0 }, actionFeedback: null, reviewReasonEditorDismissed: false, currentReminderId: null,
         acceptedRecommendations: values.acceptedRecommendations, intervalSources: values.intervalSources, historySaveError: "",
         nutritionIndex: 0, currentFuel: nutritionPlan[0], currentMobility: randomMobility(),
-         rideTargetReached: false, summary: null, cameraEnabled,
+         rideTargetReached: false, currentPhaseIndex: 0, summary: null, cameraEnabled,
          cameraAutoControl: autoControl, cameraAutoEverEnabled: autoControl,
          cameraControlHoldUntil: 0, cameraPauseReason: autoControl ? "Waiting for a stable Aero position." : "",
          cameraLearningPrompt: null, cameraLearningLastAsked: { aero: -Infinity, upright: -Infinity }, cameraLearningApplying: false
@@ -1692,11 +1784,18 @@
       }
       if (model.state === "aero") {
         const timer = doc.getElementById("aero-timer");
-        if (timer && !model.intervalComplete && !model.rideTargetReached) timer.textContent = formatHeroTime(intervalRemainingSec());
+        const challenge = currentChallenge();
+        if (timer && !model.intervalComplete && !model.rideTargetReached) timer.textContent = formatHeroTime(challenge.remainingSec);
         const total = doc.getElementById("total-aero");
         if (total) total.textContent = formatTime(totalAeroMs() / 1000);
         const percentage = doc.getElementById("aero-percentage");
         if (percentage) percentage.textContent = `(${aeroAdherencePercent()}%)`;
+        const personalBestSec = Math.max(model.personalBestSec, model.bestIntervalMs / 1000);
+        const chaseTargetSec = personalBestSec || model.currentIntervalTargetSec;
+        const challengeProgress = doc.getElementById("challenge-progress-fill");
+        if (challengeProgress) challengeProgress.style.width = `${Math.min(100, currentIntervalMs() / 10 / Math.max(1, chaseTargetSec))}%`;
+        const challengeBest = doc.getElementById("challenge-best");
+        if (challengeBest) challengeBest.innerHTML = personalBestMarkup();
         getReminderRows().forEach(item => {
           const node = doc.querySelector(`[data-reminder="${item.type}"]`);
           if (node) { node.textContent = item.remaining <= 0 ? "00:00" : formatTime(item.remaining); node.classList.toggle("due", item.remaining <= 0); }
@@ -1738,6 +1837,13 @@
 
     function tick() {
       if (["aero", "paused", "action"].includes(model.state)) {
+        const nextPhase = phaseContext();
+        if (nextPhase.index !== model.currentPhaseIndex) {
+          model.currentPhaseIndex = nextPhase.index;
+          model.events.push({ type: "ride-phase-start", phase: nextPhase.number, name: nextPhase.name, at: rideMs() / 1000 });
+          announce(`Phase ${nextPhase.number}, ${nextPhase.name}.`);
+          render();
+        }
         const createdReminders = materializeDueReminders();
         if (createdReminders.length) {
           beep();
