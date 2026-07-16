@@ -284,12 +284,12 @@
     .resolution-action { min-height: 28px; flex: 0 0 auto; border: 1px solid #3a4457; border-radius: 999px; padding: 4px 10px; background: #222938; color: #eaf1fb; font-size: clamp(.54rem, 1.35vmin, .63rem); font-weight: 900; cursor: pointer; }
     .immersive-card-data, .immersive-road { display: none; }
     .aero.immersive { background-color: #071018; background-image: linear-gradient(180deg, rgba(2,8,13,.34), rgba(2,8,13,.05) 45%, rgba(2,7,11,.3)), url("%BASE_URL%assets/immersive-training-room.webp"); background-position: center; background-size: cover; }
-    .aero.immersive::before { background: linear-gradient(90deg, rgba(3,9,14,.56), rgba(3,9,14,.05) 25% 72%, rgba(3,9,14,.58)), linear-gradient(180deg, rgba(3,8,13,.28), transparent 58%, rgba(3,8,13,.26)); }
+    .aero.immersive::before { background: linear-gradient(90deg, rgba(3,9,14,.46), rgba(3,9,14,.03) 25% 72%, rgba(3,9,14,.48)), linear-gradient(180deg, rgba(3,8,13,.22), transparent 58%, rgba(3,8,13,.2)); }
     .immersive .ride-phase-header { position: relative; z-index: 5; width: min(92%, 1120px); margin-top: 15px; }
     .immersive .ride-phase-strip { border-color: rgba(130,169,195,.48); background: rgba(5,14,22,.62); backdrop-filter: blur(13px); -webkit-backdrop-filter: blur(13px); }
     .immersive .ride-phase.current { background: rgba(69,112,142,.74); }
     .immersive .pip-mini, .immersive .camera-auto-toggle, .immersive .ride-pause-button, .immersive .camera-badge { background: rgba(6,15,23,.7); backdrop-filter: blur(13px); -webkit-backdrop-filter: blur(13px); }
-    .immersive .aero-dashboard { grid-template-columns: minmax(205px, .62fr) minmax(450px, 1.7fr) minmax(220px, .66fr); grid-template-rows: minmax(270px, .9fr) minmax(145px, .48fr) auto auto; width: min(94%, 1160px); }
+    .immersive .aero-dashboard { grid-template-columns: minmax(205px, .62fr) minmax(450px, 1.7fr) minmax(220px, .66fr); grid-template-rows: minmax(250px, .78fr) minmax(190px, .54fr) auto auto; width: min(94%, 1160px); }
     .immersive .aero-dashboard > * { position: relative; z-index: 2; }
     .immersive .aero-hero { grid-column: 2; grid-row: 1; border-color: rgba(132,180,209,.62); background: rgba(4,14,23,.53); box-shadow: inset 0 0 36px rgba(93,155,191,.08); }
     .immersive .aero-hero::before { border-color: rgba(148,202,233,.16); }
@@ -298,12 +298,17 @@
     .immersive .challenge-progress { background: rgba(3,11,18,.7); }
     .immersive .hero-metrics { border-color: rgba(117,166,194,.52); background: rgba(3,12,19,.7); }
     .immersive .trainer-metrics { border-color: rgba(86,137,121,.55); background: rgba(3,15,13,.7); }
-    .immersive .dashboard-card { border-color: rgba(120,170,199,.58); background: rgba(4,15,23,.58); box-shadow: inset 0 0 24px rgba(92,163,204,.06); }
+    .immersive .dashboard-card { border-color: rgba(120,170,199,.58); background: rgba(4,15,23,.52); box-shadow: inset 0 0 24px rgba(92,163,204,.06); }
     .immersive .dashboard-card.type-water { grid-column: 1; grid-row: 1; border-color: rgba(113,159,190,.68); }
-    .immersive .dashboard-card.type-fuel { grid-column: 1; grid-row: 2; display: grid; grid-template-columns: 82px minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 4px 10px; border-color: rgba(191,137,82,.68); text-align: left; }
+    .immersive .dashboard-card.type-fuel { grid-column: 1; grid-row: 2; display: grid; grid-template-columns: 74px minmax(0, 1fr); grid-template-rows: auto auto minmax(68px, 1fr) auto auto auto; align-items: center; gap: 5px 10px; padding: 12px 14px; border-color: rgba(191,137,82,.78); text-align: left; }
     .immersive .dashboard-card.type-stretch { grid-column: 3; grid-row: 1 / span 2; border-color: rgba(141,123,168,.7); }
-    .immersive .dashboard-card.type-fuel .status-ring { grid-column: 1; grid-row: 1 / span 2; width: 82px; }
-    .immersive .dashboard-card.type-fuel .card-label { grid-column: 2; grid-row: 1; margin: 0; }
+    .immersive .dashboard-card.type-fuel .status-ring { grid-column: 1 / -1; grid-row: 3; width: 100%; height: 72px; aspect-ratio: auto; flex-direction: row; justify-content: flex-start; gap: 10px; border-radius: 0; background: transparent; }
+    .immersive .dashboard-card.type-fuel .status-ring::after { inset: auto; left: 0; width: 62px; height: 62px; border: 6px solid var(--card-accent); border-radius: 50%; background: rgba(7,14,20,.84); }
+    .immersive .dashboard-card.type-fuel .card-orb-icon { width: 74px; height: 62px; margin-left: 0; }
+    .immersive .dashboard-card.type-fuel .card-orb-icon svg { width: 34px; height: 34px; }
+    .immersive .dashboard-card.type-fuel .card-time { display: grid; gap: 5px; margin-left: 0; font-size: clamp(1.45rem, 3.1vmin, 1.85rem); letter-spacing: -.05em; }
+    .immersive .dashboard-card.type-fuel .card-time::after { content: "TO NEXT"; color: #9eabb6; font-family: var(--hud-font); font-size: .52rem; font-weight: 950; letter-spacing: .16em; }
+    .immersive .dashboard-card.type-fuel .card-label { grid-column: 1 / -1; grid-row: 1; margin: 0; font-size: .92rem; }
     .immersive .dashboard-card.type-water .status-ring { width: min(68%, 118px); }
     .immersive .dashboard-card.type-stretch .status-ring { width: min(70%, 136px); }
     .immersive .card-label { color: #d1dde7; }
@@ -313,13 +318,18 @@
     .immersive .immersive-card-data b { color: var(--card-accent); }
     .immersive .immersive-card-data i { display: block; height: 4px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.1); }
     .immersive .immersive-card-data em { display: block; height: 100%; border-radius: inherit; background: var(--card-accent); }
-    .immersive .type-fuel .immersive-card-data { grid-column: 2; grid-row: 2; width: 100%; margin-top: 0; }
-    .immersive .type-fuel .immersive-card-data small { white-space: normal; }
+    .immersive .type-fuel .immersive-card-data { display: contents; width: 100%; margin-top: 0; }
+    .immersive .type-fuel .immersive-card-data small { grid-column: 1 / -1; grid-row: 2; color: #d2dbe2; font-size: clamp(.43rem, 1.05vmin, .51rem); letter-spacing: .045em; white-space: nowrap; }
+    .immersive .type-fuel .immersive-card-data > span { grid-column: 1 / -1; grid-row: 4; font-size: .48rem; }
+    .immersive .type-fuel .immersive-card-data > i { grid-column: 1 / -1; grid-row: 5; width: 100%; }
     .immersive-extra { display: none; }
     .immersive .immersive-extra { display: grid; width: min(92%, 210px); margin-top: 14px; }
     .immersive .water-schedule { gap: 6px; }
     .immersive .water-schedule span { display: grid; grid-template-columns: 1fr auto; gap: 8px; border-top: 1px solid rgba(113,159,190,.22); padding: 6px 3px 0; color: #7894a8; font-size: .48rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
     .immersive .water-schedule b { color: #b8cede; font-family: var(--hud-mono); font-size: .58rem; }
+    .immersive .fuel-schedule { grid-column: 1 / -1; grid-row: 6; width: 100%; gap: 4px; margin-top: 0; }
+    .immersive .fuel-schedule span { display: grid; grid-template-columns: 1fr auto; gap: 8px; border-top: 1px solid rgba(191,137,82,.2); padding: 4px 3px 0; color: #9c856f; font-size: .46rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+    .immersive .fuel-schedule b { color: #d7c1aa; font-family: var(--hud-mono); font-size: .56rem; }
     .immersive .mobility-plan { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
     .immersive .mobility-plan span { display: grid; min-height: 46px; place-items: center; border: 1px solid rgba(141,123,168,.25); border-radius: 7px; padding: 5px; color: #8f829f; font-size: .46rem; font-weight: 900; line-height: 1.15; letter-spacing: .05em; text-align: center; text-transform: uppercase; }
     .immersive .mobility-plan span.current { border-color: rgba(169,143,199,.7); background: rgba(92,70,112,.26); color: #cbb8df; }
@@ -380,10 +390,17 @@
       .reminder-resolution { grid-column: auto; grid-row: auto; }
       .ride-plan-status { grid-column: 1; grid-row: 3; }
       .immersive .immersive-card-data, .immersive .immersive-road { display: none; }
+      .immersive .type-fuel .immersive-card-data { display: none; }
       .immersive .immersive-extra { display: none; }
       .immersive .dashboard-card.type-water .status-ring, .immersive .dashboard-card.type-fuel .status-ring, .immersive .dashboard-card.type-stretch .status-ring { width: min(78%, 132px); }
       .immersive .dashboard-card.type-fuel .status-ring, .immersive .dashboard-card.type-fuel .card-label { grid-column: auto; grid-row: auto; }
       .immersive .dashboard-card.type-fuel .card-label { margin-top: clamp(11px, 2.2vh, 18px); }
+      .immersive .dashboard-card.type-fuel .status-ring { height: auto; aspect-ratio: 1; flex-direction: column; justify-content: center; gap: 7px; border-radius: 50%; background: conic-gradient(from -90deg, var(--card-accent) var(--ring-progress), var(--hud-track) 0); }
+      .immersive .dashboard-card.type-fuel .status-ring::after { inset: 8px; left: 8px; width: auto; height: auto; border: 0; border-radius: inherit; background: #10161d; }
+      .immersive .dashboard-card.type-fuel .card-orb-icon { width: clamp(34px, 5vmin, 45px); height: clamp(34px, 5vmin, 45px); margin-left: 0; }
+      .immersive .dashboard-card.type-fuel .card-orb-icon svg { width: 72%; height: 72%; }
+      .immersive .dashboard-card.type-fuel .card-time { display: block; margin-left: 0; font-size: clamp(.72rem, 2vw, 1rem); }
+      .immersive .dashboard-card.type-fuel .card-time::after { display: none; }
     }
     @media (max-width: 700px) {
       .setup-shell { grid-template-columns: 1fr; width: min(100%, 480px); }
@@ -932,6 +949,8 @@
         const detail = type === "fuel" ? model.currentFuel : type === "stretch" ? model.currentMobility : "Hydration schedule";
         const extra = type === "water"
           ? `<span class="immersive-extra water-schedule" aria-hidden="true"><span>NEXT <b>${formatTime(model.nextDue.water)}</b></span><span>AFTER <b>${formatTime(model.nextDue.water + reminderCadence(type))}</b></span><span>THEN <b>${formatTime(model.nextDue.water + reminderCadence(type) * 2)}</b></span></span>`
+          : type === "fuel"
+            ? `<span class="immersive-extra fuel-schedule" aria-hidden="true"><span>NEXT <b>${formatTime(model.nextDue.fuel)}</b></span><span>AFTER <b>${formatTime(model.nextDue.fuel + reminderCadence(type))}</b></span><span>THEN <b>${formatTime(model.nextDue.fuel + reminderCadence(type) * 2)}</b></span></span>`
           : type === "stretch"
             ? `<span class="immersive-extra mobility-plan" aria-hidden="true">${mobilityPlan.map(item => `<span class="${item === model.currentMobility ? "current" : ""}">${item.split(" (")[0]}</span>`).join("")}</span>`
             : "";
