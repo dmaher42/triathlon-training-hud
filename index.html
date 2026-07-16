@@ -111,6 +111,13 @@
     .camera-choice strong { display: block; color: #fff; font-size: .78rem; }
     .camera-choice span { display: block; margin-top: 2px; color: #95abc3; font-size: .62rem; line-height: 1.25; }
     .camera-choice + .camera-choice { margin-top: 7px; }
+    .trainer-connect { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; text-align: left; }
+    .trainer-connect strong { display: block; color: var(--hud-white); font-size: .8rem; }
+    .trainer-connect span { display: block; margin-top: 3px; color: #95a4b6; font-size: .66rem; line-height: 1.3; }
+    .trainer-connect-button { min-width: 150px; min-height: 44px; border: 1px solid #486278; border-radius: 10px; padding: 9px 12px; background: #17222c; color: #c8d6e3; font-size: .68rem; font-weight: 1000; letter-spacing: .07em; text-transform: uppercase; cursor: pointer; }
+    .trainer-connect-button.connected { border-color: #567462; background: #17251d; color: #a9c8b2; }
+    .trainer-connect-button:disabled { opacity: .65; cursor: wait; }
+    .trainer-support-note { margin: 8px 0 0; color: #718092; text-align: left; font-size: .62rem; line-height: 1.3; }
     #camera-host { display: none; position: fixed; inset: 0; z-index: 1; overflow: hidden; background: #02060b; }
     #camera-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
     body.camera-preview #camera-host { display: block; }
@@ -223,6 +230,12 @@
     .hero-metrics span { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 6px 8px; border-right: 1px solid #2b343e; color: #718092; font-size: clamp(.46rem, 1.2vmin, .58rem); font-weight: 950; letter-spacing: .12em; text-align: center; text-transform: uppercase; }
     .hero-metrics span:last-child { border-right: 0; }
     .hero-metrics strong { overflow: hidden; color: #c9d2dc; font-family: var(--hud-mono); font-size: clamp(.67rem, 1.8vmin, .86rem); letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
+    .trainer-metrics { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: min(82%, 560px); margin-top: 6px; border: 1px solid #263d35; border-radius: 10px; background: #0e1714; }
+    .trainer-metrics span { display: flex; min-width: 0; flex-direction: column; gap: 2px; padding: 5px 6px; border-right: 1px solid #263d35; color: #708d7d; font-size: clamp(.43rem, 1.1vmin, .54rem); font-weight: 950; letter-spacing: .1em; text-transform: uppercase; }
+    .trainer-metrics span:last-child { border-right: 0; }
+    .trainer-metrics strong { color: #b9d2c3; font-family: var(--hud-mono); font-size: clamp(.64rem, 1.7vmin, .82rem); font-variant-numeric: tabular-nums; }
+    .trainer-metrics.is-stopped { border-color: #745f42; background: #19160f; }
+    .trainer-metrics.is-stopped strong { color: #cbb58e; }
     .reminder-zone { display: flex; min-height: 0; flex-direction: column; gap: 8px; }
     .reminder-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex: 1 1 auto; min-height: 0; gap: clamp(6px, 1.7vw, 14px); }
     .dashboard-card { --card-accent: var(--hud-aero); position: relative; width: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(12px, 2.5vh, 22px) clamp(5px, 1.5vw, 13px); overflow: hidden; border: 1px solid #2a3039; border-radius: clamp(14px, 3vmin, 19px); background: var(--hud-panel); color: var(--hud-white); text-align: center; cursor: pointer; }
@@ -327,6 +340,11 @@
       .hero-metrics { width: 96%; margin-top: 5px; }
       .hero-metrics span { gap: 2px; padding: 4px 3px; font-size: .42rem; }
       .hero-metrics strong { font-size: .62rem; }
+      .trainer-metrics { width: 96%; margin-top: 4px; }
+      .trainer-metrics span { padding: 4px 2px; font-size: .39rem; }
+      .trainer-metrics strong { font-size: .58rem; }
+      .trainer-connect { grid-template-columns: 1fr; }
+      .trainer-connect-button { width: 100%; }
       .reminder-zone { gap: 5px; }
       .reminder-card-grid { gap: 5px; }
       .dashboard-card { padding: 9px 3px 7px; border-radius: 13px; }
@@ -414,6 +432,7 @@
     } from "/src/habit-learning.js";
     import { loadHistory, loadSettings, resetLearningFor, saveRide, saveSettings } from "/src/history-store.js";
     import { RIDE_PHASES, getLiveChallenge, getPersonalBest, getPlanStatus, getPositionTimes, getRidePhase } from "/src/ride-phases.js";
+    import { PedallingTracker, SmartTrainerConnection } from "/src/trainer-connection.js";
     const nutritionPlan = [
       "Take 1 Gel + Big Drink of Water",
       "Drink 1/2 Bottle of Carb Mix",
@@ -502,7 +521,12 @@
       cameraLearningPrompt: null,
       cameraLearningLastAsked: { aero: -Infinity, upright: -Infinity },
       cameraLearningApplying: false,
-      pendingRideValues: null
+      pendingRideValues: null,
+      trainerStatus: "disconnected",
+      trainerMessage: "Optional: connect your Tacx Bushido Smart for power, cadence and stop tracking.",
+      trainerDeviceName: "",
+      trainerRideEnabled: false,
+      trainerSnapshot: { watts: null, cadence: null, stopCount: 0, stoppedMs: 0, longestStopMs: 0, averageWatts: null, averageCadence: null, isStopped: false }
     };
 
     let audioContext = null;
@@ -520,6 +544,23 @@
     const activeDocument = () => model.pipWindow && !model.pipWindow.closed ? model.pipWindow.document : document;
     const activeRoot = () => activeDocument().getElementById("app");
     const now = () => performance.now();
+    const pedallingTracker = new PedallingTracker({ stopDelayMs: 3000 });
+    const trainer = new SmartTrainerConnection({
+      onUpdate: measurement => {
+        if (model.rideStartedAt && !["setup", "review", "history", "ride-paused"].includes(model.state)) {
+          model.trainerSnapshot = pedallingTracker.update(measurement);
+        } else {
+          model.trainerSnapshot = { ...model.trainerSnapshot, watts: measurement.watts, cadence: measurement.cadence };
+        }
+        updateTrainerUi(activeDocument());
+      },
+      onStatus: status => {
+        model.trainerStatus = status.state;
+        model.trainerMessage = status.message;
+        if (status.deviceName) model.trainerDeviceName = status.deviceName;
+        if (model.state === "setup") render(); else updateTrainerUi(activeDocument());
+      }
+    });
 
     function formatTime(totalSeconds) {
       const numeric = Number(totalSeconds);
@@ -725,6 +766,11 @@
             <div class="field"><label for="stretch-every">Mobility every (min)</label><input id="stretch-every" type="number" min="1" max="180" value="${stretchValue}"></div>
             <div class="field"><label for="fuel-seconds">Fuel break (sec)</label><input id="fuel-seconds" type="number" min="1" max="600" value="60"></div>
           </div><p class="fixed-note">Water and mobility are one-tap records. Only fueling uses a countdown.</p></div>
+          <div class="setup-section setup-span"><p class="section-title">Smart trainer <span class="section-optional">Optional</span></p>
+            <div class="trainer-connect"><div><strong>${model.trainerStatus === "connected" ? model.trainerDeviceName || "Tacx Bushido Smart" : "Tacx Bushido Smart"}</strong><span id="trainer-setup-status">${model.trainerMessage}</span></div>
+              <button class="trainer-connect-button${model.trainerStatus === "connected" ? " connected" : ""}" id="${model.trainerStatus === "connected" ? "disconnect-trainer" : "connect-trainer"}" type="button" ${model.trainerStatus === "connecting" || !trainer.supported ? "disabled" : ""}>${!trainer.supported ? "NOT SUPPORTED" : model.trainerStatus === "connecting" ? "CONNECTING..." : model.trainerStatus === "connected" ? "DISCONNECT" : "CONNECT TRAINER"}</button>
+            </div><p class="trainer-support-note">Start pedalling to wake the trainer before connecting. TiA reads measurements only and does not change resistance.</p>
+          </div>
           <div class="setup-section setup-span"><p class="section-title">Camera <span class="section-optional">Optional</span></p>
             <label class="camera-choice" for="camera-enabled"><input id="camera-enabled" type="checkbox"><span><strong>Use position detection</strong><span>Compare Aero and upright positions locally. No video is uploaded or saved.</span></span></label>
             <div class="camera-options" id="camera-options" hidden>
@@ -815,6 +861,17 @@
       return `<div class="ride-control-cluster">${cameraBadge}<div class="ride-utility-controls">${autoToggle}${pip}<button class="ride-pause-button" id="pause-ride" type="button" aria-label="Pause the entire ride" aria-keyshortcuts="P">PAUSE</button></div></div>`;
     }
 
+    function trainerMetricsMarkup() {
+      if (!model.trainerRideEnabled) return "";
+      const data = model.trainerSnapshot;
+      return `<div class="trainer-metrics${data.isStopped ? " is-stopped" : ""}" id="trainer-metrics" aria-label="Smart trainer measurements">
+        <span>Power<strong id="trainer-watts">${Number.isFinite(data.watts) ? `${Math.round(data.watts)} W` : "-- W"}</strong></span>
+        <span>Cadence<strong id="trainer-cadence">${Number.isFinite(data.cadence) ? `${Math.round(data.cadence)} RPM` : "-- RPM"}</strong></span>
+        <span>Stops<strong id="trainer-stops">${data.stopCount}</strong></span>
+        <span>Stopped<strong id="trainer-stopped-time">${formatTime(data.stoppedMs / 1000)}</strong></span>
+      </div>`;
+    }
+
     function aeroMarkup({ paused = false } = {}) {
       const due = getDueActions();
       const challenge = currentChallenge();
@@ -854,7 +911,7 @@
             <div class="challenge-progress" aria-hidden="true"><div class="challenge-progress-fill" id="challenge-progress-fill" style="width:${challengeProgress}%"></div></div>
             <p class="challenge-best" id="challenge-best">${personalBestMarkup()}</p>
             ${subtitle ? `<p class="aero-subtitle">${subtitle}</p>` : ""}
-            <div class="hero-metrics" aria-label="Ride position times"><span>Overall <strong id="overall-time">${formatTime(positionTimes.overallMs / 1000)}</strong></span><span>Aero <strong id="total-aero">${formatTime(positionTimes.aeroMs / 1000)}</strong></span><span>Upright <strong id="upright-time">${formatTime(positionTimes.uprightMs / 1000)}</strong></span></div>
+            <div class="hero-metrics" aria-label="Ride position times"><span>Overall <strong id="overall-time">${formatTime(positionTimes.overallMs / 1000)}</strong></span><span>Aero <strong id="total-aero">${formatTime(positionTimes.aeroMs / 1000)}</strong></span><span>Upright <strong id="upright-time">${formatTime(positionTimes.uprightMs / 1000)}</strong></span></div>${trainerMetricsMarkup()}
           </section>${scheduleMarkup()}${planStatusMarkup()}
         </div>${cameraLearningPromptMarkup()}${actionFeedbackMarkup()}
       </section>`;
@@ -950,6 +1007,10 @@
         <p><strong>Uncertain:</strong> ${formatTime(s.camera.uncertainSeconds)} • <strong>Longest detected Aero:</strong> ${formatTime(s.camera.longestAeroSeconds)}</p>
         ${s.camera.autoControlUsed ? `<p><strong>Automatic changes:</strong> ${s.camera.autoPauseCount} pauses • ${s.camera.autoResumeCount} resumes • ${s.camera.manualOverrideCount} manual overrides</p>` : ""}
         <p>Calibration quality ${s.camera.calibrationQuality}%.</p></div>` : "";
+      const trainerReview = s.trainer?.enabled ? `<div class="camera-review"><h2>Smart trainer • ${s.trainer.deviceName || "Tacx Bushido Smart"}</h2>
+        <p><strong>Stops:</strong> ${s.trainer.stopCount || 0} • <strong>Total stopped:</strong> ${formatTime((s.trainer.stoppedMs || 0) / 1000)} • <strong>Longest:</strong> ${formatTime((s.trainer.longestStopMs || 0) / 1000)}</p>
+        <p><strong>Average power:</strong> ${Number.isFinite(s.trainer.averageWatts) ? `${Math.round(s.trainer.averageWatts)} W` : "Not available"} • <strong>Average cadence:</strong> ${Number.isFinite(s.trainer.averageCadence) ? `${Math.round(s.trainer.averageCadence)} RPM` : "Not available"}</p>
+        <p>A stop is counted after three seconds without a completed pedal revolution.</p></div>` : "";
       const observations = s.coachingObservations || [];
       const coaching = observations.length
         ? `<div class="coaching-box"><h2>Coaching summary • ${s.mode || "fixed"} mode</h2>${observations.map(text => `<p>${text}</p>`).join("")}<p>These are patterns in recorded data, not medical advice or proof of cause.</p></div>`
@@ -965,7 +1026,7 @@
         </div>
         ${model.historySaveError ? `<div class="coaching-box"><p>${model.historySaveError}</p></div>` : ""}${coaching}${reviewReasonEditorMarkup(s)}
         ${reviewActionSection(s, "fuel")}${reviewActionSection(s, "water")}${reviewActionSection(s, "stretch")}
-        ${cameraReview}
+        ${trainerReview}${cameraReview}
         <div class="interval-list"><h2>Aero intervals</h2>${intervalLines}</div>
         <div class="setup-actions"><button class="action secondary" id="view-history" type="button">VIEW RIDE HISTORY</button><button class="action" id="new-ride" type="button">START ANOTHER RIDE</button></div>
       </section>`;
@@ -1009,6 +1070,8 @@
       doc.getElementById("pause-ride")?.addEventListener("click", event => { event.stopPropagation(); pauseRide(); });
       doc.getElementById("resume-ride")?.addEventListener("click", event => { event.stopPropagation(); resumeRide(); });
       doc.getElementById("camera-auto-toggle")?.addEventListener("click", event => { event.stopPropagation(); toggleCameraAutoControl(); });
+      doc.getElementById("connect-trainer")?.addEventListener("click", async event => { event.stopPropagation(); await connectTrainer(); });
+      doc.getElementById("disconnect-trainer")?.addEventListener("click", event => { event.stopPropagation(); disconnectTrainer(); });
       doc.querySelectorAll("[data-camera-learning-answer]").forEach(button => button.addEventListener("click", event => {
         event.stopPropagation();
         handleCameraLearningResponse(button.dataset.cameraLearningAnswer === "yes");
@@ -1277,6 +1340,26 @@
       return value;
     }
 
+    async function connectTrainer() {
+      try {
+        await trainer.connect();
+      } catch (error) {
+        model.trainerStatus = "error";
+        model.trainerMessage = error?.message || "Trainer could not connect. Keep pedalling and try again.";
+        render();
+        announce(model.trainerMessage);
+      }
+    }
+
+    function disconnectTrainer() {
+      trainer.disconnect();
+      model.trainerStatus = "disconnected";
+      model.trainerDeviceName = "";
+      model.trainerMessage = "Trainer disconnected. Start pedalling before reconnecting.";
+      render();
+      announce("Trainer disconnected.");
+    }
+
     function startRide(doc) {
       let values;
       try {
@@ -1292,6 +1375,7 @@
         };
       } catch (_) { return; }
       values.mode = doc.querySelector("[name='ride-mode']:checked")?.value || "fixed";
+      values.trainerEnabled = trainer.connected;
       values.remindersEnabled = values.mode !== "observation" || Boolean(doc.getElementById("observation-reminders")?.checked);
       const savedSettings = loadSettings();
       const selectedIntervals = { water: values.waterEvery, fuel: values.fuelEvery, stretch: values.stretchEvery };
@@ -1349,8 +1433,11 @@
          rideTargetReached: false, currentPhaseIndex: 0, summary: null, cameraEnabled,
          cameraAutoControl: autoControl, cameraAutoEverEnabled: autoControl,
          cameraControlHoldUntil: 0, cameraPauseReason: autoControl ? "Waiting for a stable Aero position." : "",
-         cameraLearningPrompt: null, cameraLearningLastAsked: { aero: -Infinity, upright: -Infinity }, cameraLearningApplying: false
+         cameraLearningPrompt: null, cameraLearningLastAsked: { aero: -Infinity, upright: -Infinity }, cameraLearningApplying: false,
+         trainerRideEnabled: Boolean(values.trainerEnabled),
+         trainerSnapshot: { watts: null, cadence: null, stopCount: 0, stoppedMs: 0, longestStopMs: 0, averageWatts: null, averageCadence: null, isStopped: false }
       });
+      pedallingTracker.reset(startedAt);
       document.body.classList.remove("camera-preview");
       if (cameraEnabled) cameraObserver.beginSession();
       render();
@@ -1422,6 +1509,7 @@
       model.ridePausedFromState = pausedFrom;
       model.rideExitConfirmation = null;
       model.ridePausedAt = now();
+      if (model.trainerRideEnabled) model.trainerSnapshot = pedallingTracker.pause(model.ridePausedAt);
       model.state = "ride-paused";
       model.events.push({ type: "ride-pause", at: rideMs() / 1000, from: pausedFrom });
       announce("Ride paused. All ride timers are stopped.");
@@ -1664,6 +1752,12 @@
       const actionStats = Object.fromEntries(ACTION_TYPES.map(type => [type, calculateActionStats(model.completedActions, type, rideSeconds)]));
       const reminderStats = Object.fromEntries(ACTION_TYPES.map(type => [type, calculateReminderStats(model.reminders, type)]));
       const cameraSummary = model.cameraEnabled ? cameraObserver.endSession(rideSeconds) : { enabled: false };
+      const trainerSummary = model.trainerRideEnabled ? {
+        enabled: true,
+        deviceName: model.trainerDeviceName || "Tacx Bushido Smart",
+        ...pedallingTracker.snapshot(now()),
+        connectedAtFinish: trainer.connected
+      } : { enabled: false };
       if (cameraSummary.enabled) Object.assign(cameraSummary, {
         autoControlUsed: model.cameraAutoEverEnabled,
         autoPauseCount: model.events.filter(event => event.type === "camera-auto-pause").length,
@@ -1694,7 +1788,7 @@
         aeroPercent: rideSeconds ? Math.round(model.accumulatedAeroMs / 10 / rideSeconds) : 0,
         bestIntervalSeconds: model.bestIntervalMs / 1000, completedIntervals: model.intervals.filter(item => item.success).length,
         waterCount: count("water"), fuelCount: count("fuel"), stretchCount: count("stretch"),
-        intervals: model.intervals.map(item => ({ ...item })), camera: cameraSummary
+        intervals: model.intervals.map(item => ({ ...item })), camera: cameraSummary, trainer: trainerSummary
       };
       model.summary.coachingObservations = buildCoachingObservations(model.summary, loadHistory());
       model.reviewReasonEditorDismissed = false;
@@ -1843,8 +1937,26 @@
       }
     }
 
+    function updateTrainerUi(doc) {
+      if (!doc || !model.trainerRideEnabled) return;
+      const data = model.trainerSnapshot;
+      const watts = doc.getElementById("trainer-watts");
+      if (watts) watts.textContent = Number.isFinite(data.watts) ? `${Math.round(data.watts)} W` : "-- W";
+      const cadence = doc.getElementById("trainer-cadence");
+      if (cadence) cadence.textContent = Number.isFinite(data.cadence) ? `${Math.round(data.cadence)} RPM` : "-- RPM";
+      const stops = doc.getElementById("trainer-stops");
+      if (stops) stops.textContent = String(data.stopCount || 0);
+      const stopped = doc.getElementById("trainer-stopped-time");
+      if (stopped) stopped.textContent = formatTime((data.stoppedMs || 0) / 1000);
+      doc.getElementById("trainer-metrics")?.classList.toggle("is-stopped", Boolean(data.isStopped));
+    }
+
     function tick() {
       if (["aero", "paused", "action"].includes(model.state)) {
+        if (model.trainerRideEnabled && trainer.connected) {
+          model.trainerSnapshot = pedallingTracker.tick(now());
+          updateTrainerUi(activeDocument());
+        }
         const nextPhase = phaseContext();
         if (nextPhase.index !== model.currentPhaseIndex) {
           model.currentPhaseIndex = nextPhase.index;
