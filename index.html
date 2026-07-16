@@ -385,6 +385,39 @@
     .coaching-box { width: min(100%,420px); margin: 0 0 10px; padding: 10px; border: 1px solid #3b6a55; border-radius: 12px; background: #09231d; text-align: left; }
     .coaching-box h2 { margin: 0 0 7px; color: #6dffad; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
     .coaching-box p { margin: 5px 0; color: #c0d7cd; font-size: .68rem; line-height: 1.35; }
+    @media (min-width: 701px) and (min-height: 521px) {
+      .setup { padding: 16px 20px; }
+      .setup-header, .setup-shell, .setup > .setup-actions, .setup > .setup-actions.has-history { width: min(calc(100vw - 40px), 1500px); }
+      .setup-header { margin-top: 0; padding: 12px 20px 13px; border-radius: 16px 16px 0 0; }
+      .setup .brand { font-size: clamp(1.9rem, 3.2vw, 2.45rem); }
+      .setup .subtitle { margin-top: 6px; font-size: .7rem; }
+      .setup-shell { grid-template-rows: auto minmax(165px, 1fr) auto; flex: 1 1 auto; align-items: stretch; gap: 12px; padding: 12px; }
+      .setup-shell:has(.setup-options[open]) { grid-template-rows: auto minmax(150px, .8fr) auto; }
+      .setup-section { padding: 15px 17px; border-radius: 13px; }
+      .setup-shell > .setup-section:first-child { min-height: 108px; }
+      .setup .ride-plan-section, .setup .execution-section { display: flex; min-height: 0; flex-direction: column; justify-content: center; }
+      .setup .section-title { gap: 8px; margin-bottom: 10px; font-size: .8rem; }
+      .setup .section-icon { font-size: 1rem; }
+      .setup .mode-tabs { gap: 9px; }
+      .setup .mode-tab span { min-height: 46px; font-size: .68rem; }
+      .setup .mode-description { margin-top: 7px; font-size: .64rem; }
+      .setup .fields { flex: 1 1 auto; align-content: center; gap: 11px 14px; }
+      .setup .field label { margin-bottom: 5px; font-size: .67rem; }
+      .setup .field input { padding: 10px 12px; font-size: 1.2rem; }
+      .setup .fixed-note { margin-top: 7px; font-size: .62rem; }
+      .setup-options { border-radius: 12px; }
+      .setup-options > summary { min-height: 44px; padding: 9px 13px; font-size: .72rem; }
+      .setup-options-content { gap: 10px; padding: 0 10px 10px; }
+      .setup-options .setup-section { padding: 11px 13px; }
+      .setup-options .section-title { margin-bottom: 7px; font-size: .68rem; }
+      .setup-options .dashboard-tabs .mode-tab span { min-height: 46px; }
+      .setup-options .trainer-connect-button { min-height: 50px; }
+      .setup-options .camera-choice { padding: 10px; }
+      .setup > .setup-actions, .setup > .setup-actions.has-history { margin-bottom: 0; gap: 10px; padding: 11px 12px; border-radius: 0 0 16px 16px; }
+      .setup > .setup-actions .action { min-height: 58px; padding: 12px; font-size: 1rem; }
+      .setup > .setup-actions .action.secondary { font-size: .8rem; }
+      .setup .pip-note { font-size: .62rem; }
+    }
     @media (max-width: 900px), (max-height: 520px) {
       .aero.immersive { background-color: #080b10; background-image: radial-gradient(circle at 50% 45%, rgba(52,88,112,.13), transparent 42%); }
       .immersive .ride-phase-header, .immersive .aero-dashboard { width: min(100%, 1180px); }
