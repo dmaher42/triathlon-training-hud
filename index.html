@@ -41,33 +41,42 @@
       cursor: pointer; transition: background-color 140ms ease, color 140ms ease;
     }
     .setup, .review { overflow-y: auto; justify-content: flex-start; cursor: default; background: var(--hud-bg); color: #fff; }
-    .setup { overflow: hidden; padding: 16px clamp(12px, 3vw, 24px) 0; }
-    .setup-header { width: min(100%, 820px); }
-    .brand { margin: 0; font-size: clamp(2rem, 7vmin, 2.85rem); line-height: .9; letter-spacing: -.07em; font-weight: 1000; }
-    .subtitle { margin: 7px 0 13px; color: #9eb2c9; font-size: .8rem; font-weight: 750; }
-    .setup-shell { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1 1 auto; min-height: 0; align-items: start; gap: 12px; width: min(100%, 820px); overflow-y: auto; padding: 0 2px 4px; scrollbar-color: #5b6675 transparent; scrollbar-gutter: stable; scrollbar-width: thin; }
+    .setup { overflow: hidden; padding: 12px clamp(10px, 3vw, 18px) 0; background-image: linear-gradient(180deg, rgba(5,10,16,.72), rgba(5,10,16,.92)), url("%BASE_URL%assets/immersive-training-room.webp"); background-position: center; background-size: cover; }
+    .setup-header { width: min(100%, 520px); margin-top: auto; padding: 7px 12px 8px; border: 1px solid rgba(125,160,188,.34); border-bottom: 0; border-radius: 13px 13px 0 0; background: rgba(5,14,23,.76); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .brand { margin: 0; color: #edf4fa; font-size: clamp(1.25rem, 4.5vmin, 1.55rem); line-height: 1; letter-spacing: .04em; font-weight: 1000; }
+    .subtitle { margin: 4px 0 0; color: #8298aa; font-size: .58rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .setup-shell { display: grid; grid-template-columns: minmax(0, 1fr); flex: 0 1 auto; min-height: 0; align-content: start; align-items: start; gap: 7px; width: min(100%, 520px); overflow-y: auto; padding: 8px; border: 1px solid rgba(125,160,188,.34); border-top: 0; background: rgba(5,14,23,.68); scrollbar-color: #5b6675 transparent; scrollbar-gutter: stable; scrollbar-width: thin; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
     .setup-shell::-webkit-scrollbar { width: 8px; }
     .setup-shell::-webkit-scrollbar-track { background: transparent; }
     .setup-shell::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: #5b6675; background-clip: padding-box; }
-    .setup-section { width: 100%; margin: 0; padding: 13px; border: 1px solid #252d3e; border-radius: 16px; background: var(--hud-panel); }
-    .setup-span { grid-column: 1 / -1; }
-    .section-title { margin: 0 0 9px; color: #6dffad; text-align: left; font-size: .72rem; font-weight: 1000; letter-spacing: .16em; text-transform: uppercase; }
+    .setup-section { width: 100%; margin: 0; padding: 9px 10px; border: 1px solid rgba(104,137,165,.4); border-radius: 10px; background: linear-gradient(180deg, rgba(41,57,72,.76), rgba(22,33,44,.82)); box-shadow: inset 0 1px rgba(255,255,255,.04); }
+    .setup-span { grid-column: auto; }
+    .section-title { display: flex; align-items: center; gap: 6px; margin: 0 0 7px; color: #b5c8d8; text-align: left; font-size: .65rem; font-weight: 1000; letter-spacing: .09em; text-transform: uppercase; }
+    .section-icon { color: #7f9eb4; font-size: .82rem; line-height: 1; }
     .section-optional { color: #7990a8; font-weight: 800; }
-    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; }
     .field { text-align: left; }
     .field.full { grid-column: 1 / -1; }
-    .field label { display: block; margin: 0 0 4px; color: #c7d6e8; font-size: .64rem; line-height: 1.1; font-weight: 950; letter-spacing: .07em; text-transform: uppercase; }
-    .field input { width: 100%; min-width: 0; border: 2px solid #365d88; border-radius: 9px; padding: 7px 8px; background: #fff; color: #07101d; text-align: center; font-size: 1.1rem; font-weight: 1000; outline: 0; }
+    .field label { display: block; margin: 0 0 3px; color: #d0dce6; font-size: .55rem; line-height: 1.1; font-weight: 950; letter-spacing: .04em; text-transform: uppercase; }
+    .field input { width: 100%; min-width: 0; border: 1px solid #546b80; border-radius: 7px; padding: 5px 7px; background: rgba(81,99,118,.72); color: #7fd4ef; text-align: center; font-family: var(--hud-mono); font-size: .9rem; font-weight: 1000; outline: 0; }
+    .execution-section .field input { color: #7de0a7; }
     .field input:focus { border-color: #35f08a; box-shadow: 0 0 0 3px rgba(53,240,138,.18); }
-    .fixed-note { margin: 7px 0 0; color: #8fa5bd; text-align: left; font-size: .67rem; font-weight: 700; }
+    .fixed-note { margin: 5px 0 0; color: #8fa5bd; text-align: left; font-size: .56rem; line-height: 1.25; font-weight: 700; }
     .setup-actions { display: grid; width: min(100%, 420px); gap: 8px; padding-bottom: 18px; }
-    .setup > .setup-actions { position: relative; z-index: 40; flex: 0 0 auto; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); width: min(100%, 820px); margin-top: 8px; padding: 8px 0 max(10px, env(safe-area-inset-bottom)); background: var(--hud-bg); }
-    .setup > .setup-actions.has-history { grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); }
+    .setup > .setup-actions, .setup > .setup-actions.has-history { position: relative; z-index: 40; flex: 0 0 auto; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); width: min(100%, 520px); margin-top: 0; margin-bottom: auto; gap: 6px; padding: 7px 8px max(8px, env(safe-area-inset-bottom)); border: 1px solid rgba(125,160,188,.34); border-top: 0; border-radius: 0 0 13px 13px; background: rgba(5,14,23,.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .setup > .setup-actions .action { min-height: 42px; border: 1px solid #667b8e; border-radius: 8px; padding: 8px; background: linear-gradient(180deg, #e1e6e8, #9daab4); color: #101820; font-size: .74rem; font-weight: 1000; cursor: pointer; }
+    .setup > .setup-actions .action.secondary { border-color: #54677a; background: linear-gradient(180deg, #445568, #263442); color: #e0e8ee; font-size: .62rem; }
     .action { border: 0; border-radius: 12px; padding: 12px; background: #35f08a; color: #04130b; font-size: 1.05rem; font-weight: 1000; cursor: pointer; }
     .action.secondary { background: #d5e4f6; color: #07101d; font-size: .85rem; }
     .action.danger { background: #ffdb4d; color: #1a1300; }
     .action:active { transform: scale(.985); }
-    .pip-note { grid-column: 1 / -1; min-height: 1em; margin: 0; color: #ffdb4d; font-size: .68rem; }
+    .pip-note { grid-column: 1 / -1; min-height: 1em; margin: 0; color: #8ea1b1; font-size: .54rem; }
+    .setup-options { width: 100%; border: 1px solid rgba(104,137,165,.4); border-radius: 9px; background: rgba(20,31,42,.82); text-align: left; }
+    .setup-options > summary { display: flex; min-height: 36px; align-items: center; justify-content: space-between; padding: 7px 10px; color: #aebfcd; font-size: .61rem; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; list-style: none; }
+    .setup-options > summary::after { content: "+"; color: #7fd4ef; font-size: .85rem; }
+    .setup-options[open] > summary::after { content: "–"; }
+    .setup-options-content { display: grid; gap: 7px; padding: 0 7px 7px; }
+    .setup-options .setup-section { background: rgba(16,27,37,.78); }
     .ride-progress { position: absolute; top: 8px; left: 50%; z-index: 20; width: min(calc(100% - 24px), 900px); height: 7px; overflow: hidden; transform: translateX(-50%); border-radius: 999px; background: var(--hud-track); }
     .ride-progress-fill { height: 100%; width: 0; border-radius: inherit; background: var(--hud-aero); transition: width .25s linear; }
     .ride-progress-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
@@ -154,16 +163,16 @@
     .mode-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
     .mode-tab { position: relative; min-width: 0; }
     .mode-tab input { position: absolute; opacity: 0; pointer-events: none; }
-    .mode-tab span { display: grid; min-height: 44px; place-items: center; border: 1px solid #365d88; border-radius: 9px; color: #b8cce0; font-size: .66rem; font-weight: 1000; text-align: center; }
-    .mode-tab input:checked + span { border-color: #35f08a; background: #12392e; color: #6dffad; }
+    .setup .mode-tab span { display: grid; min-height: 30px; place-items: center; border: 1px solid #60778c; border-radius: 999px; background: rgba(68,84,100,.64); color: #d0dbe3; font-size: .55rem; font-weight: 1000; text-align: center; }
+    .setup .mode-tab input:checked + span { border-color: #b6c7d5; background: linear-gradient(180deg, #d8e0e5, #7d8d99); color: #10202b; }
     .mode-tab input:focus-visible + span { outline: 3px solid #fff; outline-offset: 2px; }
     .dashboard-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .dashboard-tabs .mode-tab span { align-content: center; gap: 3px; min-height: 54px; }
+    .dashboard-tabs .mode-tab span { align-content: center; gap: 2px; min-height: 40px; border-radius: 7px; }
     .dashboard-tabs .mode-tab strong { font-size: .7rem; letter-spacing: .08em; }
     .dashboard-tabs .mode-tab small { color: #7f95aa; font-size: .58rem; font-weight: 750; }
     .dashboard-tabs .mode-tab input[value="immersive"]:checked + span { border-color: #789fba; background: #142b3a; color: #a9d4ee; }
     .dashboard-tabs .mode-tab input:checked + span small { color: currentColor; opacity: .72; }
-    .mode-description { min-height: 2.5em; margin: 8px 0 0; color: #9fb3ca; text-align: left; font-size: .68rem; line-height: 1.3; }
+    .mode-description { min-height: 0; margin: 6px 0 0; color: #a5b4c0; text-align: left; font-size: .54rem; line-height: 1.3; }
     .observation-toggle { display: none; margin-top: 8px; }
     .setup[data-mode="observation"] .observation-toggle { display: flex; }
     .learning-cards { display: grid; gap: 7px; margin-top: 9px; }
@@ -403,22 +412,21 @@
       .immersive .dashboard-card.type-fuel .card-time::after { display: none; }
     }
     @media (max-width: 700px) {
-      .setup-shell { grid-template-columns: 1fr; width: min(100%, 480px); }
+      .setup-shell { grid-template-columns: 1fr; width: min(100%, 520px); }
       .setup-span, .advanced-disclosure { grid-column: auto; }
-      .setup > .setup-actions, .setup > .setup-actions.has-history { grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(100%, 480px); }
-      .setup > .setup-actions #start-ride { grid-column: 1 / -1; }
-      .setup > .setup-actions:not(.has-history) #pop-out { grid-column: 1 / -1; }
+      .setup > .setup-actions, .setup > .setup-actions.has-history { grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); width: min(100%, 520px); }
+      .setup > .setup-actions #start-ride, .setup > .setup-actions:not(.has-history) #pop-out { grid-column: auto; }
     }
     @media (max-width: 480px) {
-      .setup { padding: 13px 10px 0; }
-      .setup-header { width: min(100%, 480px); }
-      .brand { font-size: 2rem; }
-      .subtitle { margin-bottom: 10px; font-size: .7rem; }
-      .setup-shell { gap: 9px; }
-      .setup-section { padding: 10px; border-radius: 13px; }
-      .field label { font-size: .58rem; }
-      .field input { padding: 6px 7px; font-size: 1rem; }
-      .setup > .setup-actions { margin-top: 9px; }
+      .setup { padding: 8px 7px 0; }
+      .setup-header { width: min(100%, 520px); }
+      .brand { font-size: 1.3rem; }
+      .subtitle { margin-bottom: 0; font-size: .52rem; }
+      .setup-shell { gap: 6px; }
+      .setup-section { padding: 8px; border-radius: 9px; }
+      .field label { font-size: .52rem; }
+      .field input { padding: 5px 6px; font-size: .84rem; }
+      .setup > .setup-actions { margin-top: 0; }
       .aero.active-ride { padding: 18px 7px 6px; }
       .ride-phase-header { gap: 6px; margin: 17px auto 7px; }
       .ride-phase-strip ol { min-height: 46px; }
@@ -478,6 +486,27 @@
       .ride-phase.current { border-right: 0; }
       .ride-phase span { font-size: .55rem; }
       .ride-phase strong { font-size: .5rem; }
+    }
+    @media (max-height: 520px) {
+      .setup { padding-top: 5px; }
+      .setup-header { padding: 5px 9px 4px; }
+      .setup .brand { font-size: 1.08rem; }
+      .setup .subtitle { display: none; }
+      .setup-shell { gap: 4px; padding: 5px; }
+      .setup-section { padding: 5px 7px; border-radius: 8px; }
+      .setup .section-title { gap: 4px; margin-bottom: 4px; font-size: .56rem; }
+      .setup .section-icon { font-size: .67rem; }
+      .setup .mode-tabs { gap: 4px; }
+      .setup .mode-tab span { min-height: 24px; font-size: .48rem; }
+      .setup .mode-description { margin-top: 3px; font-size: .46rem; line-height: 1.2; }
+      .setup .fields { gap: 3px 6px; }
+      .setup .field label { margin-bottom: 2px; font-size: .44rem; }
+      .setup .field input { padding: 2px 5px; font-size: .7rem; }
+      .setup .fixed-note { margin-top: 3px; font-size: .45rem; }
+      .setup-options > summary { min-height: 27px; padding: 4px 7px; font-size: .52rem; }
+      .setup > .setup-actions, .setup > .setup-actions.has-history { gap: 4px; padding: 5px 6px max(5px, env(safe-area-inset-bottom)); }
+      .setup > .setup-actions .action { min-height: 36px; padding: 5px; font-size: .64rem; }
+      .setup > .setup-actions .action.secondary { font-size: .52rem; }
     }
     @media (max-height: 430px) {
       .aero.active-ride { padding-top: 18px; }
@@ -849,7 +878,7 @@
       return `<section class="screen setup" data-mode="${mode}" data-camera-enabled="false">
         <header class="setup-header"><h1 class="brand">TRI HUD</h1><p class="subtitle">Aero progression and race-day timing</p></header>
         <div class="setup-shell">
-          <div class="setup-section setup-span"><p class="section-title">Training mode</p>
+          <div class="setup-section setup-span"><p class="section-title"><span class="section-icon" aria-hidden="true">&#9881;</span>Training mode</p>
             <div class="mode-tabs" role="radiogroup" aria-label="Training mode">
               <label class="mode-tab"><input type="radio" name="ride-mode" value="fixed" ${mode === "fixed" ? "checked" : ""}><span>FIXED</span></label>
               <label class="mode-tab"><input type="radio" name="ride-mode" value="observation" ${mode === "observation" ? "checked" : ""}><span>OBSERVE</span></label>
@@ -859,31 +888,32 @@
             <label class="camera-choice observation-toggle" for="observation-reminders"><input id="observation-reminders" type="checkbox" ${settings.observationReminders ? "checked" : ""}><span><strong>Use fixed reminders while observing</strong><span>Off by default so natural actions can be learned without prompts.</span></span></label>
             <div class="learning-cards" id="learning-cards">${learningCardsMarkup(history, settings, 90 * 60, mode)}</div>
           </div>
-          <div class="setup-section setup-span"><p class="section-title">Dashboard</p>
+          <div class="setup-section ride-plan-section"><p class="section-title"><span class="section-icon" aria-hidden="true">&#9650;</span>Ride plan</p><div class="fields">
+            <div class="field"><label for="ride-minutes">Planned ride (min)</label><input id="ride-minutes" type="number" min="1" max="600" value="90"></div>
+            <div class="field"><label for="aero-goal">Total Aero goal (min)</label><input id="aero-goal" type="number" min="1" max="600" value="60"></div>
+            <div class="field"><label for="interval-minutes">First Aero interval (min)</label><input id="interval-minutes" type="number" min="1" max="180" value="10"></div>
+            <div class="field"><label for="progression-minutes">Add each interval (min)</label><input id="progression-minutes" type="number" min="0" max="60" value="1"></div>
+          </div></div>
+          <div class="setup-section execution-section"><p class="section-title"><span class="section-icon" aria-hidden="true">&#9889;</span>Race execution</p><div class="fields">
+            <div class="field"><label for="water-every">Water every (min)</label><input id="water-every" type="number" min="1" max="180" value="${waterValue}"></div>
+            <div class="field"><label for="fuel-every">Fuel every (min)</label><input id="fuel-every" type="number" min="1" max="180" value="${fuelValue}"></div>
+            <div class="field"><label for="stretch-every">Mobility every (min)</label><input id="stretch-every" type="number" min="1" max="180" value="${stretchValue}"></div>
+            <div class="field"><label for="fuel-seconds">Fuel break (sec)</label><input id="fuel-seconds" type="number" min="1" max="600" value="60"></div>
+          </div><p class="fixed-note">Water and mobility are one-tap records. Only fueling uses a countdown.</p></div>
+          <details class="setup-options"><summary>Dashboard &amp; equipment</summary><div class="setup-options-content">
+          <div class="setup-section setup-span"><p class="section-title"><span class="section-icon" aria-hidden="true">&#9638;</span>Dashboard</p>
             <div class="mode-tabs dashboard-tabs" role="radiogroup" aria-label="Dashboard style">
               <label class="mode-tab"><input type="radio" name="dashboard-style" value="practical" ${dashboardStyle === "practical" ? "checked" : ""}><span><strong>PRACTICAL</strong><small>Maximum clarity</small></span></label>
               <label class="mode-tab"><input type="radio" name="dashboard-style" value="immersive" ${dashboardStyle === "immersive" ? "checked" : ""}><span><strong>IMMERSIVE</strong><small>Cinematic rider view</small></span></label>
             </div>
             <p class="fixed-note" id="dashboard-description">${dashboardStyle === "immersive" ? "Rider backdrop with floating translucent controls. Compact PiP remains distraction-free." : "Low-glare three-zone riding screen with the strongest timer contrast."}</p>
           </div>
-          <div class="setup-section"><p class="section-title">Ride plan</p><div class="fields">
-            <div class="field"><label for="ride-minutes">Planned ride (min)</label><input id="ride-minutes" type="number" min="1" max="600" value="90"></div>
-            <div class="field"><label for="aero-goal">Total Aero goal (min)</label><input id="aero-goal" type="number" min="1" max="600" value="60"></div>
-            <div class="field"><label for="interval-minutes">First Aero interval (min)</label><input id="interval-minutes" type="number" min="1" max="180" value="10"></div>
-            <div class="field"><label for="progression-minutes">Add each interval (min)</label><input id="progression-minutes" type="number" min="0" max="60" value="1"></div>
-          </div></div>
-          <div class="setup-section"><p class="section-title">Race execution</p><div class="fields">
-            <div class="field"><label for="water-every">Water every (min)</label><input id="water-every" type="number" min="1" max="180" value="${waterValue}"></div>
-            <div class="field"><label for="fuel-every">Fuel every (min)</label><input id="fuel-every" type="number" min="1" max="180" value="${fuelValue}"></div>
-            <div class="field"><label for="stretch-every">Mobility every (min)</label><input id="stretch-every" type="number" min="1" max="180" value="${stretchValue}"></div>
-            <div class="field"><label for="fuel-seconds">Fuel break (sec)</label><input id="fuel-seconds" type="number" min="1" max="600" value="60"></div>
-          </div><p class="fixed-note">Water and mobility are one-tap records. Only fueling uses a countdown.</p></div>
-          <div class="setup-section setup-span"><p class="section-title">Smart trainer <span class="section-optional">Optional</span></p>
+          <div class="setup-section setup-span"><p class="section-title"><span class="section-icon" aria-hidden="true">&#8644;</span>Smart trainer <span class="section-optional">Optional</span></p>
             <div class="trainer-connect"><div><strong>${model.trainerStatus === "connected" ? model.trainerDeviceName || "Tacx Bushido Smart" : "Tacx Bushido Smart"}</strong><span id="trainer-setup-status">${model.trainerMessage}</span></div>
               <button class="trainer-connect-button${model.trainerStatus === "connected" ? " connected" : ""}" id="${model.trainerStatus === "connected" ? "disconnect-trainer" : "connect-trainer"}" type="button" ${model.trainerStatus === "connecting" || !trainer.supported ? "disabled" : ""}>${!trainer.supported ? "NOT SUPPORTED" : model.trainerStatus === "connecting" ? "CONNECTING..." : model.trainerStatus === "connected" ? "DISCONNECT" : "CONNECT TRAINER"}</button>
             </div><p class="trainer-support-note">Start pedalling to wake the trainer before connecting. TiA reads measurements only and does not change resistance.</p>
           </div>
-          <div class="setup-section setup-span"><p class="section-title">Camera <span class="section-optional">Optional</span></p>
+          <div class="setup-section setup-span"><p class="section-title"><span class="section-icon" aria-hidden="true">&#9678;</span>Camera <span class="section-optional">Optional</span></p>
             <label class="camera-choice" for="camera-enabled"><input id="camera-enabled" type="checkbox"><span><strong>Use position detection</strong><span>Compare Aero and upright positions locally. No video is uploaded or saved.</span></span></label>
             <div class="camera-options" id="camera-options" hidden>
               <label class="camera-choice" for="camera-auto"><input id="camera-auto" type="checkbox" checked disabled><span><strong>Automatically control Aero clock</strong><span>Stable upright pauses; stable Aero resumes. Uncertain readings preserve the current clock.</span></span></label>
@@ -893,11 +923,12 @@
             <p>Maintenance controls only. Resetting learning keeps your saved ride reviews but starts future recommendations from today.</p>
             <div class="learning-management" id="learning-management">${learningManagementMarkup()}</div>
           </div></details>
+          </div></details>
         </div>
         <div class="setup-actions${history.length ? " has-history" : ""}">
           <button class="action" id="start-ride" type="button">START RIDE</button>
-          <button class="action secondary" id="pop-out" type="button" ${pipSupported ? "" : "disabled"}>${pipSupported ? "POP OUT (PiP)" : "PiP NOT SUPPORTED"}</button>
-          ${history.length ? '<button class="action secondary" id="view-history" type="button">VIEW RIDE HISTORY</button>' : ""}
+          <button class="action secondary" id="pop-out" type="button" ${pipSupported ? "" : "disabled"}>${pipSupported ? "POP OUT" : "PiP N/A"}</button>
+          <button class="action secondary" id="view-history" type="button">HISTORY</button>
           ${history.length ? `<p class="pip-note">Last ride: ${formatTime(history[0].rideSeconds)} • ${formatTime(history[0].aeroSeconds)} Aero</p>` : pipSupported ? "" : '<p class="pip-note" id="pip-note">Use recent Chrome or Edge for Pop Out.</p>'}
         </div>
       </section>`;
