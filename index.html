@@ -251,9 +251,12 @@
     .hero-metrics span { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 6px 8px; border-right: 1px solid #2b343e; color: #718092; font-size: clamp(.46rem, 1.2vmin, .58rem); font-weight: 950; letter-spacing: .12em; text-align: center; text-transform: uppercase; }
     .hero-metrics span:last-child { border-right: 0; }
     .hero-metrics strong { overflow: hidden; color: #d7e0e8; font-family: var(--hud-mono); font-size: clamp(.9rem, 2.5vmin, 1.15rem); letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
-    .trainer-metrics { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: min(92%, 650px); margin-top: 6px; border: 1px solid #31483f; border-radius: 10px; background: rgba(8,18,14,.72); }
-    .trainer-metrics span { display: flex; min-width: 0; flex-direction: column; gap: 2px; padding: 5px 6px; border-right: 1px solid #263d35; color: #708d7d; font-size: clamp(.43rem, 1.1vmin, .54rem); font-weight: 950; letter-spacing: .1em; text-transform: uppercase; }
-    .trainer-metrics span:last-child { border-right: 0; }
+    .trainer-metrics { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(92%, 650px); margin-top: 6px; border: 1px solid #31483f; border-radius: 10px; background: rgba(8,18,14,.72); }
+    .trainer-metric-row { display: grid; min-width: 0; grid-template-columns: 1fr; gap: 2px; padding: 5px 6px; border-right: 1px solid #263d35; color: #708d7d; font-size: clamp(.43rem, 1.1vmin, .54rem); font-weight: 950; letter-spacing: .1em; text-transform: uppercase; }
+    .trainer-metric-row:last-child { border-right: 0; }
+    .trainer-metric-row em { font-style: normal; }
+    .trainer-metric-row svg { display: none; }
+    .trainer-metric-row small { color: #708d7d; font-size: .48rem; }
     .trainer-metrics strong { color: #b9d2c3; font-family: var(--hud-mono); font-size: clamp(.64rem, 1.7vmin, .82rem); font-variant-numeric: tabular-nums; }
     .trainer-metrics.is-stopped { border-color: #745f42; background: #19160f; }
     .trainer-metrics.is-stopped strong { color: #cbb58e; }
@@ -322,7 +325,7 @@
     .immersive .dashboard-card.type-fuel .card-time { display: grid; gap: 5px; margin-left: 0; font-size: clamp(1.45rem, 3.1vmin, 1.85rem); letter-spacing: -.05em; }
     .immersive .dashboard-card.type-fuel .card-time::after { content: "TO NEXT"; color: #9eabb6; font-family: var(--hud-font); font-size: .52rem; font-weight: 950; letter-spacing: .16em; }
     .immersive .dashboard-card.type-fuel .card-label { grid-column: 1 / -1; grid-row: 1; margin: 0; font-size: .92rem; }
-    .immersive .dashboard-card.type-water .status-ring { width: min(68%, 118px); }
+    .immersive .dashboard-card.type-water .status-ring { width: min(62%, 105px); }
     .immersive .dashboard-card.type-stretch .status-ring { width: min(70%, 136px); }
     .immersive .card-label { color: #d1dde7; }
     .immersive .immersive-card-data { display: flex; width: min(92%, 205px); min-width: 0; flex-direction: column; gap: 5px; margin-top: 11px; color: #839caf; font-size: .5rem; font-weight: 850; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
@@ -337,8 +340,8 @@
     .immersive .type-fuel .immersive-card-data > i { grid-column: 1 / -1; grid-row: 5; width: 100%; }
     .immersive-extra { display: none; }
     .immersive .immersive-extra { display: grid; width: min(92%, 210px); margin-top: 14px; }
-    .immersive .water-schedule { gap: 6px; }
-    .immersive .water-schedule span { display: grid; grid-template-columns: 1fr auto; gap: 8px; border-top: 1px solid rgba(113,159,190,.22); padding: 6px 3px 0; color: #7894a8; font-size: .48rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+    .immersive .water-schedule { gap: 4px; }
+    .immersive .water-schedule span { display: grid; grid-template-columns: 1fr auto; gap: 8px; border-top: 1px solid rgba(113,159,190,.22); padding: 3px 3px 0; color: #7894a8; font-size: .48rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
     .immersive .water-schedule b { color: #b8cede; font-family: var(--hud-mono); font-size: .58rem; }
     .immersive .fuel-schedule { grid-column: 1 / -1; grid-row: 6; width: 100%; gap: 4px; margin-top: 0; }
     .immersive .fuel-schedule span { display: grid; grid-template-columns: 1fr auto; gap: 8px; border-top: 1px solid rgba(191,137,82,.2); padding: 4px 3px 0; color: #9c856f; font-size: .46rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
@@ -352,6 +355,47 @@
     .immersive .immersive-road span:nth-child(2) { left: 50%; }
     .immersive .immersive-road span:nth-child(3) { right: 25%; transform: rotate(-8deg); transform-origin: top; }
     .immersive .ride-plan-status { align-self: center; justify-self: center; border: 1px solid rgba(111,153,179,.35); border-radius: 999px; padding: 3px 12px; background: rgba(3,12,19,.58); backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px); }
+    .immersive-trainer-panel { display: none; }
+    .aero.immersive { background-image: linear-gradient(180deg, rgba(2,8,13,.58), rgba(2,8,13,.2) 42%, rgba(2,7,11,.48)), url("%BASE_URL%assets/immersive-training-room.webp"); }
+    .aero.immersive::before { background: linear-gradient(90deg, rgba(2,8,13,.58), rgba(2,8,13,.09) 28% 70%, rgba(2,8,13,.62)), linear-gradient(180deg, rgba(2,7,11,.3), transparent 48%, rgba(2,7,11,.4)); }
+    .immersive .ride-phase-header { display: flex; min-height: 46px; align-items: center; justify-content: flex-end; margin-top: 10px; }
+    .immersive .ride-phase-header::before { content: "TRI HUD"; position: absolute; left: 50%; color: rgba(223,233,241,.78); font-size: .78rem; font-weight: 900; letter-spacing: .18em; transform: translateX(-50%); }
+    .immersive .ride-phase-strip { display: none; }
+    .immersive .aero-dashboard { grid-template-columns: minmax(205px, .64fr) minmax(450px, 1.72fr) minmax(220px, .68fr); grid-template-rows: minmax(248px, .78fr) minmax(190px, .58fr) auto; gap: clamp(10px, 1.35vw, 15px); }
+    .immersive .aero-hero { justify-content: center; padding: 15px 18px 13px; border-radius: 20px; background: rgba(6,16,24,.62); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+    .immersive .aero-interval { position: static; align-self: flex-start; margin: 0 0 3px; font-size: clamp(.5rem, 1.1vmin, .62rem); }
+    .immersive .aero-title { max-width: 100%; margin: 0 0 8px; font-size: clamp(.62rem, 1.35vmin, .78rem); white-space: normal; }
+    .immersive .aero-clock .timer { font-size: clamp(3.45rem, 9.2vw, 5.8rem); }
+    .immersive .aero-percentage { font-size: clamp(.7rem, 1.8vmin, .9rem); }
+    .immersive .challenge-progress { width: min(84%, 650px); margin-top: 8px; }
+    .immersive .challenge-best { margin-top: 7px; font-size: clamp(.5rem, 1.15vmin, .62rem); }
+    .immersive .hero-metrics { width: min(96%, 700px); margin-top: 8px; border-color: rgba(117,166,194,.58); border-radius: 12px; background: rgba(3,12,19,.75); }
+    .immersive .hero-metrics span { padding: 7px 9px; font-size: clamp(.46rem, 1.08vmin, .56rem); }
+    .immersive .hero-metrics strong { font-size: clamp(1rem, 2.3vmin, 1.25rem); }
+    .immersive .immersive-trainer-panel { grid-column: 2; grid-row: 2; z-index: 3; display: flex; width: min(74%, 430px); align-self: center; justify-self: center; flex-direction: column; gap: 4px; border: 1px solid rgba(117,166,194,.5); border-radius: 17px; padding: 10px 15px 12px; background: rgba(6,17,25,.66); box-shadow: inset 0 0 26px rgba(83,142,177,.06); backdrop-filter: blur(17px); -webkit-backdrop-filter: blur(17px); }
+    .immersive-trainer-title { margin: 0; color: #8199aa; font-size: .52rem; font-weight: 950; letter-spacing: .14em; text-transform: uppercase; }
+    .immersive .immersive-trainer-panel .trainer-metrics { grid-template-columns: 1fr; width: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; }
+    .immersive .immersive-trainer-panel .trainer-metric-row { grid-template-columns: minmax(100px, 1fr) auto 110px; align-items: center; gap: 10px; border-right: 0; border-bottom: 1px solid rgba(117,166,194,.18); padding: 6px 0; color: #8ea0ad; }
+    .immersive .immersive-trainer-panel .trainer-metric-row:last-child { border-bottom: 0; }
+    .immersive .immersive-trainer-panel .trainer-metric-row strong { color: #e3edf3; font-size: clamp(.86rem, 2vmin, 1.08rem); }
+    .immersive .immersive-trainer-panel .trainer-metric-row svg { display: block; width: 110px; height: 27px; }
+    .immersive .immersive-trainer-panel .trainer-metric-row polyline { fill: none; stroke: #8fb4c8; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; vector-effect: non-scaling-stroke; }
+    .immersive .immersive-trainer-panel .stopped-row svg { display: none; }
+    .immersive .immersive-trainer-panel .stopped-row small { justify-self: end; color: #b29370; }
+    .immersive .trainer-metrics.is-disconnected { opacity: .62; }
+    .immersive .dashboard-card { border-radius: 18px; background: rgba(6,16,24,.61); backdrop-filter: blur(17px); -webkit-backdrop-filter: blur(17px); }
+    .immersive .dashboard-card.type-water, .immersive .dashboard-card.type-stretch { padding-bottom: 50px; }
+    .immersive .dashboard-card.type-fuel { padding-bottom: 43px; }
+    .immersive .water-schedule span:nth-child(3), .immersive .fuel-schedule span:nth-child(3) { display: none; }
+    .immersive .card-action { right: 12px; bottom: 9px; left: 12px; min-height: 30px; border-color: rgba(150,177,194,.28); border-radius: 9px; background: rgba(129,158,177,.11); color: #cbd8e0; }
+    .immersive .card-action:empty { display: grid; }
+    .immersive .type-water .card-action:empty::before { content: "LOG WATER"; }
+    .immersive .type-fuel .card-action:empty::before { content: "LOG FUEL"; }
+    .immersive .type-stretch .card-action:empty::before { content: "START MOBILITY"; }
+    .immersive .type-water .card-action { color: #a9c5d8; }
+    .immersive .type-fuel .card-action { color: #d6b68f; }
+    .immersive .type-stretch .card-action { color: #c4afd4; }
+    .immersive .immersive-road, .immersive .ride-plan-status { display: none; }
     .aero .action-toast { bottom: 10px; }
     .screen-advance-control { position: absolute; top: 20px; left: 50%; z-index: 30; min-height: 30px; transform: translateX(-50%); border: 1px solid #4e627d; border-radius: 999px; padding: 5px 11px; opacity: 0; pointer-events: none; background: #101826; color: #fff; font-size: .58rem; font-weight: 950; letter-spacing: .07em; text-transform: uppercase; }
     .screen-advance-control:focus-visible { opacity: 1; pointer-events: auto; }
@@ -448,6 +492,7 @@
       .reminder-resolution { grid-column: auto; grid-row: auto; }
       .ride-plan-status { grid-column: 1; grid-row: 3; }
       .immersive .immersive-card-data, .immersive .immersive-road { display: none; }
+      .immersive .immersive-trainer-panel { display: none; }
       .immersive .type-fuel .immersive-card-data { display: none; }
       .immersive .immersive-extra { display: none; }
       .immersive .dashboard-card.type-water .status-ring, .immersive .dashboard-card.type-fuel .status-ring, .immersive .dashboard-card.type-stretch .status-ring { width: min(78%, 132px); }
@@ -711,7 +756,8 @@
       trainerMessage: "Optional: connect your Tacx Bushido Smart for power, cadence and stop tracking.",
       trainerDeviceName: "",
       trainerRideEnabled: false,
-      trainerSnapshot: { watts: null, cadence: null, stopCount: 0, stoppedMs: 0, longestStopMs: 0, averageWatts: null, averageCadence: null, isStopped: false }
+      trainerSnapshot: { watts: null, cadence: null, stopCount: 0, stoppedMs: 0, longestStopMs: 0, averageWatts: null, averageCadence: null, isStopped: false },
+      trainerSeries: { watts: [], cadence: [] }
     };
 
     let audioContext = null;
@@ -737,6 +783,7 @@
         } else {
           model.trainerSnapshot = { ...model.trainerSnapshot, watts: measurement.watts, cadence: measurement.cadence };
         }
+        recordTrainerSeries(model.trainerSnapshot);
         updateTrainerUi(activeDocument());
       },
       onStatus: status => {
@@ -1071,18 +1118,42 @@
       return `<div class="ride-control-cluster">${cameraBadge}<div class="ride-utility-controls">${autoToggle}${pip}<button class="ride-pause-button" id="pause-ride" type="button" aria-label="Pause the entire ride" aria-keyshortcuts="P">PAUSE</button></div></div>`;
     }
 
+    function trainerSparklinePoints(values = []) {
+      const samples = values.filter(Number.isFinite).slice(-36);
+      if (!samples.length) return "0,24 120,24";
+      const low = Math.min(...samples);
+      const high = Math.max(...samples);
+      const range = Math.max(1, high - low);
+      return samples.map((value, index) => {
+        const x = samples.length === 1 ? 120 : index / (samples.length - 1) * 120;
+        const y = 29 - (value - low) / range * 23;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(" ");
+    }
+
+    function recordTrainerSeries(data) {
+      model.trainerSeries ||= { watts: [], cadence: [] };
+      for (const key of ["watts", "cadence"]) {
+        const value = Number(data[key]);
+        if (!Number.isFinite(value)) continue;
+        model.trainerSeries[key].push(value);
+        if (model.trainerSeries[key].length > 36) model.trainerSeries[key].shift();
+      }
+    }
+
     function trainerMetricsMarkup() {
-      if (!model.trainerRideEnabled) return "";
+      if (!model.trainerRideEnabled && model.dashboardStyle !== "immersive") return "";
       const data = model.trainerSnapshot;
-      return `<div class="trainer-metrics${data.isStopped ? " is-stopped" : ""}" id="trainer-metrics" aria-label="Smart trainer measurements">
-        <span>Power<strong id="trainer-watts">${Number.isFinite(data.watts) ? `${Math.round(data.watts)} W` : "-- W"}</strong></span>
-        <span>Cadence<strong id="trainer-cadence">${Number.isFinite(data.cadence) ? `${Math.round(data.cadence)} RPM` : "-- RPM"}</strong></span>
-        <span>Stops<strong id="trainer-stops">${data.stopCount}</strong></span>
-        <span>Stopped<strong id="trainer-stopped-time">${formatTime(data.stoppedMs / 1000)}</strong></span>
+      const disconnected = !model.trainerRideEnabled;
+      return `<div class="trainer-metrics${data.isStopped ? " is-stopped" : ""}${disconnected ? " is-disconnected" : ""}" id="trainer-metrics" aria-label="Smart trainer measurements">
+        <span class="trainer-metric-row"><em>Power</em><strong id="trainer-watts">${Number.isFinite(data.watts) ? `${Math.round(data.watts)} W` : "-- W"}</strong><svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline id="trainer-watts-spark" points="${trainerSparklinePoints(model.trainerSeries?.watts)}"/></svg></span>
+        <span class="trainer-metric-row"><em>Cadence</em><strong id="trainer-cadence">${Number.isFinite(data.cadence) ? `${Math.round(data.cadence)} RPM` : "-- RPM"}</strong><svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline id="trainer-cadence-spark" points="${trainerSparklinePoints(model.trainerSeries?.cadence)}"/></svg></span>
+        <span class="trainer-metric-row stopped-row"><em>Stopped pedalling</em><strong id="trainer-stopped-time">${formatTime(data.stoppedMs / 1000)}</strong><small><b id="trainer-stops">${data.stopCount}</b> ${data.stopCount === 1 ? "STOP" : "STOPS"}</small></span>
       </div>`;
     }
 
     function aeroMarkup({ paused = false } = {}) {
+      const immersive = model.dashboardStyle === "immersive";
       const due = getDueActions();
       const challenge = currentChallenge();
       const positionTimes = getPositionTimes(rideMs(), totalAeroMs());
@@ -1112,7 +1183,8 @@
       const challengeProgress = personalBestSec
         ? Math.min(100, currentIntervalMs() / 10 / personalBestSec)
         : Math.min(100, currentIntervalMs() / 10 / Math.max(1, model.currentIntervalTargetSec));
-      return `<section class="screen active-ride aero ${model.dashboardStyle === "immersive" ? "immersive" : "practical"}${model.intervalComplete || model.rideTargetReached ? " alert" : ""}" data-dashboard-style="${model.dashboardStyle || "practical"}" data-advance="true" role="region" aria-label="Aero training dashboard. Click the background to advance.">
+      const trainerMarkup = trainerMetricsMarkup();
+      return `<section class="screen active-ride aero ${immersive ? "immersive" : "practical"}${model.intervalComplete || model.rideTargetReached ? " alert" : ""}" data-dashboard-style="${model.dashboardStyle || "practical"}" data-advance="true" role="region" aria-label="Aero training dashboard. Click the background to advance.">
         ${progressMarkup()}<div class="ride-phase-header">${ridePhasesMarkup()}${rideControlsMarkup()}</div><button class="screen-advance-control" type="button" aria-keyshortcuts="Enter Space">${advanceLabel}</button><div class="aero-dashboard">
           <section class="aero-hero" aria-label="Current Aero interval">
             <button class="hero-tap-target" id="aero-hero-action" type="button" aria-label="${advanceLabel}" aria-keyshortcuts="Enter Space"><span class="visually-hidden">${advanceLabel}</span></button>
@@ -1121,8 +1193,8 @@
             <div class="challenge-progress" aria-hidden="true"><div class="challenge-progress-fill" id="challenge-progress-fill" style="width:${challengeProgress}%"></div></div>
             <p class="challenge-best" id="challenge-best">${personalBestMarkup()}</p>
             ${subtitle ? `<p class="aero-subtitle">${subtitle}</p>` : ""}
-            <div class="hero-metrics" aria-label="Ride position times"><span>Overall <strong id="overall-time">${formatTime(positionTimes.overallMs / 1000)}</strong></span><span>Aero <strong id="total-aero">${formatTime(positionTimes.aeroMs / 1000)}</strong></span><span>Upright <strong id="upright-time">${formatTime(positionTimes.uprightMs / 1000)}</strong></span></div>${trainerMetricsMarkup()}
-          </section><div class="immersive-road" aria-hidden="true"><span></span><span></span><span></span></div>${scheduleMarkup()}${planStatusMarkup()}
+            <div class="hero-metrics" aria-label="Ride position times"><span>Overall <strong id="overall-time">${formatTime(positionTimes.overallMs / 1000)}</strong></span><span>Aero <strong id="total-aero">${formatTime(positionTimes.aeroMs / 1000)}</strong></span><span>Upright <strong id="upright-time">${formatTime(positionTimes.uprightMs / 1000)}</strong></span></div>${immersive ? "" : trainerMarkup}
+          </section>${immersive ? `<section class="immersive-trainer-panel" aria-label="Smart trainer data"><p class="immersive-trainer-title">Smart trainer data</p>${trainerMarkup}</section>` : ""}<div class="immersive-road" aria-hidden="true"><span></span><span></span><span></span></div>${scheduleMarkup()}${planStatusMarkup()}
         </div>${cameraLearningPromptMarkup()}${actionFeedbackMarkup()}
       </section>`;
     }
@@ -1660,7 +1732,8 @@
          cameraControlHoldUntil: 0, cameraPauseReason: autoControl ? "Waiting for a stable Aero position." : "",
          cameraLearningPrompt: null, cameraLearningLastAsked: { aero: -Infinity, upright: -Infinity }, cameraLearningApplying: false,
          trainerRideEnabled: Boolean(values.trainerEnabled),
-         trainerSnapshot: { watts: null, cadence: null, stopCount: 0, stoppedMs: 0, longestStopMs: 0, averageWatts: null, averageCadence: null, isStopped: false }
+         trainerSnapshot: { watts: null, cadence: null, stopCount: 0, stoppedMs: 0, longestStopMs: 0, averageWatts: null, averageCadence: null, isStopped: false },
+         trainerSeries: { watts: [], cadence: [] }
       });
       pedallingTracker.reset(startedAt);
       document.body.classList.remove("camera-preview");
@@ -2174,7 +2247,13 @@
       if (stops) stops.textContent = String(data.stopCount || 0);
       const stopped = doc.getElementById("trainer-stopped-time");
       if (stopped) stopped.textContent = formatTime((data.stoppedMs || 0) / 1000);
-      doc.getElementById("trainer-metrics")?.classList.toggle("is-stopped", Boolean(data.isStopped));
+      const wattsSpark = doc.getElementById("trainer-watts-spark");
+      if (wattsSpark) wattsSpark.setAttribute("points", trainerSparklinePoints(model.trainerSeries?.watts));
+      const cadenceSpark = doc.getElementById("trainer-cadence-spark");
+      if (cadenceSpark) cadenceSpark.setAttribute("points", trainerSparklinePoints(model.trainerSeries?.cadence));
+      const metrics = doc.getElementById("trainer-metrics");
+      metrics?.classList.toggle("is-stopped", Boolean(data.isStopped));
+      metrics?.classList.remove("is-disconnected");
     }
 
     function tick() {
