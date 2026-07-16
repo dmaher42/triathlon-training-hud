@@ -40,6 +40,12 @@ export function getPersonalBest(history = [], currentBestSec = 0) {
   return Math.max(0, finite(currentBestSec), ...history.map(ride => Math.max(0, finite(ride?.bestIntervalSeconds))));
 }
 
+export function getPositionTimes(rideElapsedMs = 0, aeroElapsedMs = 0) {
+  const overallMs = Math.floor(Math.max(0, finite(rideElapsedMs)) / 1000) * 1000;
+  const aeroMs = Math.floor(clamp(finite(aeroElapsedMs), 0, overallMs) / 1000) * 1000;
+  return { overallMs, aeroMs, uprightMs: overallMs - aeroMs };
+}
+
 export function getPlanStatus(reminders = [], completedActions = [], toleranceSec = 120) {
   const completed = reminders.filter(reminder => reminder?.status === "done" && Number.isFinite(Number(reminder.completedAtSec)));
   const onTime = completed.filter(reminder => Number(reminder.completedAtSec) - Number(reminder.originalDueAtSec ?? reminder.dueAtSec) <= toleranceSec).length;

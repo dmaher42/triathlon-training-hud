@@ -219,8 +219,10 @@
     .challenge-progress-fill { height: 100%; border-radius: inherit; background: var(--hud-aero); }
     .challenge-best { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 12px; margin: clamp(7px, 1.5vh, 12px) 0 0; color: #8296aa; font-family: var(--hud-mono); font-size: clamp(.57rem, 1.6vmin, .74rem); font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
     .challenge-best strong { color: #93aa93; }
-    .hero-metrics { display: none; }
-    .hero-metrics strong { color: #b9c3cd; font-family: var(--hud-mono); }
+    .hero-metrics { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(82%, 560px); margin-top: clamp(7px, 1.4vh, 11px); border: 1px solid #2b343e; border-radius: 10px; background: #10151b; }
+    .hero-metrics span { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 6px 8px; border-right: 1px solid #2b343e; color: #718092; font-size: clamp(.46rem, 1.2vmin, .58rem); font-weight: 950; letter-spacing: .12em; text-align: center; text-transform: uppercase; }
+    .hero-metrics span:last-child { border-right: 0; }
+    .hero-metrics strong { overflow: hidden; color: #c9d2dc; font-family: var(--hud-mono); font-size: clamp(.67rem, 1.8vmin, .86rem); letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
     .reminder-zone { display: flex; min-height: 0; flex-direction: column; gap: 8px; }
     .reminder-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex: 1 1 auto; min-height: 0; gap: clamp(6px, 1.7vw, 14px); }
     .dashboard-card { --card-accent: var(--hud-aero); position: relative; width: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(12px, 2.5vh, 22px) clamp(5px, 1.5vw, 13px); overflow: hidden; border: 1px solid #2a3039; border-radius: clamp(14px, 3vmin, 19px); background: var(--hud-panel); color: var(--hud-white); text-align: center; cursor: pointer; }
@@ -321,8 +323,10 @@
       .aero-clock .timer.message { font-size: 1.65rem; }
       .aero-percentage { font-size: .68rem; }
       .challenge-progress { margin-top: 6px; }
-      .challenge-best { margin-top: 5px; font-size: .49rem; }
-      .hero-metrics { gap: 7px; margin-top: 9px; font-size: .46rem; letter-spacing: .03em; }
+      .challenge-best { display: none; }
+      .hero-metrics { width: 96%; margin-top: 5px; }
+      .hero-metrics span { gap: 2px; padding: 4px 3px; font-size: .42rem; }
+      .hero-metrics strong { font-size: .62rem; }
       .reminder-zone { gap: 5px; }
       .reminder-card-grid { gap: 5px; }
       .dashboard-card { padding: 9px 3px 7px; border-radius: 13px; }
@@ -409,7 +413,7 @@
       updateCompletedActionReason
     } from "/src/habit-learning.js";
     import { loadHistory, loadSettings, resetLearningFor, saveRide, saveSettings } from "/src/history-store.js";
-    import { RIDE_PHASES, getLiveChallenge, getPersonalBest, getPlanStatus, getRidePhase } from "/src/ride-phases.js";
+    import { RIDE_PHASES, getLiveChallenge, getPersonalBest, getPlanStatus, getPositionTimes, getRidePhase } from "/src/ride-phases.js";
     const nutritionPlan = [
       "Take 1 Gel + Big Drink of Water",
       "Drink 1/2 Bottle of Carb Mix",
@@ -811,14 +815,32 @@
       return `<div class="ride-control-cluster">${cameraBadge}<div class="ride-utility-controls">${autoToggle}${pip}<button class="ride-pause-button" id="pause-ride" type="button" aria-label="Pause the entire ride" aria-keyshortcuts="P">PAUSE</button></div></div>`;
     }
 
-    function aeroMarkup() {
-      const totalSec = totalAeroMs() / 1000;
+    function aeroMarkup({ paused = false } = {}) {
       const due = getDueActions();
       const challenge = currentChallenge();
-      const title = model.rideTargetReached ? "RIDE COMPLETE" : model.intervalComplete ? "BREAK TIME" : `CURRENT CHALLENGE • ${challenge.label}`;
-      const subtitle = model.rideTargetReached ? "TAP TO FINISH & REVIEW" : model.intervalComplete ? "TAP TO RECOVER" : due.length ? `${ACTION_LABELS[due[0].type].toUpperCase()} DUE • TAP TO SIT UP` : "TAP TO SIT UP";
+      const positionTimes = getPositionTimes(rideMs(), totalAeroMs());
+      const title = model.rideTargetReached
+        ? "RIDE COMPLETE"
+        : model.intervalComplete
+          ? "BREAK TIME"
+          : `CURRENT CHALLENGE • ${challenge.label}`;
+      const subtitle = model.rideTargetReached
+        ? "TAP TO FINISH & REVIEW"
+        : model.intervalComplete
+          ? "TAP TO RECOVER"
+          : due.length
+            ? `${ACTION_LABELS[due[0].type].toUpperCase()} DUE • TAP TO START BREAK`
+            : "";
       const headline = formatHeroTime(model.intervalComplete || model.rideTargetReached ? 0 : challenge.remainingSec);
-      const advanceLabel = model.rideTargetReached ? "Finish and review" : model.intervalComplete ? "Start recovery" : due.length ? "Start next due break" : "Pause Aero";
+      const advanceLabel = model.rideTargetReached
+        ? "Finish and review"
+        : model.intervalComplete
+          ? "Start recovery"
+          : due.length
+            ? "Start next due break"
+            : paused
+              ? "Resume Aero"
+              : "Pause Aero";
       const personalBestSec = Math.max(model.personalBestSec, model.bestIntervalMs / 1000);
       const challengeProgress = personalBestSec
         ? Math.min(100, currentIntervalMs() / 10 / personalBestSec)
@@ -831,32 +853,15 @@
             <h1 class="aero-title">${title}</h1><div class="aero-clock"><span class="timer${model.intervalComplete || model.rideTargetReached ? " message" : ""}" id="aero-timer">${headline}</span><span class="aero-percentage" id="aero-percentage">(${aeroAdherencePercent()}%)</span></div>
             <div class="challenge-progress" aria-hidden="true"><div class="challenge-progress-fill" id="challenge-progress-fill" style="width:${challengeProgress}%"></div></div>
             <p class="challenge-best" id="challenge-best">${personalBestMarkup()}</p>
-            <p class="aero-subtitle">${subtitle}</p>
-            <div class="hero-metrics"><span>Total <strong id="total-aero">${formatTime(totalSec)}</strong></span><span>Goal <strong>${formatTime(model.aeroGoalSec)}</strong></span><span>Phase <strong>${phaseContext().number} / ${RIDE_PHASES.length}</strong></span></div>
+            ${subtitle ? `<p class="aero-subtitle">${subtitle}</p>` : ""}
+            <div class="hero-metrics" aria-label="Ride position times"><span>Overall <strong id="overall-time">${formatTime(positionTimes.overallMs / 1000)}</strong></span><span>Aero <strong id="total-aero">${formatTime(positionTimes.aeroMs / 1000)}</strong></span><span>Upright <strong id="upright-time">${formatTime(positionTimes.uprightMs / 1000)}</strong></span></div>
           </section>${scheduleMarkup()}${planStatusMarkup()}
         </div>${cameraLearningPromptMarkup()}${actionFeedbackMarkup()}
       </section>`;
     }
 
     function pausedMarkup() {
-      const cameraState = model.cameraSnapshot.stableState || "uncertain";
-      const due = getDueActions()[0];
-      const dueLabel = due ? ({ water: "water", fuel: "fuel", stretch: "mobility" })[due.type] : "";
-      const pauseCopy = due
-        ? `${dueLabel[0].toUpperCase() + dueLabel.slice(1)} is due. Your Aero clock is paused; click anywhere to begin this break.`
-        : model.cameraAutoControl
-        ? cameraState === "upright"
-          ? "Camera detected upright and paused your Aero clock. Return to Aero to resume automatically, or click for manual control."
-          : cameraState === "uncertain"
-            ? "Camera is uncertain. Your clock remains paused; return clearly to Aero or click to override manually."
-            : "A manual override is holding the clock paused briefly. Click again or remain clearly in Aero to continue."
-        : "Your Aero interval is preserved. Take a quick adjustment, then click anywhere to continue the same interval.";
-      return `<section class="screen active-ride paused" data-advance="true" role="region" aria-label="Aero paused. Click the background to resume.">
-        ${progressMarkup()}${rideControlsMarkup()}<button class="screen-advance-control" type="button" aria-keyshortcuts="Enter Space">${due ? `Start ${dueLabel} break` : "Resume Aero"}</button><p class="eyebrow">Aero Paused</p><p class="timer">${formatTime(intervalRemainingSec())}</p>
-        <div class="stats"><div class="stat"><span class="stat-label">Interval</span><span class="stat-value">${formatTime(currentIntervalMs()/1000)}</span></div><div class="stat"><span class="stat-label">Total Aero</span><span class="stat-value">${formatTime(totalAeroMs()/1000)}</span></div><div class="stat"><span class="stat-label">Ride</span><span class="stat-value" id="paused-ride">${formatTime(rideMs()/1000)}</span></div></div>
-        <p class="paused-copy">${pauseCopy}</p>
-        <p class="hint">${due ? `Click anywhere • Start ${dueLabel}` : model.cameraAutoControl ? "Return to Aero • Or click to override" : "Click anywhere • Resume Aero"}</p>${activeRideChromeMarkup()}
-      </section>`;
+      return aeroMarkup({ paused: true });
     }
 
     function rideSessionPausedMarkup() {
@@ -1782,12 +1787,17 @@
         progress.setAttribute("aria-valuenow", String(Math.round(Math.min(100, elapsedSec / model.plannedRideSec * 100))));
         progress.setAttribute("aria-valuetext", `${formatTime(elapsedSec)} of ${formatTime(model.plannedRideSec)}`);
       }
-      if (model.state === "aero") {
+      if (["aero", "paused"].includes(model.state)) {
         const timer = doc.getElementById("aero-timer");
         const challenge = currentChallenge();
         if (timer && !model.intervalComplete && !model.rideTargetReached) timer.textContent = formatHeroTime(challenge.remainingSec);
+        const positionTimes = getPositionTimes(rideMs(), totalAeroMs());
+        const overall = doc.getElementById("overall-time");
+        if (overall) overall.textContent = formatTime(positionTimes.overallMs / 1000);
         const total = doc.getElementById("total-aero");
-        if (total) total.textContent = formatTime(totalAeroMs() / 1000);
+        if (total) total.textContent = formatTime(positionTimes.aeroMs / 1000);
+        const upright = doc.getElementById("upright-time");
+        if (upright) upright.textContent = formatTime(positionTimes.uprightMs / 1000);
         const percentage = doc.getElementById("aero-percentage");
         if (percentage) percentage.textContent = `(${aeroAdherencePercent()}%)`;
         const personalBestSec = Math.max(model.personalBestSec, model.bestIntervalMs / 1000);
@@ -1807,8 +1817,6 @@
           const overdue = doc.querySelector(`[data-resolution-overdue="${urgent.id}"]`);
           if (overdue) overdue.textContent = `${formatTime(Math.max(0, elapsedSec - urgent.dueAtSec))} late`;
         }
-      } else if (model.state === "paused") {
-        const ride = doc.getElementById("paused-ride"); if (ride) ride.textContent = formatTime(elapsedSec);
       } else if (model.state === "action" && model.currentAction === "fuel" && !model.actionFinished) {
         const timer = doc.getElementById("action-timer"); if (timer) timer.textContent = formatTime(Math.ceil((model.actionEndsAt - now()) / 1000));
       }

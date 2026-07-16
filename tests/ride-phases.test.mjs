@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getLiveChallenge, getPersonalBest, getPlanStatus, getRidePhase } from "../src/ride-phases.js";
+import { getLiveChallenge, getPersonalBest, getPlanStatus, getPositionTimes, getRidePhase } from "../src/ride-phases.js";
 
 test("ride phases advance evenly across the planned ride", () => {
   assert.equal(getRidePhase(0, 6000).name, "Warm Up");
@@ -29,6 +29,12 @@ test("challenge keeps the Aero interval target when it arrives first", () => {
 test("personal best includes saved and current ride intervals", () => {
   assert.equal(getPersonalBest([{ bestIntervalSeconds: 720 }, { bestIntervalSeconds: 840 }], 600), 840);
   assert.equal(getPersonalBest([], 300), 300);
+});
+
+test("overall time is always split between Aero and upright time", () => {
+  assert.deepEqual(getPositionTimes(600_000, 420_000), { overallMs: 600_000, aeroMs: 420_000, uprightMs: 180_000 });
+  assert.deepEqual(getPositionTimes(60_000, 90_000), { overallMs: 60_000, aeroMs: 60_000, uprightMs: 0 });
+  assert.deepEqual(getPositionTimes(3_100, 1_600), { overallMs: 3_000, aeroMs: 1_000, uprightMs: 2_000 });
 });
 
 test("plan status distinguishes on-time and review-needed actions", () => {
