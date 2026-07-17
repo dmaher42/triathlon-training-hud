@@ -19,6 +19,32 @@ The phone will:
 - speak coaching messages and status summaries;
 - continue with phone-only cadence if Garmin telemetry becomes stale.
 
+## Version 1 watch controls
+
+The starter data field lives in `garmin/RunDurabilityRemote`. On a full-screen
+Forerunner 265 data-field page it provides four touch regions:
+
+- **Status** asks the phone to speak the current coaching status;
+- **Walk / Resume** starts or ends a planned walk exemption;
+- **Quiet** silences automatic coaching for ten minutes;
+- **Finish** requires a second tap within eight seconds before ending the run.
+
+Every watch action uses the same intent names as voice control. The browser-side
+entry point is `window.runCoachGarminControl(message)`.
+
+```json
+{
+  "type": "run-control",
+  "version": 1,
+  "source": "garmin",
+  "command": "planned-walk",
+  "requestId": "fr265-42"
+}
+```
+
+The phone returns a `run-control-ack` with the same request ID. Unsupported
+commands are rejected rather than executed.
+
 ## Version 1 watch-to-phone message
 
 The canonical parser is `src/running/signal-fusion.js`.
@@ -52,3 +78,9 @@ window.runCoachGarminSample({
 ## Toolchain checkpoint
 
 This machine did not have Java, Android SDK/ADB, or Garmin Connect IQ tools at the first implementation checkpoint. Do not claim a compiled watch field or locked-screen Android app until those official toolchains are installed and the result is tested on the Pixel 8 and Forerunner 265.
+
+Garmin `Communications.transmit()` does not deliver directly into a Chrome web
+page. A small Android companion using Garmin's Connect IQ Mobile SDK must receive
+the watch dictionary and forward it to the coach. Until that bridge is built and
+installed, the watch project is a source-level starter and its controls are not
+available on the physical watch.

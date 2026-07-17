@@ -79,17 +79,21 @@
     </section>
 
     <section class="voice-dock" id="voice-dock" aria-label="Voice coach">
-      <div class="voice-heading"><span>VOICE COACH</span><small>ON DEVICE</small></div>
-      <p id="voice-help">Spoken replies are ready. Android voice commands are the next platform step.</p>
+      <div class="voice-heading"><span>VOICE COACH</span><small>CHROME VOICE</small></div>
+      <p id="voice-help">Tap once to enable hands-free commands, then leave the screen open.</p>
       <div class="voice-visual">
         <div class="wave wave-left" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        <button class="voice-orb" id="speak-status" type="button" aria-label="Hear current coach status">
+        <button class="voice-orb" id="voice-toggle" type="button" aria-label="Enable voice controls" aria-pressed="false">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V7a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Z"></path><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-3 0h6"></path></svg>
         </button>
         <div class="wave wave-right" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       </div>
-      <strong id="voice-mode">VOICE COACH READY</strong>
-      <small id="voice-subtitle">Tap the microphone to hear your current status</small>
+      <strong id="voice-mode">VOICE CONTROL OFF</strong>
+      <small id="voice-subtitle">Tap the microphone, then allow microphone access</small>
+      <div class="voice-command-list" aria-label="Available voice commands">
+        <span>START RUN</span><span>COACH STATUS</span><span>PLANNED WALK</span><span>RESUME RUNNING</span><span>QUIET</span><span>FINISH RUN</span>
+      </div>
+      <button class="voice-status-button" id="speak-status" type="button">HEAR STATUS</button>
     </section>
 
     <section class="primary-controls">
@@ -99,6 +103,7 @@
 
     <section class="run-controls" id="run-controls" hidden aria-label="In-run controls">
       <button type="button" id="planned-walk"><strong>PLANNED WALK</strong><span>Exclude the next two minutes</span></button>
+      <button type="button" id="resume-run"><strong>RESUME RUNNING</strong><span>End a planned walk early</span></button>
       <button type="button" id="silence-coach"><strong>QUIET 10 MIN</strong><span>Keep measuring silently</span></button>
     </section>
 

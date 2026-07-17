@@ -1,6 +1,8 @@
 import { HipMotionCadenceDetector } from "./motion-cadence.js";
 import { RunRhythmCoach } from "./rhythm-engine.js";
 import { RunSignalFusion } from "./signal-fusion.js";
+import { BrowserVoiceController, VOICE_INTENTS, parseVoiceCommand } from "./voice-commands.js";
+import { createRunControlAck, normaliseRunControlMessage } from "./control-protocol.js";
 
 const doc = document;
 const els = Object.fromEntries([
@@ -9,8 +11,8 @@ const els = Object.fromEntries([
   "cadence-value", "cadence-target", "cadence-delta", "baseline-value", "baseline-state",
   "baseline-summary", "stable-value", "stability-summary", "summary-state", "session-time", "walk-value", "stop-value",
   "phone-connection", "garmin-connection", "screen-connection", "start-session", "stop-session", "run-controls",
-  "planned-walk", "speak-status", "silence-coach", "demo-session", "voice-status",
-  "voice-dock", "voice-help", "voice-mode", "voice-subtitle"
+  "planned-walk", "resume-run", "speak-status", "silence-coach", "demo-session", "voice-status",
+  "voice-dock", "voice-help", "voice-mode", "voice-subtitle", "voice-toggle"
 ].map(id => [id, doc.getElementById(id)]));
 
 let detector = new HipMotionCadenceDetector();
@@ -30,6 +32,9 @@ let motionSignalConfirmed = false;
 let preflightConfirmed = false;
 let preflightAnnounced = false;
 let motionSignalTimeout = null;
+let voiceController = null;
+let voiceResumeTimer = null;
+let pendingFinishUntil = -Infinity;
 
 function toneFor(status) {
   if (["FADING", "WALKING"].includes(status)) return "attention";
@@ -76,18 +81,46 @@ function statusSentence() {
 }
 
 function voiceIdleState() {
-  if (snapshot.status === "REVIEW") return ["RUN REVIEW READY", "Tap the microphone to hear your final summary"];
+  if (voiceController?.state === "unsupported") return ["VOICE UNAVAILABLE", "This browser does not support speech recognition"];
+  if (voiceController?.state === "denied") return ["MICROPHONE BLOCKED", "Allow microphone access in Chrome site settings"];
+  if (voiceController?.state === "no-microphone") return ["MICROPHONE MISSING", "Chrome could not access a microphone"];
+  if (voiceController?.enabled) {
+    if (voiceController.listening) return ["LISTENING…", "Say “Coach status” or “Voice help”"];
+    return ["VOICE CONTROL ON", "Listening will resume after the current reply"];
+  }
+  if (snapshot.status === "REVIEW") return ["RUN REVIEW READY", "Tap Hear Status for your final summary"];
   if (snapshot.status === "SENSOR ERROR") return ["SENSOR NEEDS ATTENTION", "Resolve the sensor message before starting"];
   if (active && fieldSession && !preflightConfirmed) return ["PREFLIGHT IN PROGRESS", "Waiting for phone motion and screen-awake checks"];
-  if (active) return ["COACHING ACTIVE", "Tap the microphone to hear your current status"];
-  return ["VOICE COACH READY", "Tap the microphone to hear your current status"];
+  return ["VOICE CONTROL OFF", "Tap the microphone, then allow microphone access"];
 }
 
 function setVoiceIdle() {
   const [mode, subtitle] = voiceIdleState();
   els["voice-dock"].dataset.speaking = "false";
+  els["voice-dock"].dataset.listening = String(Boolean(voiceController?.listening));
+  els["voice-dock"].dataset.voiceError = String(["unsupported", "denied", "no-microphone"].includes(voiceController?.state));
+  els["voice-toggle"].setAttribute("aria-pressed", String(Boolean(voiceController?.enabled)));
   els["voice-mode"].textContent = mode;
   els["voice-subtitle"].textContent = subtitle;
+}
+
+function handleVoiceState({ state, detail }) {
+  els["voice-dock"].dataset.listening = String(state === "listening");
+  els["voice-dock"].dataset.voiceError = String(["unsupported", "denied", "no-microphone"].includes(state));
+  els["voice-toggle"].setAttribute("aria-pressed", String(Boolean(voiceController?.enabled)));
+  if (state === "listening") {
+    els["voice-mode"].textContent = "LISTENING…";
+    els["voice-subtitle"].textContent = "Say “Coach status” or “Voice help”";
+  } else if (["starting", "reconnecting"].includes(state)) {
+    els["voice-mode"].textContent = state === "starting" ? "STARTING MICROPHONE" : "RECONNECTING VOICE";
+    els["voice-subtitle"].textContent = detail === "network" ? "Chrome voice service is reconnecting" : "Listening will resume automatically";
+  } else if (state === "speaking") {
+    els["voice-dock"].dataset.speaking = "true";
+    els["voice-mode"].textContent = "COACH SPEAKING";
+    els["voice-subtitle"].textContent = "Listening is paused to avoid hearing its own reply";
+  } else {
+    setVoiceIdle();
+  }
 }
 
 function speak(message) {
@@ -100,6 +133,7 @@ function speak(message) {
   }
 
   const token = ++voiceSpeechToken;
+  voiceController?.pauseForSpeech();
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(message);
   utterance.rate = 1.02;
@@ -110,12 +144,80 @@ function speak(message) {
     els["voice-mode"].textContent = "COACH SPEAKING";
     els["voice-subtitle"].textContent = "Spoken reply in progress";
   };
+  let completed = false;
   const finishSpeaking = () => {
-    if (token === voiceSpeechToken) setVoiceIdle();
+    if (completed || token !== voiceSpeechToken) return;
+    completed = true;
+    if (voiceResumeTimer) clearTimeout(voiceResumeTimer);
+    voiceResumeTimer = null;
+    voiceController?.resumeAfterSpeech();
+    setVoiceIdle();
   };
   utterance.onend = finishSpeaking;
   utterance.onerror = finishSpeaking;
+  voiceResumeTimer = setTimeout(finishSpeaking, Math.min(12_000, Math.max(2_500, message.length * 55)));
   window.speechSynthesis.speak(utterance);
+}
+
+async function handleVoiceTranscript(alternatives) {
+  const awaitingFinishConfirmation = performance.now() <= pendingFinishUntil;
+  if (!awaitingFinishConfirmation) pendingFinishUntil = -Infinity;
+  const parsed = alternatives.map(transcript => parseVoiceCommand(transcript, { awaitingFinishConfirmation }));
+  const command = parsed.find(result => result.intent !== VOICE_INTENTS.UNKNOWN) || parsed[0];
+  els["voice-subtitle"].textContent = `Heard: “${command?.transcript || alternatives[0]}”`;
+
+  await executeRunIntent(command?.intent);
+}
+
+async function executeRunIntent(intent) {
+  switch (intent) {
+    case VOICE_INTENTS.START:
+      if (active) speak("The run coach is already active.");
+      else await startSession();
+      break;
+    case VOICE_INTENTS.STATUS:
+      speak(statusSentence());
+      break;
+    case VOICE_INTENTS.PLANNED_WALK:
+      if (!active) speak("Start the run coach before marking a planned walk.");
+      else handleSnapshot(coach.markPlannedBreak(performance.now()));
+      break;
+    case VOICE_INTENTS.RESUME:
+      if (!active) speak("The run coach is not active.");
+      else if (!snapshot.plannedBreakActive) speak("There is no planned walk to end.");
+      else handleSnapshot(coach.resumePlannedBreak(performance.now()));
+      break;
+    case VOICE_INTENTS.QUIET:
+      if (!active) speak("The run coach is not active.");
+      else handleSnapshot(coach.silence(performance.now()));
+      break;
+    case VOICE_INTENTS.FINISH_REQUEST:
+      if (!active) speak("There is no active run to finish.");
+      else {
+        pendingFinishUntil = performance.now() + 8_000;
+        speak("To finish the run, say confirm finish. Say keep running to cancel.");
+      }
+      break;
+    case VOICE_INTENTS.FINISH_CONFIRM:
+      pendingFinishUntil = -Infinity;
+      if (active) finishSession();
+      break;
+    case VOICE_INTENTS.FINISH_CANCEL:
+      pendingFinishUntil = -Infinity;
+      speak("Finish cancelled. Keep running.");
+      break;
+    case VOICE_INTENTS.HELP:
+      speak("You can say start run, coach status, planned walk, resume running, quiet, finish run, or stop listening.");
+      break;
+    case VOICE_INTENTS.VOICE_OFF:
+      voiceController?.disable();
+      speak("Voice controls off. Automatic coaching replies remain available.");
+      break;
+    default:
+      els["voice-mode"].textContent = "COMMAND NOT RECOGNISED";
+      els["voice-subtitle"].textContent = "Say “Voice help” to hear the available commands";
+      break;
+  }
 }
 
 function handleSnapshot(nextSnapshot) {
@@ -184,8 +286,12 @@ function render(force = false) {
   els["voice-help"].textContent = active
     ? fieldSession && !preflightConfirmed
       ? "Move the phone gently while the app confirms motion and screen protection."
-      : "Automatic spoken cues are active. Tap below for a full status reply."
-    : "Spoken replies are ready. Android voice commands are the next platform step.";
+      : voiceController?.enabled
+        ? "Hands-free controls are active. Say “Voice help” to hear the commands."
+        : "Tap the microphone to enable hands-free commands."
+    : voiceController?.supported
+      ? "Tap once to enable hands-free commands, then leave the screen open."
+      : "Voice commands are unavailable in this browser. Spoken replies still work.";
   if (els["voice-dock"].dataset.speaking !== "true") setVoiceIdle();
 }
 
@@ -354,6 +460,7 @@ async function startSession() {
 
 function finishSession() {
   if (!active) return;
+  pendingFinishUntil = -Infinity;
   clearMotionTimeout();
   lastSessionElapsedMs = sessionStartedAtMs === null ? 0 : Math.max(0, snapshot.timestampMs - sessionStartedAtMs);
   active = false;
@@ -413,14 +520,62 @@ export function ingestGarminTelemetry(payload) {
   return signal;
 }
 
+export async function ingestGarminControl(payload) {
+  let message;
+  try {
+    message = normaliseRunControlMessage(payload);
+  } catch (error) {
+    return {
+      type: "run-control-ack",
+      version: 1,
+      requestId: String(payload?.requestId || "").slice(0, 64),
+      command: String(payload?.command || "unknown"),
+      accepted: false,
+      detail: error.message
+    };
+  }
+  await executeRunIntent(message.command);
+  return createRunControlAck(message, { accepted: true, detail: "Command received by phone coach" });
+}
+
+function toggleVoiceControls() {
+  if (voiceController.enabled) {
+    voiceController.disable();
+    speak("Voice controls off. Automatic coaching replies remain available.");
+    return;
+  }
+  voiceController.enable();
+}
+
+function resumeRunning() {
+  if (!active) {
+    speak("The run coach is not active.");
+    return;
+  }
+  if (!snapshot.plannedBreakActive) {
+    speak("There is no planned walk to end.");
+    return;
+  }
+  handleSnapshot(coach.resumePlannedBreak(performance.now()));
+}
+
 window.runCoachGarminSample = ingestGarminTelemetry;
+window.runCoachGarminControl = ingestGarminControl;
+window.runCoachVoiceCommand = transcript => handleVoiceTranscript([String(transcript || "")]);
+voiceController = BrowserVoiceController.fromWindow(window, {
+  onTranscript: handleVoiceTranscript,
+  onState: handleVoiceState
+});
 els["start-session"].addEventListener("click", startSession);
 els["stop-session"].addEventListener("click", finishSession);
 els["demo-session"].addEventListener("click", startDemo);
 els["planned-walk"].addEventListener("click", () => handleSnapshot(coach.markPlannedBreak(performance.now())));
+els["resume-run"].addEventListener("click", resumeRunning);
 els["speak-status"].addEventListener("click", () => speak(statusSentence()));
 els["silence-coach"].addEventListener("click", () => handleSnapshot(coach.silence(performance.now())));
+els["voice-toggle"].addEventListener("click", toggleVoiceControls);
 document.addEventListener("visibilitychange", () => {
+  voiceController.setPageVisible(document.visibilityState === "visible");
   if (active && fieldSession && document.visibilityState === "visible") requestWakeLock();
 });
 

@@ -84,6 +84,14 @@ export class RunRhythmCoach {
     return this.snapshot(now, [{ type: "planned-break", message: this.lastMessage, speak: true }]);
   }
 
+  resumePlannedBreak(timestampMs) {
+    const now = finite(timestampMs) ?? this.lastUpdateAtMs ?? 0;
+    this.excusedUntilMs = -Infinity;
+    this.lastStatus = this.baselineCadenceSpm === null ? "CALIBRATING" : "RESET";
+    this.lastMessage = "Planned walk ended. Settle back into your natural rhythm.";
+    return this.snapshot(now, [{ type: "planned-break-ended", message: this.lastMessage, speak: true }]);
+  }
+
   silence(timestampMs, durationMs = 600_000) {
     const now = finite(timestampMs) ?? this.lastUpdateAtMs ?? 0;
     this.silencedUntilMs = Math.max(this.silencedUntilMs, now + Math.max(0, durationMs));

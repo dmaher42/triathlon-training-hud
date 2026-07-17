@@ -80,6 +80,16 @@ test("planned walking does not count against continuity", () => {
   assert.equal(planned.plannedBreakActive, true);
 });
 
+test("a planned walk can be ended early by a voice or screen command", () => {
+  const coach = makeCoach();
+  learnBaseline(coach);
+  coach.markPlannedBreak(3_500, 10_000);
+  const resumed = coach.resumePlannedBreak(4_000);
+  assert.equal(resumed.plannedBreakActive, false);
+  assert.equal(resumed.status, "RESET");
+  assert.equal(resumed.events.at(-1).type, "planned-break-ended");
+});
+
 test("stable-running summary is based on learned rhythm rather than total session time", () => {
   const coach = makeCoach();
   learnBaseline(coach);
