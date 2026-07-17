@@ -81,6 +81,13 @@ h1 { margin: 0; font-size: clamp(1.55rem, 7vw, 2.15rem); line-height: 1; letter-
 .connection-pill.warning { border-color: rgba(var(--amber-rgb), .42); background: rgba(var(--amber-rgb), .08); color: var(--amber); }
 .connection-pill.warning i { background: var(--amber); box-shadow: 0 0 10px rgba(var(--amber-rgb), .55); }
 
+.preflight-panel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-bottom: 8px; }
+.preflight-panel span { display: flex; min-width: 0; min-height: 24px; align-items: center; justify-content: center; gap: 4px; border: 1px solid #273a31; border-radius: 8px; padding: 4px 3px; background: rgba(255,255,255,.018); color: #71837a; font-size: clamp(.38rem, 1.8vw, .46rem); font-weight: 900; letter-spacing: .025em; white-space: nowrap; }
+.preflight-panel i { width: 5px; height: 5px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
+.preflight-panel span[data-state="ready"] { border-color: rgba(var(--green-rgb), .32); background: rgba(var(--green-rgb), .06); color: #82dca9; }
+.preflight-panel span[data-state="warning"] { border-color: rgba(var(--amber-rgb), .4); background: rgba(var(--amber-rgb), .07); color: var(--amber); }
+.preflight-panel span[data-state="unknown"] { color: #8a9a92; }
+
 .status-card {
   --accent: var(--green);
   --accent-rgb: var(--green-rgb);
@@ -202,8 +209,9 @@ h1 { margin: 0; font-size: clamp(1.55rem, 7vw, 2.15rem); line-height: 1; letter-
 .primary-controls { margin-top: 8px; }
 .install-button { width: 100%; min-height: 44px; margin-bottom: 8px; border: 1px solid rgba(97, 230, 160, .42); border-radius: 14px; background: rgba(20, 57, 41, .9); color: #72e9aa; font-size: .64rem; font-weight: 950; letter-spacing: .08em; cursor: pointer; }
 .install-button[hidden] { display: none; }
-.start-button, .stop-button { width: 100%; min-height: 52px; border-radius: 15px; padding: 12px; font-weight: 950; letter-spacing: .07em; cursor: pointer; }
+.start-button, .resume-button, .stop-button { width: 100%; min-height: 52px; border-radius: 15px; padding: 12px; font-weight: 950; letter-spacing: .07em; cursor: pointer; }
 .start-button { border: 0; background: linear-gradient(135deg, #5df2a1, #42df8d); box-shadow: 0 10px 28px rgba(var(--green-rgb), .13); color: #05130c; }
+.resume-button { margin-top: 7px; border: 1px solid rgba(var(--amber-rgb), .45); background: rgba(var(--amber-rgb), .1); color: var(--amber); }
 .stop-button { border: 1px solid rgba(var(--red-rgb), .35); background: rgba(var(--red-rgb), .09); color: #ffaaa3; }
 .run-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 7px; }
 .run-controls[hidden] { display: none; }
@@ -212,7 +220,7 @@ h1 { margin: 0; font-size: clamp(1.55rem, 7vw, 2.15rem); line-height: 1; letter-
 .run-controls strong { font-size: .58rem; letter-spacing: .05em; }
 .run-controls span { margin-top: 4px; color: #71867b; font-size: .51rem; line-height: 1.25; }
 .run-controls .pocket-lock-button { min-height: 60px; border-color: rgba(97, 230, 160, .45); background: rgba(18, 54, 39, .96); color: #72e9aa; }
-.pocket-lock-screen { position: fixed; z-index: 9999; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: max(28px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom)); background: #020806; color: #e5f2eb; text-align: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+.pocket-lock-screen { position: fixed; z-index: 9999; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: max(28px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom)); background: #000; color: #dbe7e0; text-align: center; touch-action: none; user-select: none; -webkit-user-select: none; }
 .pocket-lock-screen[hidden] { display: none; }
 .pocket-lock-mark { display: grid; width: 68px; height: 68px; place-items: center; border: 1px solid rgba(97, 230, 160, .42); border-radius: 50%; background: rgba(97, 230, 160, .08); box-shadow: 0 0 35px rgba(97, 230, 160, .1); color: #61e6a0; font-size: 1.2rem; }
 .pocket-lock-screen > p { margin: 18px 0 4px; color: #739286; font-size: .65rem; font-weight: 950; letter-spacing: .2em; }
@@ -220,11 +228,12 @@ h1 { margin: 0; font-size: clamp(1.55rem, 7vw, 2.15rem); line-height: 1; letter-
 .pocket-lock-readings { display: grid; width: min(320px, 90vw); grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 25px; }
 .pocket-lock-readings span { border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 13px 8px; color: #6f8279; font-size: .5rem; font-weight: 900; letter-spacing: .1em; }
 .pocket-lock-readings b { display: block; margin-bottom: 4px; color: #dce9e2; font-family: var(--mono); font-size: 1.35rem; letter-spacing: -.04em; }
+.pocket-lock-health { margin-top: 14px; color: #405248; font-size: .46rem; font-weight: 900; letter-spacing: .07em; }
 #pocket-unlock { position: relative; width: min(300px, 86vw); min-height: 58px; overflow: hidden; margin-top: auto; border: 1px solid rgba(255,255,255,.16); border-radius: 999px; background: #0a1712; color: #9eb2a8; font-size: .62rem; font-weight: 950; letter-spacing: .08em; touch-action: none; }
 #pocket-unlock::before { content: ""; position: absolute; inset: 0; background: rgba(97, 230, 160, .22); transform: scaleX(var(--unlock-progress, 0)); transform-origin: left; }
 #pocket-unlock.is-holding::before { transition: transform 1.8s linear; }
 #pocket-unlock-progress { margin-top: 9px; color: #52665c; font-size: .55rem; }
-body.pocket-locked { overflow: hidden; overscroll-behavior: none; }
+body.pocket-locked { overflow: hidden; overscroll-behavior: none; touch-action: none; }
 .demo-button { width: 100%; margin-top: 7px; border: 0; padding: 9px; background: transparent; color: #71867b; font-size: .55rem; font-weight: 900; letter-spacing: .07em; text-decoration: underline; cursor: pointer; }
 
 .visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(1px, 1px, 1px, 1px) !important; white-space: nowrap !important; }

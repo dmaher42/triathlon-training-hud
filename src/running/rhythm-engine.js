@@ -76,6 +76,47 @@ export class RunRhythmCoach {
     return this.snapshot(timestampMs);
   }
 
+  exportState() {
+    const state = {};
+    for (const key of Object.keys(this)) {
+      if (key === "config") continue;
+      const value = this[key];
+      state[key] = Number.isFinite(value) || value === null || typeof value !== "number" ? value : null;
+    }
+    return { version: 1, config: { ...this.config }, state };
+  }
+
+  restoreState(payload, timestampMs = 0) {
+    if (!payload || payload.version !== 1 || !payload.state) throw new TypeError("Unsupported run coach state.");
+    this.config = { ...DEFAULT_RUN_COACH_CONFIG, ...(payload.config || {}) };
+    this.reset();
+    const state = payload.state;
+    const previousNow = finite(state.lastUpdateAtMs) ?? 0;
+    const nextNow = finite(timestampMs) ?? 0;
+    const shift = nextNow - previousNow;
+    const timestampKeys = new Set([
+      "startedAtMs", "lastUpdateAtMs", "lastBaselineSampleAtMs", "stateSinceMs",
+      "walkCandidateSinceMs", "stopCandidateSinceMs", "driftCandidateSinceMs",
+      "recoveryCandidateSinceMs", "excusedUntilMs", "silencedUntilMs", "lastCueAtMs"
+    ]);
+    for (const [key, value] of Object.entries(state)) {
+      if (!(key in this)) continue;
+      if (timestampKeys.has(key)) {
+        if (value === null) {
+          this[key] = ["excusedUntilMs", "silencedUntilMs", "lastCueAtMs", "lastBaselineSampleAtMs"].includes(key) ? -Infinity : null;
+        } else {
+          this[key] = Number(value) + shift;
+        }
+      } else if (Array.isArray(this[key])) {
+        this[key] = Array.isArray(value) ? [...value] : [];
+      } else {
+        this[key] = value;
+      }
+    }
+    this.lastUpdateAtMs = nextNow;
+    return this.snapshot(nextNow);
+  }
+
   markPlannedBreak(timestampMs, durationMs = this.config.plannedBreakMs) {
     const now = finite(timestampMs) ?? this.lastUpdateAtMs ?? 0;
     this.excusedUntilMs = Math.max(this.excusedUntilMs, now + Math.max(0, durationMs));

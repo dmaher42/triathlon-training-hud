@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#06100c">
   <meta name="description" content="A low-distraction running rhythm and continuity coach.">
   <meta name="mobile-web-app-capable" content="yes">
@@ -29,6 +29,13 @@
       <span class="connection-pill muted" id="screen-connection"><i></i> SCREEN CHECK</span>
     </section>
 
+    <section class="preflight-panel" id="preflight-panel" aria-label="Pocket readiness">
+      <span id="preflight-motion" data-state="waiting"><i></i>MOTION</span>
+      <span id="preflight-screen" data-state="waiting"><i></i>SCREEN</span>
+      <span id="preflight-pocket" data-state="waiting"><i></i>POCKET LOCK</span>
+      <span id="preflight-battery" data-state="waiting"><i></i>BATTERY</span>
+    </section>
+
     <section class="status-card" id="status-card" data-tone="ready" aria-live="polite">
       <div class="status-topline">
         <p class="status-label">COACHING</p>
@@ -44,6 +51,7 @@
     <section class="primary-controls">
       <button class="install-button" id="install-app" type="button">INSTALL RUNNING APP</button>
       <button class="start-button" id="start-session" type="button">START RUN</button>
+      <button class="resume-button" id="resume-session" type="button" hidden>RESUME SAVED RUN</button>
       <button class="stop-button" id="stop-session" type="button" hidden>FINISH RUN</button>
     </section>
 
@@ -51,6 +59,7 @@
       <button type="button" id="planned-walk"><strong>PLANNED WALK</strong><span>Exclude this recovery</span></button>
       <button type="button" id="resume-run"><strong>RESUME RUNNING</strong><span>End the planned walk</span></button>
       <button type="button" id="silence-coach"><strong>VOICE PROMPTS OFF</strong><span>Keep measuring silently</span></button>
+      <button type="button" id="start-vibration"><strong>START VIBRATION ON</strong><span>Confirm recording by touch</span></button>
       <button class="pocket-lock-button" type="button" id="pocket-lock"><strong>POCKET LOCK</strong><span>Block accidental touches</span></button>
     </section>
 
@@ -83,6 +92,7 @@
           <div><dt>Time</dt><dd id="session-time">0:00</dd></div>
           <div><dt>Unplanned walks</dt><dd id="walk-value">0</dd></div>
           <div><dt>Stops</dt><dd id="stop-value">0</dd></div>
+          <div><dt>Signal interruptions</dt><dd id="interruption-value">0</dd></div>
         </dl>
       </article>
     </section>
@@ -123,6 +133,7 @@
       <span><b id="pocket-lock-time">0:00</b>TIME</span>
       <span><b id="pocket-lock-cadence">—</b>CADENCE</span>
     </div>
+    <small class="pocket-lock-health" id="pocket-lock-health">MOTION LIVE · SCREEN PROTECTED</small>
     <button type="button" id="pocket-unlock">PRESS AND HOLD TO UNLOCK</button>
     <small id="pocket-unlock-progress">Hold for 2 seconds</small>
   </section>

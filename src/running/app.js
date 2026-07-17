@@ -3,18 +3,23 @@ import { RunRhythmCoach } from "./rhythm-engine.js";
 import { RunSignalFusion } from "./signal-fusion.js";
 import { BrowserVoiceController, VOICE_INTENTS, parseVoiceCommand } from "./voice-commands.js";
 import { createRunControlAck, normaliseRunControlMessage } from "./control-protocol.js";
+import {
+  closeInterruption, createInterruption, interruptionSummary,
+  makePersistedSession, parsePersistedSession
+} from "./session-resilience.js";
 
 const doc = document;
 const els = Object.fromEntries([
   "status-card", "status-value", "status-message", "status-glyph",
   "baseline-progress", "baseline-mini-progress",
   "cadence-value", "cadence-target", "cadence-delta", "baseline-value", "baseline-state",
-  "baseline-summary", "stable-value", "stability-summary", "summary-state", "session-time", "walk-value", "stop-value",
+  "baseline-summary", "stable-value", "stability-summary", "summary-state", "session-time", "walk-value", "stop-value", "interruption-value",
   "phone-connection", "garmin-connection", "screen-connection", "install-app", "start-session", "stop-session", "run-controls",
-  "planned-walk", "resume-run", "speak-status", "silence-coach", "demo-session", "voice-status",
+  "planned-walk", "resume-run", "speak-status", "silence-coach", "start-vibration", "demo-session", "voice-status",
   "voice-dock", "voice-help", "voice-mode", "voice-subtitle", "voice-toggle", "voice-prompts-toggle",
   "pocket-lock", "pocket-lock-screen", "pocket-lock-status", "pocket-lock-time", "pocket-lock-cadence",
-  "pocket-unlock", "pocket-unlock-progress"
+  "pocket-unlock", "pocket-unlock-progress", "pocket-lock-health", "resume-session",
+  "preflight-panel", "preflight-motion", "preflight-screen", "preflight-pocket", "preflight-battery"
 ].map(id => [id, doc.getElementById(id)]));
 
 let detector = new HipMotionCadenceDetector();
@@ -27,6 +32,7 @@ let demoTimer = null;
 let demoStartedAt = null;
 let lastRenderAt = -Infinity;
 let sessionStartedAtMs = null;
+let sessionStartedAtEpochMs = null;
 let lastSessionElapsedMs = 0;
 let voiceSpeechToken = 0;
 let fieldSession = false;
@@ -39,10 +45,21 @@ let voiceResumeTimer = null;
 let pendingFinishUntil = -Infinity;
 const voicePromptsStorageKey = "run-durability-voice-prompts-v1";
 let voicePromptsEnabled = localStorage.getItem(voicePromptsStorageKey) !== "off";
+const startVibrationStorageKey = "run-durability-start-vibration-v1";
+let startVibrationEnabled = localStorage.getItem(startVibrationStorageKey) !== "off";
+const activeSessionStorageKey = "run-durability-active-session-v1";
 let pocketLocked = false;
 let pocketUnlockTimer = null;
 let installPrompt = null;
 const demoEnabled = new URLSearchParams(window.location.search).has("demo");
+let batteryStatus = { supported: false, sufficient: null, level: null, charging: null };
+let batteryManager = null;
+let lastMotionAtMs = null;
+let interruptionActive = null;
+let interruptions = [];
+let resilienceTimer = null;
+let lastPersistedAtMs = -Infinity;
+let savedSession = parsePersistedSession(localStorage.getItem(activeSessionStorageKey));
 
 function toneFor(status) {
   if (["FADING", "WALKING"].includes(status)) return "attention";
@@ -54,6 +71,117 @@ function formatMinutes(milliseconds) {
   const minutes = Math.floor(milliseconds / 60_000);
   const seconds = Math.floor(milliseconds % 60_000 / 1_000);
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function setPreflightItem(id, label, state = "waiting") {
+  const element = els[id];
+  element.dataset.state = state;
+  element.innerHTML = `<i></i>${label}`;
+}
+
+function updateBatteryDisplay() {
+  if (!batteryStatus.supported) {
+    setPreflightItem("preflight-battery", "BATTERY MANUAL", "unknown");
+    return;
+  }
+  const percent = Math.round((batteryStatus.level ?? 0) * 100);
+  const safe = batteryStatus.charging || batteryStatus.sufficient;
+  setPreflightItem("preflight-battery", batteryStatus.charging ? `CHARGING ${percent}%` : `BATTERY ${percent}%`, safe ? "ready" : "warning");
+}
+
+async function initialiseBatteryCheck() {
+  if (!navigator.getBattery) {
+    updateBatteryDisplay();
+    return;
+  }
+  try {
+    batteryManager = await navigator.getBattery();
+    const refresh = () => {
+      batteryStatus = {
+        supported: true,
+        level: batteryManager.level,
+        charging: batteryManager.charging,
+        sufficient: batteryManager.charging || batteryManager.level >= 0.2
+      };
+      updateBatteryDisplay();
+    };
+    batteryManager.addEventListener?.("levelchange", refresh);
+    batteryManager.addEventListener?.("chargingchange", refresh);
+    refresh();
+  } catch (_) {
+    batteryStatus = { supported: false, sufficient: null, level: null, charging: null };
+    updateBatteryDisplay();
+  }
+}
+
+function renderStartVibration() {
+  els["start-vibration"].querySelector("strong").textContent = `START VIBRATION ${startVibrationEnabled ? "ON" : "OFF"}`;
+  els["start-vibration"].querySelector("span").textContent = startVibrationEnabled ? "Confirm recording by touch" : "No start vibration";
+}
+
+function toggleStartVibration() {
+  startVibrationEnabled = !startVibrationEnabled;
+  localStorage.setItem(startVibrationStorageKey, startVibrationEnabled ? "on" : "off");
+  renderStartVibration();
+}
+
+function beginInterruption(reason) {
+  if (!active || !fieldSession || interruptionActive) return;
+  interruptionActive = createInterruption({ reason, startedAtEpochMs: Date.now() });
+  interruptions.push(interruptionActive);
+  persistActiveSession(true);
+}
+
+function endInterruption() {
+  if (!interruptionActive) return;
+  const closed = closeInterruption(interruptionActive, Date.now());
+  interruptions[interruptions.length - 1] = closed;
+  interruptionActive = null;
+  persistActiveSession(true);
+}
+
+function persistActiveSession(force = false) {
+  if (!active || !fieldSession || sessionStartedAtEpochMs === null) return;
+  const now = performance.now();
+  if (!force && now - lastPersistedAtMs < 5_000) return;
+  lastPersistedAtMs = now;
+  const payload = makePersistedSession({
+    startedAtEpochMs: sessionStartedAtEpochMs,
+    coachState: coach.exportState(),
+    interruptions
+  });
+  try { localStorage.setItem(activeSessionStorageKey, JSON.stringify(payload)); } catch (_) {}
+}
+
+function clearPersistedSession() {
+  savedSession = null;
+  try { localStorage.removeItem(activeSessionStorageKey); } catch (_) {}
+}
+
+function startResilienceMonitor() {
+  if (resilienceTimer) clearInterval(resilienceTimer);
+  resilienceTimer = setInterval(() => {
+    if (!active || !fieldSession) return;
+    const now = performance.now();
+    const motionMissing = lastMotionAtMs !== null && now - lastMotionAtMs > 5_000;
+    if (document.visibilityState !== "visible") {
+      beginInterruption("app-hidden");
+    } else if (motionMissing) {
+      beginInterruption("motion-gap");
+      setConnection("phone-connection", "MOTION INTERRUPTED", "warning");
+      els["pocket-lock-health"].textContent = "MOTION INTERRUPTED · KEEP SCREEN ACTIVE";
+    } else if (interruptionActive) {
+      endInterruption();
+    }
+    if (!wakeLock || wakeLock.released) requestWakeLock();
+    persistActiveSession();
+    render();
+  }, 2_000);
+}
+
+function stopResilienceMonitor() {
+  if (resilienceTimer) clearInterval(resilienceTimer);
+  resilienceTimer = null;
 }
 
 function glyphFor(status) {
@@ -287,12 +415,15 @@ function render(force = false) {
   els["session-time"].textContent = formatMinutes(elapsedMs);
   els["walk-value"].textContent = snapshot.unplannedWalks || 0;
   els["stop-value"].textContent = snapshot.stopCount || 0;
+  els["interruption-value"].textContent = interruptionSummary(interruptions).count;
   els["summary-state"].textContent = snapshot.status === "REVIEW" ? "FINAL" : active ? "LIVE" : "READY";
   els["pocket-lock-status"].textContent = snapshot.status;
   els["pocket-lock-time"].textContent = formatMinutes(elapsedMs);
   els["pocket-lock-cadence"].textContent = cadence ?? "—";
 
-  els["start-session"].hidden = active;
+  if (!interruptionActive) els["pocket-lock-health"].textContent = preflightConfirmed ? "MOTION LIVE · SCREEN PROTECTED" : "POCKET CHECK IN PROGRESS";
+  els["start-session"].hidden = active || Boolean(savedSession);
+  els["resume-session"].hidden = active || !savedSession;
   els["stop-session"].hidden = !active;
   els["run-controls"].hidden = !active;
   els["install-app"].hidden = active || isInstalledApp();
@@ -328,9 +459,14 @@ function maybeConfirmPreflight() {
   setConnection("screen-connection", "SCREEN AWAKE");
   if (preflightConfirmed) return;
   preflightConfirmed = true;
+  setPreflightItem("preflight-motion", "MOTION LIVE", "ready");
+  setPreflightItem("preflight-screen", "SCREEN PROTECTED", "ready");
+  setPreflightItem("preflight-pocket", "POCKET LOCKED", "ready");
+  setPocketLock(true, { announce: false });
   render(true);
   if (!preflightAnnounced) {
     preflightAnnounced = true;
+    if (startVibrationEnabled) navigator.vibrate?.([120, 80, 180]);
     speak("Preflight passed. Run naturally while I learn your rhythm.");
   }
 }
@@ -353,13 +489,19 @@ async function requestWakeLock() {
       if (active && fieldSession) {
         preflightConfirmed = false;
         setConnection("screen-connection", "SCREEN NOT HELD", "warning");
+        setPreflightItem("preflight-screen", "SCREEN RECOVERING", "warning");
+        beginInterruption("wake-lock-released");
+        if (document.visibilityState === "visible") setTimeout(() => requestWakeLock(), 250);
       }
     });
     setConnection("screen-connection", "SCREEN AWAKE");
+    setPreflightItem("preflight-screen", "SCREEN PROTECTED", "ready");
+    if (interruptionActive?.reason === "wake-lock-released") endInterruption();
     maybeConfirmPreflight();
     return true;
   } catch (_) {
     setConnection("screen-connection", "WAKE LOCK FAILED", "warning");
+    setPreflightItem("preflight-screen", "SCREEN FAILED", "warning");
     return false;
   }
 }
@@ -402,14 +544,18 @@ function onDeviceMotion(event) {
     firstMotionSignal = true;
     clearMotionTimeout();
     setConnection("phone-connection", "MOTION CONFIRMED");
+    if (interruptionActive) endInterruption();
   }
   const timestampMs = performance.now();
+  lastMotionAtMs = timestampMs;
+  if (interruptionActive?.reason === "motion-gap") endInterruption();
   const phone = detector.update({
     timestampMs,
     acceleration: event.acceleration,
     accelerationIncludingGravity: event.accelerationIncludingGravity
   });
   processSignal(fusion.updatePhone({ timestampMs, ...phone }));
+  persistActiveSession();
   if (firstMotionSignal) maybeConfirmPreflight();
 }
 
@@ -419,6 +565,9 @@ function failPreflight(message, source = "motion") {
   fieldSession = false;
   preflightConfirmed = false;
   sessionStartedAtMs = null;
+  sessionStartedAtEpochMs = null;
+  stopResilienceMonitor();
+  clearPersistedSession();
   window.removeEventListener("devicemotion", onDeviceMotion);
   releaseWakeLock({ resetLabel: false });
   if (source === "wake") {
@@ -445,7 +594,16 @@ async function startSession() {
     preflightConfirmed = false;
     preflightAnnounced = false;
     sessionStartedAtMs = performance.now();
+    sessionStartedAtEpochMs = Date.now();
     lastSessionElapsedMs = 0;
+    interruptions = [];
+    interruptionActive = null;
+    lastMotionAtMs = null;
+    savedSession = null;
+    setPreflightItem("preflight-motion", "MOTION CHECK", "waiting");
+    setPreflightItem("preflight-screen", "SCREEN CHECK", "waiting");
+    setPreflightItem("preflight-pocket", "POCKET ARMING", "waiting");
+    updateBatteryDisplay();
     setConnection("phone-connection", "WAITING FOR MOTION", "warning");
     setConnection("screen-connection", "CHECKING SCREEN", "warning");
     window.addEventListener("devicemotion", onDeviceMotion);
@@ -455,6 +613,8 @@ async function startSession() {
       message: "Checking phone motion and screen-awake protection."
     };
     render(true);
+    startResilienceMonitor();
+    persistActiveSession(true);
     const screenReady = await requestWakeLock();
     if (!screenReady) {
       failPreflight("Screen-awake protection failed. Turn off Battery Saver and try again.", "wake");
@@ -473,21 +633,78 @@ async function startSession() {
   }
 }
 
+async function resumeSavedSession() {
+  const restored = savedSession || parsePersistedSession(localStorage.getItem(activeSessionStorageKey));
+  if (!restored) {
+    clearPersistedSession();
+    render(true);
+    return;
+  }
+  try {
+    await requestMotionPermission();
+    detector = new HipMotionCadenceDetector();
+    fusion = new RunSignalFusion();
+    coach = new RunRhythmCoach();
+    const now = performance.now();
+    snapshot = coach.restoreState(restored.coachState, now);
+    active = true;
+    fieldSession = true;
+    sessionStartedAtEpochMs = restored.startedAtEpochMs;
+    sessionStartedAtMs = now - Math.max(0, Date.now() - restored.startedAtEpochMs);
+    interruptions = [...restored.interruptions];
+    interruptionActive = interruptions.at(-1)?.endedAtEpochMs == null ? interruptions.at(-1) : null;
+    motionSignalConfirmed = false;
+    preflightConfirmed = false;
+    preflightAnnounced = true;
+    lastMotionAtMs = null;
+    savedSession = null;
+    if (!interruptionActive) {
+      interruptions.push(createInterruption({ reason: "app-restarted", startedAtEpochMs: restored.savedAtEpochMs }));
+      interruptionActive = interruptions.at(-1);
+    }
+    setConnection("phone-connection", "WAITING FOR MOTION", "warning");
+    setConnection("screen-connection", "RECOVERING SCREEN", "warning");
+    setPreflightItem("preflight-motion", "MOTION CHECK", "waiting");
+    setPreflightItem("preflight-screen", "SCREEN CHECK", "waiting");
+    setPreflightItem("preflight-pocket", "POCKET ARMING", "waiting");
+    window.addEventListener("devicemotion", onDeviceMotion);
+    render(true);
+    startResilienceMonitor();
+    await requestWakeLock();
+    motionSignalTimeout = setTimeout(() => {
+      if (active && !motionSignalConfirmed) setConnection("phone-connection", "NO MOTION YET", "warning");
+    }, 6_000);
+    speak("Saved run restored. Move the phone to confirm motion, then pocket lock will reactivate.");
+    persistActiveSession(true);
+  } catch (error) {
+    snapshot = { ...snapshot, status: "SENSOR ERROR", message: error?.message || "The saved run could not resume.", events: [] };
+    render(true);
+  }
+}
+
 function finishSession() {
   if (!active) return;
   setPocketLock(false);
   pendingFinishUntil = -Infinity;
   clearMotionTimeout();
   lastSessionElapsedMs = sessionStartedAtMs === null ? 0 : Math.max(0, snapshot.timestampMs - sessionStartedAtMs);
+  if (interruptionActive) endInterruption();
+  const interruptionData = interruptionSummary(interruptions);
   active = false;
   fieldSession = false;
   preflightConfirmed = false;
   sessionStartedAtMs = null;
+  sessionStartedAtEpochMs = null;
   window.removeEventListener("devicemotion", onDeviceMotion);
   if (demoTimer) clearInterval(demoTimer);
   demoTimer = null;
+  stopResilienceMonitor();
+  clearPersistedSession();
   releaseWakeLock();
-  const summary = `Field test complete. ${snapshot.stablePercent} percent of running time was inside your rhythm band. ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}. Longest steady block ${formatMinutes(snapshot.longestStableBlockMs)}.`;
+  const interruptionNote = interruptionData.count
+    ? ` Recording was interrupted ${interruptionData.count} ${interruptionData.count === 1 ? "time" : "times"} for about ${formatMinutes(interruptionData.totalMs)}.`
+    : " Recording remained continuous.";
+  const summary = `Field test complete. ${snapshot.stablePercent} percent of running time was inside your rhythm band. ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}. Longest steady block ${formatMinutes(snapshot.longestStableBlockMs)}.${interruptionNote}`;
   snapshot = { ...snapshot, status: "REVIEW", message: summary, events: [] };
   setConnection("phone-connection", "PHONE READY");
   speak(summary);
@@ -590,7 +807,7 @@ async function installRunningApp() {
   window.alert("In Chrome, tap the three-dot menu, then tap Add to Home screen or Install app.");
 }
 
-async function setPocketLock(locked) {
+async function setPocketLock(locked, { announce = true } = {}) {
   pocketLocked = Boolean(locked && active);
   els["pocket-lock-screen"].hidden = !pocketLocked;
   doc.querySelector(".run-shell").inert = pocketLocked;
@@ -599,7 +816,8 @@ async function setPocketLock(locked) {
   if (pocketLocked) {
     await requestWakeLock();
     try { await doc.documentElement.requestFullscreen?.({ navigationUI: "hide" }); } catch (_) {}
-    reply("Pocket lock on. Press and hold the unlock button for two seconds to unlock.");
+    setPreflightItem("preflight-pocket", "POCKET LOCKED", "ready");
+    if (announce) reply("Pocket lock on. Press and hold the unlock button for two seconds to unlock.");
   } else if (doc.fullscreenElement) {
     try { await doc.exitFullscreen(); } catch (_) {}
   }
@@ -631,12 +849,14 @@ voiceController = BrowserVoiceController.fromWindow(window, {
   onState: handleVoiceState
 });
 els["start-session"].addEventListener("click", startSession);
+els["resume-session"].addEventListener("click", resumeSavedSession);
 els["stop-session"].addEventListener("click", finishSession);
 els["demo-session"].addEventListener("click", startDemo);
 els["planned-walk"].addEventListener("click", () => handleSnapshot(coach.markPlannedBreak(performance.now())));
 els["resume-run"].addEventListener("click", resumeRunning);
 els["speak-status"].addEventListener("click", () => reply(statusSentence()));
 els["silence-coach"].addEventListener("click", toggleVoicePrompts);
+els["start-vibration"].addEventListener("click", toggleStartVibration);
 els["voice-toggle"].addEventListener("click", toggleVoiceControls);
 els["voice-prompts-toggle"].addEventListener("click", toggleVoicePrompts);
 els["install-app"].addEventListener("click", installRunningApp);
@@ -647,8 +867,20 @@ for (const eventName of ["pointerup", "pointercancel", "pointerleave"]) {
 }
 document.addEventListener("visibilitychange", () => {
   voiceController.setPageVisible(document.visibilityState === "visible");
-  if (active && fieldSession && document.visibilityState === "visible") requestWakeLock();
+  if (!active || !fieldSession) return;
+  if (document.visibilityState === "visible") {
+    requestWakeLock();
+  } else {
+    beginInterruption("app-hidden");
+    persistActiveSession(true);
+  }
 });
+for (const eventName of ["touchmove", "wheel", "gesturestart", "gesturechange", "gestureend", "contextmenu"]) {
+  document.addEventListener(eventName, event => {
+    if (pocketLocked) event.preventDefault();
+  }, { passive: false });
+}
+window.addEventListener("pagehide", () => persistActiveSession(true));
 window.addEventListener("beforeinstallprompt", event => {
   event.preventDefault();
   installPrompt = event;
@@ -662,4 +894,9 @@ window.addEventListener("appinstalled", () => {
 
 els["install-app"].hidden = isInstalledApp();
 renderVoicePromptsToggle();
+renderStartVibration();
+initialiseBatteryCheck();
+if (savedSession) {
+  snapshot = { ...snapshot, status: "SAVED RUN", message: "A previous run can be resumed without losing its recorded summary.", events: [] };
+}
 render(true);
