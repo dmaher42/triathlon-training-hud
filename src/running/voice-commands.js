@@ -12,6 +12,7 @@ export const VOICE_INTENTS = Object.freeze({
   PLANNED_WALK: "planned-walk",
   RESUME: "resume",
   QUIET: "quiet",
+  PROMPTS_ON: "prompts-on",
   FINISH_REQUEST: "finish-request",
   FINISH_CONFIRM: "finish-confirm",
   FINISH_CANCEL: "finish-cancel",
@@ -51,7 +52,10 @@ export function parseVoiceCommand(transcript, { awaitingFinishConfirmation = fal
   if (matches(text, [/^resume(\s+running)?$/, /^back\s+to\s+running$/, /^end\s+(the\s+)?walk$/, /^continue(\s+run|\s+running)?$/])) {
     return { intent: VOICE_INTENTS.RESUME, transcript: text };
   }
-  if (matches(text, [/^(go\s+)?quiet$/, /^(silence|mute)(\s+coach)?$/, /^quiet\s+(for\s+)?(ten|10)\s+minutes$/])) {
+  if (matches(text, [/^(turn\s+)?(voice\s+)?prompts\s+on$/, /^automatic\s+coaching\s+on$/])) {
+    return { intent: VOICE_INTENTS.PROMPTS_ON, transcript: text };
+  }
+  if (matches(text, [/^(go\s+)?quiet$/, /^(silence|mute)(\s+coach)?$/, /^quiet\s+(for\s+)?(ten|10)\s+minutes$/, /^(turn\s+)?(voice\s+)?prompts\s+off$/])) {
     return { intent: VOICE_INTENTS.QUIET, transcript: text };
   }
   if (matches(text, [/^(finish|end|complete)(\s+the)?\s+(run|session)$/, /^finish$/])) {

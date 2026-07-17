@@ -10,6 +10,8 @@ const commandCases = [
   ["mark a planned walk", VOICE_INTENTS.PLANNED_WALK],
   ["back to running", VOICE_INTENTS.RESUME],
   ["quiet for ten minutes", VOICE_INTENTS.QUIET],
+  ["voice prompts off", VOICE_INTENTS.QUIET],
+  ["voice prompts on", VOICE_INTENTS.PROMPTS_ON],
   ["finish run", VOICE_INTENTS.FINISH_REQUEST],
   ["voice help", VOICE_INTENTS.HELP],
   ["stop listening", VOICE_INTENTS.VOICE_OFF]

@@ -91,9 +91,10 @@
       <strong id="voice-mode">VOICE CONTROL OFF</strong>
       <small id="voice-subtitle">Tap the microphone, then allow microphone access</small>
       <div class="voice-command-list" aria-label="Available voice commands">
-        <span>START RUN</span><span>COACH STATUS</span><span>PLANNED WALK</span><span>RESUME RUNNING</span><span>QUIET</span><span>FINISH RUN</span>
+        <span>START RUN</span><span>COACH STATUS</span><span>PLANNED WALK</span><span>RESUME RUNNING</span><span>PROMPTS OFF</span><span>PROMPTS ON</span><span>FINISH RUN</span>
       </div>
       <button class="voice-status-button" id="speak-status" type="button">HEAR STATUS</button>
+      <button class="voice-prompts-toggle" id="voice-prompts-toggle" type="button" aria-pressed="true">VOICE PROMPTS: ON</button>
     </section>
 
     <section class="primary-controls">
@@ -104,7 +105,7 @@
     <section class="run-controls" id="run-controls" hidden aria-label="In-run controls">
       <button type="button" id="planned-walk"><strong>PLANNED WALK</strong><span>Exclude the next two minutes</span></button>
       <button type="button" id="resume-run"><strong>RESUME RUNNING</strong><span>End a planned walk early</span></button>
-      <button type="button" id="silence-coach"><strong>QUIET 10 MIN</strong><span>Keep measuring silently</span></button>
+      <button type="button" id="silence-coach"><strong>VOICE PROMPTS OFF</strong><span>Keep measuring silently</span></button>
     </section>
 
     <button class="demo-button" id="demo-session" type="button">RUN 20-SECOND DESKTOP DEMO</button>

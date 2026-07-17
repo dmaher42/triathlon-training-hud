@@ -204,6 +204,8 @@ h1 { margin: 0; font-size: clamp(1.95rem, 8.5vw, 2.65rem); line-height: 1; lette
 .voice-command-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 8px; }
 .voice-command-list span { border: 1px solid rgba(var(--green-rgb), .16); border-radius: 999px; padding: 3px 5px; color: #789487; font-size: .42rem; font-weight: 850; letter-spacing: .025em; }
 .voice-status-button { margin-top: 7px; border: 0; padding: 4px 8px; background: transparent; color: #91aa9e; font-size: .48rem; font-weight: 900; letter-spacing: .08em; text-decoration: underline; cursor: pointer; }
+.voice-prompts-toggle { margin-top: 8px; border: 1px solid rgba(97, 230, 160, .35); border-radius: 999px; padding: 7px 12px; background: rgba(97, 230, 160, .1); color: #76e7aa; font-size: .52rem; font-weight: 950; letter-spacing: .08em; cursor: pointer; }
+.voice-prompts-toggle[aria-pressed="false"] { border-color: rgba(171, 188, 181, .28); background: rgba(126, 145, 137, .08); color: #9aaba4; }
 
 .primary-controls { margin-top: 9px; }
 .start-button, .stop-button { width: 100%; min-height: 55px; border-radius: 16px; padding: 13px; font-weight: 950; letter-spacing: .07em; cursor: pointer; }
