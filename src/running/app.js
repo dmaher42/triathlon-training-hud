@@ -42,6 +42,7 @@ let voicePromptsEnabled = localStorage.getItem(voicePromptsStorageKey) !== "off"
 let pocketLocked = false;
 let pocketUnlockTimer = null;
 let installPrompt = null;
+const demoEnabled = new URLSearchParams(window.location.search).has("demo");
 
 function toneFor(status) {
   if (["FADING", "WALKING"].includes(status)) return "attention";
@@ -294,7 +295,9 @@ function render(force = false) {
   els["start-session"].hidden = active;
   els["stop-session"].hidden = !active;
   els["run-controls"].hidden = !active;
-  els["demo-session"].hidden = active;
+  els["install-app"].hidden = active || isInstalledApp();
+  els["demo-session"].hidden = active || !demoEnabled;
+  doc.body.dataset.session = active ? "active" : snapshot.status === "REVIEW" ? "review" : "ready";
   els["voice-help"].textContent = active
     ? fieldSession && !preflightConfirmed
       ? "Move the phone gently while the app confirms motion and screen protection."
