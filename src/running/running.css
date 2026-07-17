@@ -42,10 +42,8 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px soli
   padding: max(18px, env(safe-area-inset-top)) 16px max(26px, env(safe-area-inset-bottom));
 }
 
-.app-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
-.brand-kicker { margin: 0 0 3px; color: var(--green); font-size: .58rem; font-weight: 950; letter-spacing: .18em; }
+.app-header { display: flex; min-height: 38px; align-items: center; justify-content: space-between; gap: 18px; }
 h1 { margin: 0; font-size: clamp(1.95rem, 8.5vw, 2.65rem); line-height: 1; letter-spacing: -.052em; }
-.subtitle { margin: 5px 0 0; color: #a9bbb3; font-size: .82rem; }
 .hud-link {
   display: grid;
   width: 42px;
@@ -230,10 +228,6 @@ h1 { margin: 0; font-size: clamp(1.95rem, 8.5vw, 2.65rem); line-height: 1; lette
 body.pocket-locked { overflow: hidden; overscroll-behavior: none; }
 .demo-button { width: 100%; margin-top: 7px; border: 0; padding: 9px; background: transparent; color: #71867b; font-size: .55rem; font-weight: 900; letter-spacing: .07em; text-decoration: underline; cursor: pointer; }
 
-.prototype-note { margin-top: 13px; border-top: 1px solid #23362d; padding-top: 12px; color: #83968d; }
-.prototype-note summary { color: #a7bbb1; font-size: .65rem; font-weight: 850; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
-.prototype-note ol { margin: 11px 0; padding-left: 20px; font-size: .7rem; line-height: 1.6; }
-.prototype-note p { margin: 0; font-size: .64rem; line-height: 1.5; }
 .visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(1px, 1px, 1px, 1px) !important; white-space: nowrap !important; }
 
 @keyframes voice-wave { from { transform: scaleY(.55); opacity: .45; } to { transform: scaleY(1.15); opacity: 1; } }
