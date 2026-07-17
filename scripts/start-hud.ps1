@@ -45,16 +45,25 @@ if (-not $port) { throw "No free local port was found between 5173 and 5199." }
 
 $node = (Get-Command node -ErrorAction Stop).Source
 $vite = Join-Path $projectRoot "node_modules\vite\bin\vite.js"
-$serverCommand = "title Triathlon HUD Server && `"$node`" `"$vite`" --host 127.0.0.1 --port $port --strictPort"
-Start-Process -FilePath $env:ComSpec -ArgumentList "/k", $serverCommand -WorkingDirectory $projectRoot -WindowStyle Minimized
+$serverProcess = Start-Process `
+    -FilePath $node `
+    -ArgumentList $vite, "--host", "127.0.0.1", "--port", $port, "--strictPort" `
+    -WorkingDirectory $projectRoot `
+    -WindowStyle Hidden `
+    -PassThru
 
 $url = "http://127.0.0.1:$port"
 for ($attempt = 0; $attempt -lt 30; $attempt++) {
     Start-Sleep -Milliseconds 250
+    $serverProcess.Refresh()
+    if ($serverProcess.HasExited) {
+        throw "The Triathlon HUD server stopped during startup (exit code $($serverProcess.ExitCode))."
+    }
     try {
         $response = Invoke-WebRequest -UseBasicParsing $url -TimeoutSec 1
         if ($response.Content -match "<title>Triathlon Training HUD</title>") {
             Set-Content -LiteralPath $portRecord -Value $port
+            Set-Content -LiteralPath (Join-Path $projectRoot ".vite-server.pid") -Value $serverProcess.Id
             Start-Process $url
             exit 0
         }
@@ -63,4 +72,7 @@ for ($attempt = 0; $attempt -lt 30; $attempt++) {
     }
 }
 
+if (-not $serverProcess.HasExited) {
+    Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
+}
 throw "The Triathlon HUD server did not become ready at $url."

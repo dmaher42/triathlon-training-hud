@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#06100c">
+  <meta name="description" content="A low-distraction running rhythm and continuity coach.">
+  <title>Run Durability Coach</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2355ee9a'/%3E%3Cpath d='M21 47V17h13c8 0 13 4 13 11 0 5-3 9-8 10l10 9H38l-9-9v9H21zm8-16h5c3 0 5-1 5-4s-2-4-5-4h-5v8z' fill='%2306100c'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../src/running/running.css">
+</head>
+<body>
+  <main class="run-shell">
+    <header class="app-header">
+      <div>
+        <p class="brand-kicker">RUNNING COACH</p>
+        <h1>Run Durability</h1>
+        <p class="subtitle">Rhythm and continuity coach</p>
+      </div>
+      <a class="hud-link" href="../" aria-label="Open the cycling HUD" title="Cycling HUD">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="17" r="3.5"></circle><circle cx="18" cy="17" r="3.5"></circle><path d="m6 17 4-8 3 8m-5-4h8l-3-6h3"></path></svg>
+      </a>
+    </header>
+
+    <section class="connection-strip" aria-label="Sensor connections">
+      <span class="connection-pill" id="phone-connection"><i></i> PHONE READY</span>
+      <span class="connection-pill muted" id="garmin-connection"><i></i> GARMIN OFFLINE</span>
+      <span class="connection-pill muted" id="screen-connection"><i></i> SCREEN CHECK</span>
+    </section>
+
+    <section class="status-card" id="status-card" data-tone="ready" aria-live="polite">
+      <div class="status-topline">
+        <p class="status-label">COACHING</p>
+        <span class="status-glyph" id="status-glyph" aria-hidden="true">✓</span>
+      </div>
+      <strong class="status-value" id="status-value">READY</strong>
+      <p class="status-message" id="status-message">Ready for a steady opening run.</p>
+      <p class="status-detail" id="status-detail">Secure the phone in the same hip pocket for every run.</p>
+      <div class="baseline-track" aria-label="Cadence baseline learning progress">
+        <span id="baseline-progress" style="width:0%"></span>
+      </div>
+      <div class="baseline-row">
+        <p class="baseline-copy" id="baseline-copy">Personal baseline not started</p>
+        <span class="baseline-check" id="baseline-check" aria-hidden="true">○</span>
+      </div>
+    </section>
+
+    <section class="metric-grid" aria-label="Run coaching measurements">
+      <article class="metric-card cadence-card">
+        <header><span>CADENCE</span><small>CURRENT VS TARGET</small></header>
+        <div class="cadence-compare">
+          <strong id="cadence-value">&mdash;</strong>
+          <span>vs. <b id="cadence-target">&mdash;</b></span>
+        </div>
+        <footer><span>steps/min</span><b id="cadence-delta">SETTLING</b></footer>
+      </article>
+
+      <article class="metric-card baseline-card">
+        <header><span>BASELINE</span><small id="baseline-state">LEARNING</small></header>
+        <div class="baseline-reading"><strong id="baseline-value">&mdash;</strong><span>steps/min</span></div>
+        <p id="baseline-summary">Starts with two minutes of natural running</p>
+        <div class="mini-progress"><span id="baseline-mini-progress" style="width:0%"></span></div>
+      </article>
+
+      <article class="metric-card stability-card">
+        <header><span>RHYTHM STABILITY</span><small>PERSONAL BAND</small></header>
+        <div class="stability-reading"><strong id="stable-value">0%</strong><span class="shield" aria-hidden="true">✓</span></div>
+        <p id="stability-summary">Waiting for your opening rhythm</p>
+      </article>
+
+      <article class="metric-card summary-card">
+        <header><span>RUN SUMMARY</span><small id="summary-state">READY</small></header>
+        <dl>
+          <div><dt>Time</dt><dd id="session-time">0:00</dd></div>
+          <div><dt>Unplanned walks</dt><dd id="walk-value">0</dd></div>
+          <div><dt>Stops</dt><dd id="stop-value">0</dd></div>
+        </dl>
+      </article>
+    </section>
+
+    <section class="voice-dock" id="voice-dock" aria-label="Voice coach">
+      <div class="voice-heading"><span>VOICE COACH</span><small>ON DEVICE</small></div>
+      <p id="voice-help">Spoken replies are ready. Android voice commands are the next platform step.</p>
+      <div class="voice-visual">
+        <div class="wave wave-left" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <button class="voice-orb" id="speak-status" type="button" aria-label="Hear current coach status">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V7a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Z"></path><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-3 0h6"></path></svg>
+        </button>
+        <div class="wave wave-right" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+      <strong id="voice-mode">VOICE COACH READY</strong>
+      <small id="voice-subtitle">Tap the microphone to hear your current status</small>
+    </section>
+
+    <section class="primary-controls">
+      <button class="start-button" id="start-session" type="button">START PHONE SENSOR</button>
+      <button class="stop-button" id="stop-session" type="button" hidden>FINISH RUN</button>
+    </section>
+
+    <section class="run-controls" id="run-controls" hidden aria-label="In-run controls">
+      <button type="button" id="planned-walk"><strong>PLANNED WALK</strong><span>Exclude the next two minutes</span></button>
+      <button type="button" id="silence-coach"><strong>QUIET 10 MIN</strong><span>Keep measuring silently</span></button>
+    </section>
+
+    <button class="demo-button" id="demo-session" type="button">RUN 20-SECOND DESKTOP DEMO</button>
+
+    <details class="prototype-note">
+      <summary>First field-test instructions</summary>
+      <ol>
+        <li>Use Chrome on the Pixel 8 and grant motion access if asked.</li>
+        <li>Turn off Battery Saver, then wait for PHONE LIVE and SCREEN AWAKE.</li>
+        <li>Keep the phone snug in the same hip pocket for the whole run.</li>
+        <li>Run naturally while the coach quietly learns your opening rhythm.</li>
+      </ol>
+      <p>This browser prototype keeps the screen awake because sensors may pause when the screen locks. Motion is processed on this device and is not uploaded.</p>
+    </details>
+  </main>
+
+  <div class="visually-hidden" id="voice-status" role="status" aria-live="assertive"></div>
+  <script type="module" src="../src/running/app.js"></script>
+</body>
+</html>
