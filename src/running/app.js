@@ -12,7 +12,9 @@ const els = Object.fromEntries([
   "baseline-summary", "stable-value", "stability-summary", "summary-state", "session-time", "walk-value", "stop-value",
   "phone-connection", "garmin-connection", "screen-connection", "start-session", "stop-session", "run-controls",
   "planned-walk", "resume-run", "speak-status", "silence-coach", "demo-session", "voice-status",
-  "voice-dock", "voice-help", "voice-mode", "voice-subtitle", "voice-toggle", "voice-prompts-toggle"
+  "voice-dock", "voice-help", "voice-mode", "voice-subtitle", "voice-toggle", "voice-prompts-toggle",
+  "pocket-lock", "pocket-lock-screen", "pocket-lock-status", "pocket-lock-time", "pocket-lock-cadence",
+  "pocket-unlock", "pocket-unlock-progress"
 ].map(id => [id, doc.getElementById(id)]));
 
 let detector = new HipMotionCadenceDetector();
@@ -37,6 +39,8 @@ let voiceResumeTimer = null;
 let pendingFinishUntil = -Infinity;
 const voicePromptsStorageKey = "run-durability-voice-prompts-v1";
 let voicePromptsEnabled = localStorage.getItem(voicePromptsStorageKey) !== "off";
+let pocketLocked = false;
+let pocketUnlockTimer = null;
 
 function toneFor(status) {
   if (["FADING", "WALKING"].includes(status)) return "attention";
@@ -305,6 +309,9 @@ function render(force = false) {
   els["walk-value"].textContent = snapshot.unplannedWalks || 0;
   els["stop-value"].textContent = snapshot.stopCount || 0;
   els["summary-state"].textContent = snapshot.status === "REVIEW" ? "FINAL" : active ? "LIVE" : "READY";
+  els["pocket-lock-status"].textContent = snapshot.status;
+  els["pocket-lock-time"].textContent = formatMinutes(elapsedMs);
+  els["pocket-lock-cadence"].textContent = cadence ?? "—";
 
   els["start-session"].hidden = active;
   els["stop-session"].hidden = !active;
@@ -487,6 +494,7 @@ async function startSession() {
 
 function finishSession() {
   if (!active) return;
+  setPocketLock(false);
   pendingFinishUntil = -Infinity;
   clearMotionTimeout();
   lastSessionElapsedMs = sessionStartedAtMs === null ? 0 : Math.max(0, snapshot.timestampMs - sessionStartedAtMs);
@@ -586,6 +594,39 @@ function resumeRunning() {
   handleSnapshot(coach.resumePlannedBreak(performance.now()));
 }
 
+async function setPocketLock(locked) {
+  pocketLocked = Boolean(locked && active);
+  els["pocket-lock-screen"].hidden = !pocketLocked;
+  doc.querySelector(".run-shell").inert = pocketLocked;
+  doc.body.classList.toggle("pocket-locked", pocketLocked);
+  cancelPocketUnlock();
+  if (pocketLocked) {
+    await requestWakeLock();
+    try { await doc.documentElement.requestFullscreen?.({ navigationUI: "hide" }); } catch (_) {}
+    reply("Pocket lock on. Press and hold the unlock button for two seconds to unlock.");
+  } else if (doc.fullscreenElement) {
+    try { await doc.exitFullscreen(); } catch (_) {}
+  }
+}
+
+function cancelPocketUnlock() {
+  if (pocketUnlockTimer) clearTimeout(pocketUnlockTimer);
+  pocketUnlockTimer = null;
+  els["pocket-unlock"].classList.remove("is-holding");
+  els["pocket-unlock"].style.setProperty("--unlock-progress", "0");
+  els["pocket-unlock-progress"].textContent = "Hold for 2 seconds";
+}
+
+function beginPocketUnlock(event) {
+  if (!pocketLocked || pocketUnlockTimer) return;
+  event.preventDefault();
+  els["pocket-unlock"].setPointerCapture?.(event.pointerId);
+  els["pocket-unlock"].classList.add("is-holding");
+  requestAnimationFrame(() => els["pocket-unlock"].style.setProperty("--unlock-progress", "1"));
+  els["pocket-unlock-progress"].textContent = "Keep holding…";
+  pocketUnlockTimer = setTimeout(() => setPocketLock(false), 1_800);
+}
+
 window.runCoachGarminSample = ingestGarminTelemetry;
 window.runCoachGarminControl = ingestGarminControl;
 window.runCoachVoiceCommand = transcript => handleVoiceTranscript([String(transcript || "")]);
@@ -602,6 +643,11 @@ els["speak-status"].addEventListener("click", () => reply(statusSentence()));
 els["silence-coach"].addEventListener("click", toggleVoicePrompts);
 els["voice-toggle"].addEventListener("click", toggleVoiceControls);
 els["voice-prompts-toggle"].addEventListener("click", toggleVoicePrompts);
+els["pocket-lock"].addEventListener("click", () => setPocketLock(true));
+els["pocket-unlock"].addEventListener("pointerdown", beginPocketUnlock);
+for (const eventName of ["pointerup", "pointercancel", "pointerleave"]) {
+  els["pocket-unlock"].addEventListener(eventName, cancelPocketUnlock);
+}
 document.addEventListener("visibilitychange", () => {
   voiceController.setPageVisible(document.visibilityState === "visible");
   if (active && fieldSession && document.visibilityState === "visible") requestWakeLock();

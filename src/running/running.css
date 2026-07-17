@@ -217,6 +217,20 @@ h1 { margin: 0; font-size: clamp(1.95rem, 8.5vw, 2.65rem); line-height: 1; lette
 .run-controls strong, .run-controls span { display: block; }
 .run-controls strong { font-size: .58rem; letter-spacing: .05em; }
 .run-controls span { margin-top: 4px; color: #71867b; font-size: .51rem; line-height: 1.25; }
+.run-controls .pocket-lock-button { grid-column: 1 / -1; min-height: 48px; border-color: rgba(97, 230, 160, .38); background: rgba(18, 54, 39, .94); color: #72e9aa; }
+.pocket-lock-screen { position: fixed; z-index: 9999; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: max(28px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom)); background: #020806; color: #e5f2eb; text-align: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+.pocket-lock-screen[hidden] { display: none; }
+.pocket-lock-mark { display: grid; width: 68px; height: 68px; place-items: center; border: 1px solid rgba(97, 230, 160, .42); border-radius: 50%; background: rgba(97, 230, 160, .08); box-shadow: 0 0 35px rgba(97, 230, 160, .1); color: #61e6a0; font-size: 1.2rem; }
+.pocket-lock-screen > p { margin: 18px 0 4px; color: #739286; font-size: .65rem; font-weight: 950; letter-spacing: .2em; }
+.pocket-lock-screen > strong { color: #61e6a0; font-size: clamp(1.8rem, 9vw, 3rem); letter-spacing: -.04em; }
+.pocket-lock-readings { display: grid; width: min(320px, 90vw); grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 25px; }
+.pocket-lock-readings span { border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 13px 8px; color: #6f8279; font-size: .5rem; font-weight: 900; letter-spacing: .1em; }
+.pocket-lock-readings b { display: block; margin-bottom: 4px; color: #dce9e2; font-family: var(--mono); font-size: 1.35rem; letter-spacing: -.04em; }
+#pocket-unlock { position: relative; width: min(300px, 86vw); min-height: 58px; overflow: hidden; margin-top: auto; border: 1px solid rgba(255,255,255,.16); border-radius: 999px; background: #0a1712; color: #9eb2a8; font-size: .62rem; font-weight: 950; letter-spacing: .08em; touch-action: none; }
+#pocket-unlock::before { content: ""; position: absolute; inset: 0; background: rgba(97, 230, 160, .22); transform: scaleX(var(--unlock-progress, 0)); transform-origin: left; }
+#pocket-unlock.is-holding::before { transition: transform 1.8s linear; }
+#pocket-unlock-progress { margin-top: 9px; color: #52665c; font-size: .55rem; }
+body.pocket-locked { overflow: hidden; overscroll-behavior: none; }
 .demo-button { width: 100%; margin-top: 7px; border: 0; padding: 9px; background: transparent; color: #71867b; font-size: .55rem; font-weight: 900; letter-spacing: .07em; text-decoration: underline; cursor: pointer; }
 
 .prototype-note { margin-top: 13px; border-top: 1px solid #23362d; padding-top: 12px; color: #83968d; }

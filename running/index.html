@@ -106,6 +106,7 @@
       <button type="button" id="planned-walk"><strong>PLANNED WALK</strong><span>Exclude the next two minutes</span></button>
       <button type="button" id="resume-run"><strong>RESUME RUNNING</strong><span>End a planned walk early</span></button>
       <button type="button" id="silence-coach"><strong>VOICE PROMPTS OFF</strong><span>Keep measuring silently</span></button>
+      <button class="pocket-lock-button" type="button" id="pocket-lock"><strong>POCKET LOCK</strong><span>Block accidental pocket touches</span></button>
     </section>
 
     <button class="demo-button" id="demo-session" type="button">RUN 20-SECOND DESKTOP DEMO</button>
@@ -121,6 +122,18 @@
       <p>This browser prototype keeps the screen awake because sensors may pause when the screen locks. Motion is processed on this device and is not uploaded.</p>
     </details>
   </main>
+
+  <section class="pocket-lock-screen" id="pocket-lock-screen" hidden aria-label="Pocket lock active">
+    <div class="pocket-lock-mark" aria-hidden="true">●</div>
+    <p>POCKET LOCKED</p>
+    <strong id="pocket-lock-status">RUN ACTIVE</strong>
+    <div class="pocket-lock-readings">
+      <span><b id="pocket-lock-time">0:00</b>TIME</span>
+      <span><b id="pocket-lock-cadence">—</b>CADENCE</span>
+    </div>
+    <button type="button" id="pocket-unlock">PRESS AND HOLD TO UNLOCK</button>
+    <small id="pocket-unlock-progress">Hold for 2 seconds</small>
+  </section>
 
   <div class="visually-hidden" id="voice-status" role="status" aria-live="assertive"></div>
   <script type="module" src="../src/running/app.js"></script>
