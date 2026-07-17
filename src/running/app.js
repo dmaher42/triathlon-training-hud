@@ -6,8 +6,8 @@ import { createRunControlAck, normaliseRunControlMessage } from "./control-proto
 
 const doc = document;
 const els = Object.fromEntries([
-  "status-card", "status-value", "status-message", "status-detail", "status-glyph",
-  "baseline-progress", "baseline-copy", "baseline-check", "baseline-mini-progress",
+  "status-card", "status-value", "status-message", "status-glyph",
+  "baseline-progress", "baseline-mini-progress",
   "cadence-value", "cadence-target", "cadence-delta", "baseline-value", "baseline-state",
   "baseline-summary", "stable-value", "stability-summary", "summary-state", "session-time", "walk-value", "stop-value",
   "phone-connection", "garmin-connection", "screen-connection", "install-app", "start-session", "stop-session", "run-controls",
@@ -53,24 +53,6 @@ function formatMinutes(milliseconds) {
   const minutes = Math.floor(milliseconds / 60_000);
   const seconds = Math.floor(milliseconds % 60_000 / 1_000);
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-function detailFor(status) {
-  const details = {
-    READY: "Secure the phone in the same hip pocket for every run.",
-    PREFLIGHT: "Confirming motion data and keeping the screen awake.",
-    CALIBRATING: "Run naturally while your opening rhythm is learned.",
-    STEADY: "Your cadence is inside its personal rhythm band.",
-    FADING: "A sustained cadence drop has been detected.",
-    RESET: "Build back into your natural rhythm without rushing.",
-    WALKING: "This walk was not marked as part of your plan.",
-    "PLANNED WALK": "This recovery is excluded from continuity coaching.",
-    "PLANNED STOP": "This stop is excluded from continuity coaching.",
-    STOPPED: "The coach will continue automatically when you move.",
-    REVIEW: "Your rhythm and continuity summary is ready.",
-    "SENSOR ERROR": "Check browser motion permission and try again."
-  };
-  return details[status] || "Rhythm coaching is active.";
 }
 
 function glyphFor(status) {
@@ -269,7 +251,6 @@ function render(force = false) {
   els["status-value"].textContent = snapshot.status;
   els["status-value"].classList.toggle("is-long", snapshot.status.length > 8);
   els["status-message"].textContent = snapshot.message;
-  els["status-detail"].textContent = detailFor(snapshot.status);
   els["status-glyph"].textContent = glyphFor(snapshot.status);
 
   const progress = snapshot.baselineProgress || 0;
@@ -277,10 +258,6 @@ function render(force = false) {
   const baseline = Number.isFinite(snapshot.baselineCadenceSpm) ? snapshot.baselineCadenceSpm : null;
   els["baseline-progress"].style.width = `${progress}%`;
   els["baseline-mini-progress"].style.width = `${progress}%`;
-  els["baseline-copy"].textContent = baseline
-    ? `Personal baseline learned · ${baseline} steps/min`
-    : snapshot.active ? `Learning personal baseline · ${progress}%` : "Personal baseline not started";
-  els["baseline-check"].textContent = baseline ? "✓" : "○";
 
   els["cadence-value"].textContent = cadence ?? "—";
   els["cadence-target"].textContent = baseline ?? "—";
