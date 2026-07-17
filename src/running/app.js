@@ -173,7 +173,7 @@ function reply(message) {
 
 function renderVoicePromptsToggle() {
   els["voice-prompts-toggle"].setAttribute("aria-pressed", String(voicePromptsEnabled));
-  els["voice-prompts-toggle"].textContent = `VOICE PROMPTS: ${voicePromptsEnabled ? "ON" : "OFF"}`;
+  els["voice-prompts-toggle"].textContent = `PROMPTS: ${voicePromptsEnabled ? "ON" : "OFF"}`;
   els["silence-coach"].querySelector("strong").textContent = voicePromptsEnabled ? "VOICE PROMPTS OFF" : "VOICE PROMPTS ON";
   els["silence-coach"].querySelector("span").textContent = voicePromptsEnabled ? "Keep measuring silently" : "Restore automatic coaching";
 }
