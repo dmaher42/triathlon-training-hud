@@ -1,0 +1,28 @@
+{
+  "id": "./running/",
+  "name": "Run Durability Coach",
+  "short_name": "Run Coach",
+  "description": "A low-distraction running rhythm and continuity coach.",
+  "start_url": "./running/",
+  "scope": "./running/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#020806",
+  "theme_color": "#06100c",
+  "categories": ["fitness", "sports", "health"],
+  "icons": [
+    {
+      "src": "./icons/run-durability-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/run-durability-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

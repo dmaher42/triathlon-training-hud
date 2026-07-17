@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#06100c">
   <meta name="description" content="A low-distraction running rhythm and continuity coach.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="%BASE_URL%running.webmanifest">
+  <link rel="apple-touch-icon" href="%BASE_URL%icons/run-durability-192.png">
   <title>Run Durability Coach</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2355ee9a'/%3E%3Cpath d='M21 47V17h13c8 0 13 4 13 11 0 5-3 9-8 10l10 9H38l-9-9v9H21zm8-16h5c3 0 5-1 5-4s-2-4-5-4h-5v8z' fill='%2306100c'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="../src/running/running.css">
@@ -98,6 +103,7 @@
     </section>
 
     <section class="primary-controls">
+      <button class="install-button" id="install-app" type="button">INSTALL RUNNING APP</button>
       <button class="start-button" id="start-session" type="button">START PHONE SENSOR</button>
       <button class="stop-button" id="stop-session" type="button" hidden>FINISH RUN</button>
     </section>
@@ -136,6 +142,14 @@
   </section>
 
   <div class="visually-hidden" id="voice-status" role="status" aria-live="assertive"></div>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register(
+        "%BASE_URL%running-sw.js",
+        { scope: "%BASE_URL%running/" }
+      ).catch(() => {}));
+    }
+  </script>
   <script type="module" src="../src/running/app.js"></script>
 </body>
 </html>

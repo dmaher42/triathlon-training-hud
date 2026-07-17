@@ -208,6 +208,8 @@ h1 { margin: 0; font-size: clamp(1.95rem, 8.5vw, 2.65rem); line-height: 1; lette
 .voice-prompts-toggle[aria-pressed="false"] { border-color: rgba(171, 188, 181, .28); background: rgba(126, 145, 137, .08); color: #9aaba4; }
 
 .primary-controls { margin-top: 9px; }
+.install-button { width: 100%; min-height: 44px; margin-bottom: 8px; border: 1px solid rgba(97, 230, 160, .42); border-radius: 14px; background: rgba(20, 57, 41, .9); color: #72e9aa; font-size: .64rem; font-weight: 950; letter-spacing: .08em; cursor: pointer; }
+.install-button[hidden] { display: none; }
 .start-button, .stop-button { width: 100%; min-height: 55px; border-radius: 16px; padding: 13px; font-weight: 950; letter-spacing: .07em; cursor: pointer; }
 .start-button { border: 0; background: linear-gradient(135deg, #5df2a1, #42df8d); box-shadow: 0 10px 28px rgba(var(--green-rgb), .13); color: #05130c; }
 .stop-button { border: 1px solid rgba(var(--red-rgb), .35); background: rgba(var(--red-rgb), .09); color: #ffaaa3; }

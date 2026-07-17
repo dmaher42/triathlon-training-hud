@@ -10,7 +10,7 @@ const els = Object.fromEntries([
   "baseline-progress", "baseline-copy", "baseline-check", "baseline-mini-progress",
   "cadence-value", "cadence-target", "cadence-delta", "baseline-value", "baseline-state",
   "baseline-summary", "stable-value", "stability-summary", "summary-state", "session-time", "walk-value", "stop-value",
-  "phone-connection", "garmin-connection", "screen-connection", "start-session", "stop-session", "run-controls",
+  "phone-connection", "garmin-connection", "screen-connection", "install-app", "start-session", "stop-session", "run-controls",
   "planned-walk", "resume-run", "speak-status", "silence-coach", "demo-session", "voice-status",
   "voice-dock", "voice-help", "voice-mode", "voice-subtitle", "voice-toggle", "voice-prompts-toggle",
   "pocket-lock", "pocket-lock-screen", "pocket-lock-status", "pocket-lock-time", "pocket-lock-cadence",
@@ -41,6 +41,7 @@ const voicePromptsStorageKey = "run-durability-voice-prompts-v1";
 let voicePromptsEnabled = localStorage.getItem(voicePromptsStorageKey) !== "off";
 let pocketLocked = false;
 let pocketUnlockTimer = null;
+let installPrompt = null;
 
 function toneFor(status) {
   if (["FADING", "WALKING"].includes(status)) return "attention";
@@ -594,6 +595,21 @@ function resumeRunning() {
   handleSnapshot(coach.resumePlannedBreak(performance.now()));
 }
 
+function isInstalledApp() {
+  return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+}
+
+async function installRunningApp() {
+  if (installPrompt) {
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt = null;
+    els["install-app"].hidden = true;
+    return;
+  }
+  window.alert("In Chrome, tap the three-dot menu, then tap Add to Home screen or Install app.");
+}
+
 async function setPocketLock(locked) {
   pocketLocked = Boolean(locked && active);
   els["pocket-lock-screen"].hidden = !pocketLocked;
@@ -643,6 +659,7 @@ els["speak-status"].addEventListener("click", () => reply(statusSentence()));
 els["silence-coach"].addEventListener("click", toggleVoicePrompts);
 els["voice-toggle"].addEventListener("click", toggleVoiceControls);
 els["voice-prompts-toggle"].addEventListener("click", toggleVoicePrompts);
+els["install-app"].addEventListener("click", installRunningApp);
 els["pocket-lock"].addEventListener("click", () => setPocketLock(true));
 els["pocket-unlock"].addEventListener("pointerdown", beginPocketUnlock);
 for (const eventName of ["pointerup", "pointercancel", "pointerleave"]) {
@@ -652,6 +669,17 @@ document.addEventListener("visibilitychange", () => {
   voiceController.setPageVisible(document.visibilityState === "visible");
   if (active && fieldSession && document.visibilityState === "visible") requestWakeLock();
 });
+window.addEventListener("beforeinstallprompt", event => {
+  event.preventDefault();
+  installPrompt = event;
+  els["install-app"].hidden = false;
+  els["install-app"].textContent = "INSTALL RUNNING APP";
+});
+window.addEventListener("appinstalled", () => {
+  installPrompt = null;
+  els["install-app"].hidden = true;
+});
 
+els["install-app"].hidden = isInstalledApp();
 renderVoicePromptsToggle();
 render(true);
