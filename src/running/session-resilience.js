@@ -31,13 +31,15 @@ export function interruptionSummary(interruptions = [], nowEpochMs = Date.now())
   }, { count: 0, totalMs: 0 });
 }
 
-export function makePersistedSession({ startedAtEpochMs, savedAtEpochMs = Date.now(), coachState, interruptions = [] }) {
+export function makePersistedSession({ startedAtEpochMs, savedAtEpochMs = Date.now(), coachState, formState = null, pocketSide = "right", interruptions = [] }) {
   return {
     version: RUN_SESSION_VERSION,
     active: true,
     startedAtEpochMs: finite(startedAtEpochMs),
     savedAtEpochMs: finite(savedAtEpochMs),
     coachState,
+    formState,
+    pocketSide,
     interruptions
   };
 }

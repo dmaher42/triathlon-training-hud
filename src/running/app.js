@@ -3,6 +3,7 @@ import { RunRhythmCoach } from "./rhythm-engine.js";
 import { RunSignalFusion } from "./signal-fusion.js";
 import { BrowserVoiceController, VOICE_INTENTS, parseVoiceCommand } from "./voice-commands.js";
 import { createRunControlAck, normaliseRunControlMessage } from "./control-protocol.js";
+import { HipFormAnalyzer } from "./hip-form-analyzer.js";
 import {
   closeInterruption, createInterruption, interruptionSummary,
   makePersistedSession, parsePersistedSession
@@ -19,12 +20,17 @@ const els = Object.fromEntries([
   "voice-dock", "voice-help", "voice-mode", "voice-subtitle", "voice-toggle", "voice-prompts-toggle",
   "pocket-lock", "pocket-lock-screen", "pocket-lock-status", "pocket-lock-time", "pocket-lock-cadence",
   "pocket-unlock", "pocket-unlock-progress", "pocket-lock-health", "resume-session",
-  "preflight-panel", "preflight-motion", "preflight-screen", "preflight-pocket", "preflight-battery"
+  "preflight-panel", "preflight-motion", "preflight-screen", "preflight-pocket", "preflight-battery", "preflight-save",
+  "form-lab", "form-vertical", "form-horizontal", "form-rotation", "form-impact",
+  "form-status", "form-confidence", "form-progress", "pocket-side-left", "pocket-side-right",
+  "form-segment-review", "form-middle", "form-late"
 ].map(id => [id, doc.getElementById(id)]));
 
 let detector = new HipMotionCadenceDetector();
 let fusion = new RunSignalFusion();
 let coach = new RunRhythmCoach();
+let formAnalyzer = new HipFormAnalyzer();
+let formSnapshot = formAnalyzer.snapshot(0);
 let snapshot = coach.snapshot(0);
 let active = false;
 let wakeLock = null;
@@ -44,10 +50,11 @@ let voiceController = null;
 let voiceResumeTimer = null;
 let pendingFinishUntil = -Infinity;
 const voicePromptsStorageKey = "run-durability-voice-prompts-v1";
-let voicePromptsEnabled = localStorage.getItem(voicePromptsStorageKey) !== "off";
+let voicePromptsEnabled = readStoredText(voicePromptsStorageKey) !== "off";
 const startVibrationStorageKey = "run-durability-start-vibration-v1";
-let startVibrationEnabled = localStorage.getItem(startVibrationStorageKey) !== "off";
+let startVibrationEnabled = readStoredText(startVibrationStorageKey) !== "off";
 const activeSessionStorageKey = "run-durability-active-session-v1";
+const completedFormStorageKey = "run-durability-completed-form-v1";
 let pocketLocked = false;
 let pocketUnlockTimer = null;
 let installPrompt = null;
@@ -58,8 +65,16 @@ let lastMotionAtMs = null;
 let interruptionActive = null;
 let interruptions = [];
 let resilienceTimer = null;
-let lastPersistedAtMs = -Infinity;
-let savedSession = parsePersistedSession(localStorage.getItem(activeSessionStorageKey));
+let lastPersistAttemptAtMs = -Infinity;
+let savedSession = parsePersistedSession(readStoredText(activeSessionStorageKey));
+const pocketSideStorageKey = "run-durability-pocket-side-v1";
+let pocketSide = readStoredText(pocketSideStorageKey) === "left" ? "left" : "right";
+let storageHealthy = null;
+let completedFormReport = readStoredJson(completedFormStorageKey);
+if (savedSession && completedFormReport?.version === 1 && completedFormReport.completedAtEpochMs >= savedSession.savedAtEpochMs) {
+  savedSession = null;
+  try { localStorage.removeItem(activeSessionStorageKey); } catch (_) {}
+}
 
 function toneFor(status) {
   if (["FADING", "WALKING"].includes(status)) return "attention";
@@ -115,14 +130,126 @@ async function initialiseBatteryCheck() {
 }
 
 function renderStartVibration() {
-  els["start-vibration"].querySelector("strong").textContent = `START VIBRATION ${startVibrationEnabled ? "ON" : "OFF"}`;
-  els["start-vibration"].querySelector("span").textContent = startVibrationEnabled ? "Confirm recording by touch" : "No start vibration";
+  els["start-vibration"].querySelector("strong").textContent = `START VIBRATION: ${startVibrationEnabled ? "ON" : "OFF"}`;
+  els["start-vibration"].querySelector("span").textContent = "Tap to change";
+}
+
+function setPocketSide(side) {
+  if (active) return;
+  pocketSide = side === "left" ? "left" : "right";
+  writeStoredText(pocketSideStorageKey, pocketSide);
+  renderPocketSide();
+}
+
+function renderPocketSide() {
+  for (const side of ["left", "right"]) {
+    els[`pocket-side-${side}`].setAttribute("aria-pressed", String(pocketSide === side));
+    els[`pocket-side-${side}`].disabled = active;
+  }
+}
+
+function formatFormChange(value) {
+  if (!Number.isFinite(value)) return "—";
+  return `${value > 0 ? "+" : ""}${value}%`;
+}
+
+function segmentReviewLabel(label, drift) {
+  if (!drift || !Number.isFinite(drift.verticalPercent)) return `${label} —`;
+  const rotation = Number.isFinite(drift.rotationPercent) ? ` · ROT ${formatFormChange(drift.rotationPercent)}` : "";
+  return `${label} BOUNCE ${formatFormChange(drift.verticalPercent)}${rotation}`;
+}
+
+function renderFormLab() {
+  const drift = formSnapshot.drift || {};
+  els["form-vertical"].textContent = formatFormChange(drift.verticalPercent);
+  els["form-horizontal"].textContent = formatFormChange(drift.horizontalPercent);
+  els["form-rotation"].textContent = formSnapshot.totalSamples && formSnapshot.capabilities?.rotationAvailable === false
+    ? "N/A"
+    : formatFormChange(drift.rotationPercent);
+  els["form-impact"].textContent = formatFormChange(drift.impactPercent);
+  els["form-progress"].style.width = `${formSnapshot.baselineProgress || 0}%`;
+  els["form-confidence"].textContent = `${formSnapshot.confidence || 0}% CONFIDENCE`;
+  const isReview = !active && Boolean(formSnapshot.totalSamples);
+  const reviewStatus = !formSnapshot.baselineReady
+    ? `Saved ${pocketSide} hip run · insufficient data for comparison`
+    : formSnapshot.segments?.late
+      ? `Saved ${pocketSide} hip report · opening, middle and final retained`
+      : formSnapshot.segments?.middle
+        ? `Saved ${pocketSide} hip report · final section not reached`
+        : `Saved ${pocketSide} hip baseline · middle section not reached`;
+  els["form-segment-review"].hidden = !isReview;
+  els["form-middle"].textContent = segmentReviewLabel("MIDDLE", formSnapshot.segmentDrift?.middle);
+  els["form-late"].textContent = segmentReviewLabel("FINAL", formSnapshot.segmentDrift?.late);
+  els["form-status"].textContent = isReview
+    ? reviewStatus
+    : formSnapshot.placementConsistent === false
+      ? "Phone position changed — measurement confidence reduced"
+      : formSnapshot.baselineReady
+        ? formSnapshot.capabilities?.rotationAvailable === false
+          ? "Recent movement compared · rotation unavailable"
+          : "Recent five minutes compared with your opening movement"
+        : active
+          ? `Learning ${pocketSide} hip movement · ${formSnapshot.baselineProgress || 0}%`
+          : "Starts by learning ten minutes of running";
+  renderPocketSide();
 }
 
 function toggleStartVibration() {
   startVibrationEnabled = !startVibrationEnabled;
-  localStorage.setItem(startVibrationStorageKey, startVibrationEnabled ? "on" : "off");
+  writeStoredText(startVibrationStorageKey, startVibrationEnabled ? "on" : "off");
   renderStartVibration();
+}
+
+function readStoredText(key) {
+  try { return localStorage.getItem(key); } catch (_) { return null; }
+}
+
+function writeStoredText(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    setSaveHealth(true);
+    return true;
+  } catch (_) {
+    setSaveHealth(false);
+    return false;
+  }
+}
+
+function readStoredJson(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function setSaveHealth(healthy, label = healthy ? "SAVE READY" : "SAVE FAILED") {
+  storageHealthy = healthy;
+  setPreflightItem("preflight-save", label, healthy ? "ready" : "warning");
+  if (!healthy && pocketLocked) els["pocket-lock-health"].textContent = "RUN ACTIVE · SAVE FAILED";
+}
+
+function writeStoredJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    setSaveHealth(true);
+    return true;
+  } catch (_) {
+    setSaveHealth(false);
+    return false;
+  }
+}
+
+function initialiseStorageCheck() {
+  const key = "run-durability-storage-check";
+  try {
+    localStorage.setItem(key, "ok");
+    localStorage.removeItem(key);
+    setSaveHealth(true);
+  } catch (_) {
+    setSaveHealth(false);
+  }
 }
 
 function beginInterruption(reason) {
@@ -143,19 +270,27 @@ function endInterruption() {
 function persistActiveSession(force = false) {
   if (!active || !fieldSession || sessionStartedAtEpochMs === null) return;
   const now = performance.now();
-  if (!force && now - lastPersistedAtMs < 5_000) return;
-  lastPersistedAtMs = now;
+  if (!force && now - lastPersistAttemptAtMs < 5_000) return;
+  lastPersistAttemptAtMs = now;
   const payload = makePersistedSession({
     startedAtEpochMs: sessionStartedAtEpochMs,
     coachState: coach.exportState(),
+    formState: formAnalyzer.exportState(),
+    pocketSide,
     interruptions
   });
-  try { localStorage.setItem(activeSessionStorageKey, JSON.stringify(payload)); } catch (_) {}
+  writeStoredJson(activeSessionStorageKey, payload);
 }
 
 function clearPersistedSession() {
-  savedSession = null;
-  try { localStorage.removeItem(activeSessionStorageKey); } catch (_) {}
+  try {
+    localStorage.removeItem(activeSessionStorageKey);
+    savedSession = null;
+    return true;
+  } catch (_) {
+    setSaveHealth(false);
+    return false;
+  }
 }
 
 function startResilienceMonitor() {
@@ -291,7 +426,7 @@ function renderVoicePromptsToggle() {
 
 function setVoicePrompts(enabled) {
   voicePromptsEnabled = Boolean(enabled);
-  localStorage.setItem(voicePromptsStorageKey, voicePromptsEnabled ? "on" : "off");
+  writeStoredText(voicePromptsStorageKey, voicePromptsEnabled ? "on" : "off");
   renderVoicePromptsToggle();
   reply(voicePromptsEnabled ? "Automatic voice prompts on." : "Automatic voice prompts off. I will keep measuring silently.");
 }
@@ -421,7 +556,11 @@ function render(force = false) {
   els["pocket-lock-time"].textContent = formatMinutes(elapsedMs);
   els["pocket-lock-cadence"].textContent = cadence ?? "—";
 
-  if (!interruptionActive) els["pocket-lock-health"].textContent = preflightConfirmed ? "MOTION LIVE · SCREEN PROTECTED" : "POCKET CHECK IN PROGRESS";
+  if (!interruptionActive) {
+    els["pocket-lock-health"].textContent = storageHealthy === false
+      ? "RUN ACTIVE · SAVE FAILED"
+      : preflightConfirmed ? "MOTION LIVE · SCREEN PROTECTED" : "POCKET CHECK IN PROGRESS";
+  }
   els["start-session"].hidden = active || Boolean(savedSession);
   els["resume-session"].hidden = active || !savedSession;
   els["stop-session"].hidden = !active;
@@ -439,6 +578,7 @@ function render(force = false) {
       ? "Tap once to enable hands-free commands, then leave the screen open."
       : "Voice commands are unavailable in this browser. Spoken replies still work.";
   if (els["voice-dock"].dataset.speaking !== "true") setVoiceIdle();
+  renderFormLab();
 }
 
 function setConnection(id, label, state = "ready") {
@@ -554,6 +694,13 @@ function onDeviceMotion(event) {
     acceleration: event.acceleration,
     accelerationIncludingGravity: event.accelerationIncludingGravity
   });
+  formSnapshot = formAnalyzer.update({
+    timestampMs,
+    accelerationIncludingGravity: event.accelerationIncludingGravity,
+    rotationRate: event.rotationRate,
+    movementState: phone.movementState,
+    stepDetected: phone.stepDetected
+  });
   processSignal(fusion.updatePhone({ timestampMs, ...phone }));
   persistActiveSession();
   if (firstMotionSignal) maybeConfirmPreflight();
@@ -588,6 +735,7 @@ async function startSession() {
     detector = new HipMotionCadenceDetector();
     fusion = new RunSignalFusion();
     coach = new RunRhythmCoach();
+    formAnalyzer = new HipFormAnalyzer();
     active = true;
     fieldSession = true;
     motionSignalConfirmed = false;
@@ -612,6 +760,7 @@ async function startSession() {
       status: "PREFLIGHT",
       message: "Checking phone motion and screen-awake protection."
     };
+    formSnapshot = formAnalyzer.start(sessionStartedAtMs);
     render(true);
     startResilienceMonitor();
     persistActiveSession(true);
@@ -634,7 +783,7 @@ async function startSession() {
 }
 
 async function resumeSavedSession() {
-  const restored = savedSession || parsePersistedSession(localStorage.getItem(activeSessionStorageKey));
+  const restored = savedSession || parsePersistedSession(readStoredText(activeSessionStorageKey));
   if (!restored) {
     clearPersistedSession();
     render(true);
@@ -645,8 +794,11 @@ async function resumeSavedSession() {
     detector = new HipMotionCadenceDetector();
     fusion = new RunSignalFusion();
     coach = new RunRhythmCoach();
+    formAnalyzer = new HipFormAnalyzer();
     const now = performance.now();
     snapshot = coach.restoreState(restored.coachState, now);
+    formSnapshot = restored.formState ? formAnalyzer.restoreState(restored.formState, now) : formAnalyzer.start(now);
+    pocketSide = restored.pocketSide === "left" ? "left" : "right";
     active = true;
     fieldSession = true;
     sessionStartedAtEpochMs = restored.startedAtEpochMs;
@@ -690,6 +842,18 @@ function finishSession() {
   lastSessionElapsedMs = sessionStartedAtMs === null ? 0 : Math.max(0, snapshot.timestampMs - sessionStartedAtMs);
   if (interruptionActive) endInterruption();
   const interruptionData = interruptionSummary(interruptions);
+  formSnapshot = formAnalyzer.snapshot(performance.now(), { force: true });
+  let completedSaved = !fieldSession;
+  if (fieldSession) {
+    const completedPayload = {
+      version: 1,
+      completedAtEpochMs: Date.now(),
+      pocketSide,
+      snapshot: formSnapshot
+    };
+    completedSaved = writeStoredJson(completedFormStorageKey, completedPayload);
+    if (completedSaved) completedFormReport = completedPayload;
+  }
   active = false;
   fieldSession = false;
   preflightConfirmed = false;
@@ -699,7 +863,7 @@ function finishSession() {
   if (demoTimer) clearInterval(demoTimer);
   demoTimer = null;
   stopResilienceMonitor();
-  clearPersistedSession();
+  if (completedSaved) clearPersistedSession();
   releaseWakeLock();
   const interruptionNote = interruptionData.count
     ? ` Recording was interrupted ${interruptionData.count} ${interruptionData.count === 1 ? "time" : "times"} for about ${formatMinutes(interruptionData.totalMs)}.`
@@ -724,6 +888,7 @@ function startDemo() {
     walkHoldMs: 1_500,
     cueCooldownMs: 0
   });
+  formAnalyzer = new HipFormAnalyzer();
   active = true;
   fieldSession = false;
   motionSignalConfirmed = false;
@@ -732,6 +897,7 @@ function startDemo() {
   sessionStartedAtMs = demoStartedAt;
   lastSessionElapsedMs = 0;
   handleSnapshot(coach.start(demoStartedAt));
+  formSnapshot = formAnalyzer.start(demoStartedAt);
   setConnection("phone-connection", "DEMO SIGNAL LIVE");
   setConnection("screen-connection", "DEMO MODE", "muted");
   speak("Short demonstration started.");
@@ -857,6 +1023,8 @@ els["resume-run"].addEventListener("click", resumeRunning);
 els["speak-status"].addEventListener("click", () => reply(statusSentence()));
 els["silence-coach"].addEventListener("click", toggleVoicePrompts);
 els["start-vibration"].addEventListener("click", toggleStartVibration);
+els["pocket-side-left"].addEventListener("click", () => setPocketSide("left"));
+els["pocket-side-right"].addEventListener("click", () => setPocketSide("right"));
 els["voice-toggle"].addEventListener("click", toggleVoiceControls);
 els["voice-prompts-toggle"].addEventListener("click", toggleVoicePrompts);
 els["install-app"].addEventListener("click", installRunningApp);
@@ -895,8 +1063,13 @@ window.addEventListener("appinstalled", () => {
 els["install-app"].hidden = isInstalledApp();
 renderVoicePromptsToggle();
 renderStartVibration();
+renderPocketSide();
 initialiseBatteryCheck();
+initialiseStorageCheck();
 if (savedSession) {
   snapshot = { ...snapshot, status: "SAVED RUN", message: "A previous run can be resumed without losing its recorded summary.", events: [] };
+} else if (completedFormReport?.version === 1 && completedFormReport.snapshot) {
+  formSnapshot = completedFormReport.snapshot;
+  pocketSide = completedFormReport.pocketSide === "left" ? "left" : "right";
 }
 render(true);

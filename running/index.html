@@ -34,6 +34,7 @@
       <span id="preflight-screen" data-state="waiting"><i></i>SCREEN</span>
       <span id="preflight-pocket" data-state="waiting"><i></i>POCKET LOCK</span>
       <span id="preflight-battery" data-state="waiting"><i></i>BATTERY</span>
+      <span id="preflight-save" data-state="waiting"><i></i>SAVE CHECK</span>
     </section>
 
     <section class="status-card" id="status-card" data-tone="ready" aria-live="polite">
@@ -50,6 +51,9 @@
 
     <section class="primary-controls">
       <button class="install-button" id="install-app" type="button">INSTALL RUNNING APP</button>
+      <div class="pre-run-options">
+        <button type="button" id="start-vibration"><strong>START VIBRATION: ON</strong><span>Tap to change</span></button>
+      </div>
       <button class="start-button" id="start-session" type="button">START RUN</button>
       <button class="resume-button" id="resume-session" type="button" hidden>RESUME SAVED RUN</button>
       <button class="stop-button" id="stop-session" type="button" hidden>FINISH RUN</button>
@@ -59,7 +63,6 @@
       <button type="button" id="planned-walk"><strong>PLANNED WALK</strong><span>Exclude this recovery</span></button>
       <button type="button" id="resume-run"><strong>RESUME RUNNING</strong><span>End the planned walk</span></button>
       <button type="button" id="silence-coach"><strong>VOICE PROMPTS OFF</strong><span>Keep measuring silently</span></button>
-      <button type="button" id="start-vibration"><strong>START VIBRATION ON</strong><span>Confirm recording by touch</span></button>
       <button class="pocket-lock-button" type="button" id="pocket-lock"><strong>POCKET LOCK</strong><span>Block accidental touches</span></button>
     </section>
 
@@ -95,6 +98,27 @@
           <div><dt>Signal interruptions</dt><dd id="interruption-value">0</dd></div>
         </dl>
       </article>
+    </section>
+
+    <section class="form-lab" id="form-lab" aria-label="Silent hip motion measurement">
+      <header><span>HIP MOTION LAB</span><small>MEASUREMENT ONLY · NO COACHING</small></header>
+      <div class="pocket-side" role="group" aria-label="Phone pocket side">
+        <span>PHONE POSITION</span>
+        <button type="button" id="pocket-side-left" aria-pressed="false">LEFT HIP</button>
+        <button type="button" id="pocket-side-right" aria-pressed="true">RIGHT HIP</button>
+      </div>
+      <div class="form-measures">
+        <span><b id="form-vertical">—</b>BOUNCE</span>
+        <span><b id="form-horizontal">—</b>HORIZONTAL</span>
+        <span><b id="form-rotation">—</b>ROTATION</span>
+        <span><b id="form-impact">—</b>IMPACT</span>
+      </div>
+      <footer><span id="form-status">Starts by learning your opening movement</span><b id="form-confidence">0% CONFIDENCE</b></footer>
+      <div class="form-progress"><span id="form-progress" style="width:0%"></span></div>
+      <div class="form-segment-review" id="form-segment-review" hidden>
+        <span id="form-middle">MIDDLE —</span>
+        <span id="form-late">FINAL —</span>
+      </div>
     </section>
 
     <section class="voice-dock" id="voice-dock" aria-label="Voice coach">

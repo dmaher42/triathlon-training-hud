@@ -11,9 +11,12 @@ test("persists and validates a recent active run", () => {
     startedAtEpochMs: 1_000,
     savedAtEpochMs: 10_000,
     coachState: { version: 1 },
+    formState: { version: 1 },
+    pocketSide: "left",
     interruptions: []
   });
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).startedAtEpochMs, 1_000);
+  assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).pocketSide, "left");
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 50_000, maxAgeMs: 20_000 }), null);
 });
 
