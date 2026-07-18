@@ -17,7 +17,7 @@ const els = Object.fromEntries([
   "baseline-progress", "baseline-mini-progress", "baseline-track",
   "cadence-value", "cadence-target", "cadence-delta", "baseline-value", "baseline-state",
   "baseline-summary", "stable-value", "stability-summary", "summary-state", "session-time", "walk-value", "stop-value", "interruption-value",
-  "phone-connection", "garmin-connection", "screen-connection", "install-app", "start-session", "stop-session", "run-controls",
+  "phone-connection", "garmin-connection", "screen-connection", "install-app", "start-session", "stop-session", "primary-controls", "run-controls",
   "planned-walk", "resume-run", "speak-status", "silence-coach", "start-vibration", "demo-session", "voice-status",
   "voice-dock", "voice-help", "voice-mode", "voice-subtitle", "voice-toggle", "voice-prompts-toggle",
   "pocket-lock", "pocket-lock-screen", "pocket-lock-status", "pocket-lock-time", "pocket-lock-cadence",
@@ -93,8 +93,10 @@ if (savedSession) {
 }
 
 function toneFor(status) {
-  if (["FADING", "WALKING"].includes(status)) return "attention";
-  if (["STOPPED", "PLANNED STOP", "SENSOR ERROR"].includes(status)) return "stopped";
+  if (status === "STEADY") return "success";
+  if (["ARM LIVE", "ARM CHECK"].includes(status)) return "arm";
+  if (["FADING", "WALKING", "PLANNED WALK", "PLANNED STOP"].includes(status)) return "attention";
+  if (["STOPPED", "SENSOR ERROR"].includes(status)) return "stopped";
   return "ready";
 }
 
@@ -244,9 +246,11 @@ function renderFormLab() {
   const displayPlacement = isReview ? completedReportPlacement() : phonePlacement;
   const displaySide = isReview ? (completedFormReport.pocketSide === "left" ? "left" : "right") : pocketSide;
   renderPhonePlacement({ placement: displayPlacement, side: displaySide });
-  if (displayPlacement === "hand" && els["form-lab"].nextElementSibling !== els["metric-grid"]) {
+  if (!active && !isReview && els["primary-controls"].previousElementSibling !== els["form-lab"]) {
+    els["primary-controls"].before(els["form-lab"]);
+  } else if ((active || isReview) && displayPlacement === "hand" && els["form-lab"].nextElementSibling !== els["metric-grid"]) {
     els["metric-grid"].before(els["form-lab"]);
-  } else if (displayPlacement === "hip" && els["metric-grid"].nextElementSibling !== els["form-lab"]) {
+  } else if ((active || isReview) && displayPlacement === "hip" && els["metric-grid"].nextElementSibling !== els["form-lab"]) {
     els["metric-grid"].after(els["form-lab"]);
   }
   const displaySnapshot = isReview
@@ -512,13 +516,14 @@ function voiceIdleState() {
   if (voiceController?.state === "denied") return ["MICROPHONE BLOCKED", "Allow microphone access in Chrome site settings"];
   if (voiceController?.state === "no-microphone") return ["MICROPHONE MISSING", "Chrome could not access a microphone"];
   if (voiceController?.enabled) {
-    if (voiceController.listening) return ["LISTENING…", "Say “Coach status” or “Voice help”"];
-    return ["VOICE CONTROL ON", "Listening will resume after the current reply"];
+    if (voiceController.listening) return ["VOICE LISTENING", "Say “Coach status” or “Voice help”"];
+    return ["VOICE READY", "Listening will resume after the current reply"];
   }
-  if (snapshot.status === "REVIEW") return ["RUN REVIEW READY", "Tap Hear Status for your final summary"];
-  if (snapshot.status === "SENSOR ERROR") return ["SENSOR NEEDS ATTENTION", "Resolve the sensor message before starting"];
-  if (active && fieldSession && !preflightConfirmed) return ["PREFLIGHT IN PROGRESS", "Waiting for phone motion and screen-awake checks"];
-  return ["VOICE CONTROL OFF", "Tap the microphone, then allow microphone access"];
+  return ["VOICE OFF", "Tap to enable hands-free controls"];
+}
+
+function renderVoiceToggleAccessibility() {
+  els["voice-toggle"].setAttribute("aria-label", voiceController?.enabled ? "Disable voice controls" : "Enable voice controls");
 }
 
 function setVoiceIdle() {
@@ -527,6 +532,7 @@ function setVoiceIdle() {
   els["voice-dock"].dataset.listening = String(Boolean(voiceController?.listening));
   els["voice-dock"].dataset.voiceError = String(["unsupported", "denied", "no-microphone"].includes(voiceController?.state));
   els["voice-toggle"].setAttribute("aria-pressed", String(Boolean(voiceController?.enabled)));
+  renderVoiceToggleAccessibility();
   els["voice-mode"].textContent = mode;
   els["voice-subtitle"].textContent = subtitle;
 }
@@ -535,8 +541,9 @@ function handleVoiceState({ state, detail }) {
   els["voice-dock"].dataset.listening = String(state === "listening");
   els["voice-dock"].dataset.voiceError = String(["unsupported", "denied", "no-microphone"].includes(state));
   els["voice-toggle"].setAttribute("aria-pressed", String(Boolean(voiceController?.enabled)));
+  renderVoiceToggleAccessibility();
   if (state === "listening") {
-    els["voice-mode"].textContent = "LISTENING…";
+    els["voice-mode"].textContent = "VOICE LISTENING";
     els["voice-subtitle"].textContent = "Say “Coach status” or “Voice help”";
   } else if (["starting", "reconnecting"].includes(state)) {
     els["voice-mode"].textContent = state === "starting" ? "STARTING MICROPHONE" : "RECONNECTING VOICE";
@@ -771,6 +778,8 @@ function render(force = false) {
   els["resume-session"].hidden = active || !savedSession;
   els["stop-session"].hidden = !active;
   els["run-controls"].hidden = !active;
+  els["planned-walk"].hidden = !active || Boolean(snapshot.plannedBreakActive);
+  els["resume-run"].hidden = !active || !snapshot.plannedBreakActive;
   els["install-app"].hidden = active || isInstalledApp();
   els["demo-session"].hidden = active || !demoEnabled;
   doc.body.dataset.session = active ? "active" : snapshot.status === "REVIEW" ? "review" : "ready";

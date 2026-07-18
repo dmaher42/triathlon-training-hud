@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#06100c">
+  <meta name="theme-color" content="#050a12">
   <meta name="description" content="A low-distraction running rhythm and continuity coach.">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,13 +11,16 @@
   <link rel="manifest" href="%BASE_URL%running.webmanifest">
   <link rel="apple-touch-icon" href="%BASE_URL%icons/run-durability-192.png">
   <title>Run Durability Coach</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2355ee9a'/%3E%3Cpath d='M21 47V17h13c8 0 13 4 13 11 0 5-3 9-8 10l10 9H38l-9-9v9H21zm8-16h5c3 0 5-1 5-4s-2-4-5-4h-5v8z' fill='%2306100c'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23050a12'/%3E%3Cpath d='M21 47V17h13c8 0 13 4 13 11 0 5-3 9-8 10l10 9H38l-9-9v9H21zm8-16h5c3 0 5-1 5-4s-2-4-5-4h-5v8z' fill='%232bc3ff'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="../src/running/running.css">
 </head>
 <body>
   <main class="run-shell">
     <header class="app-header">
-      <h1>Run Durability</h1>
+      <div class="app-title">
+        <h1>Run Durability</h1>
+        <p>Rhythm and continuity coach</p>
+      </div>
       <a class="hud-link" href="../" aria-label="Open the cycling HUD" title="Cycling HUD">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="17" r="3.5"></circle><circle cx="18" cy="17" r="3.5"></circle><path d="m6 17 4-8 3 8m-5-4h8l-3-6h3"></path></svg>
       </a>
@@ -26,8 +29,23 @@
     <section class="connection-strip" aria-label="Sensor connections">
       <span class="connection-pill" id="phone-connection"><i></i> PHONE READY</span>
       <span class="connection-pill muted" id="garmin-connection"><i></i> GARMIN OFFLINE</span>
-      <span class="connection-pill muted" id="screen-connection"><i></i> SCREEN CHECK</span>
+      <div class="voice-dock" id="voice-dock" aria-label="Voice control status">
+        <button class="voice-toggle" id="voice-toggle" type="button" aria-label="Enable voice controls" aria-describedby="voice-subtitle" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V7a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Z"></path><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-3 0h6"></path></svg>
+          <strong id="voice-mode">VOICE OFF</strong>
+        </button>
+        <small class="visually-hidden" id="voice-subtitle">Tap to enable hands-free controls</small>
+        <button id="voice-prompts-toggle" type="button" aria-pressed="true" hidden>PROMPTS: ON</button>
+        <p id="voice-help" hidden>Tap once to enable hands-free commands.</p>
+        <details class="voice-command-details" hidden>
+          <summary>COMMANDS</summary>
+          <div class="voice-command-list" aria-label="Available voice commands">
+            <span>START RUN</span><span>COACH STATUS</span><span>ARM STATUS</span><span>PLANNED WALK</span><span>RESUME RUNNING</span><span>PROMPTS OFF</span><span>PROMPTS ON</span><span>FINISH RUN</span>
+          </div>
+        </details>
+      </div>
     </section>
+    <span class="connection-pill muted" id="screen-connection" hidden><i></i> SCREEN CHECK</span>
 
     <section class="preflight-panel" id="preflight-panel" aria-label="Run readiness">
       <span id="preflight-motion" data-state="waiting"><i></i>MOTION</span>
@@ -49,7 +67,7 @@
       </div>
     </section>
 
-    <section class="primary-controls">
+    <section class="primary-controls" id="primary-controls">
       <button class="install-button" id="install-app" type="button">INSTALL RUNNING APP</button>
       <div class="pre-run-options">
         <button type="button" id="start-vibration"><strong>START VIBRATION: ON</strong><span>Tap to change</span></button>
@@ -63,6 +81,7 @@
     <section class="run-controls" id="run-controls" hidden aria-label="In-run controls">
       <button type="button" id="planned-walk"><strong>PLANNED WALK</strong><span>Exclude this recovery</span></button>
       <button type="button" id="resume-run"><strong>RESUME RUNNING</strong><span>End the planned walk</span></button>
+      <button type="button" id="speak-status"><strong>HEAR STATUS</strong><span>Speak the latest reading</span></button>
       <button type="button" id="silence-coach"><strong>VOICE PROMPTS OFF</strong><span>Keep measuring silently</span></button>
       <button class="pocket-lock-button" type="button" id="pocket-lock"><strong>POCKET LOCK</strong><span>Block accidental touches</span></button>
     </section>
@@ -128,30 +147,6 @@
       <div class="form-segment-review" id="form-segment-review" hidden>
         <span id="form-middle">MIDDLE —</span>
         <span id="form-late">FINAL —</span>
-      </div>
-    </section>
-
-    <section class="voice-dock" id="voice-dock" aria-label="Voice coach">
-      <div class="voice-heading"><span>VOICE COACH</span><small>OPTIONAL</small></div>
-      <div class="voice-compact-row">
-        <button class="voice-orb" id="voice-toggle" type="button" aria-label="Enable voice controls" aria-pressed="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V7a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Z"></path><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-3 0h6"></path></svg>
-        </button>
-        <div class="voice-state-copy">
-          <strong id="voice-mode">VOICE CONTROL OFF</strong>
-          <small id="voice-subtitle">Tap the microphone, then allow microphone access</small>
-        </div>
-        <button class="voice-prompts-toggle" id="voice-prompts-toggle" type="button" aria-pressed="true">PROMPTS: ON</button>
-      </div>
-      <p id="voice-help">Tap once to enable hands-free commands, then leave the screen open.</p>
-      <div class="voice-secondary-actions">
-        <button class="voice-status-button" id="speak-status" type="button">HEAR STATUS</button>
-        <details class="voice-command-details">
-          <summary>COMMANDS</summary>
-          <div class="voice-command-list" aria-label="Available voice commands">
-            <span>START RUN</span><span>COACH STATUS</span><span>ARM STATUS</span><span>PLANNED WALK</span><span>RESUME RUNNING</span><span>PROMPTS OFF</span><span>PROMPTS ON</span><span>FINISH RUN</span>
-          </div>
-        </details>
       </div>
     </section>
 
