@@ -9,6 +9,7 @@ import {
   closeInterruption, createInterruption, interruptionSummary,
   makePersistedSession, parsePersistedSession
 } from "./session-resilience.js";
+import { runConfigurationLocked, selectRunConfiguration } from "./run-configuration.js";
 
 const doc = document;
 const els = Object.fromEntries([
@@ -149,22 +150,37 @@ function renderStartVibration() {
   els["start-vibration"].querySelector("span").textContent = "Tap to change";
 }
 
-function setPocketSide(side) {
-  if (active || savedSession) return;
-  pocketSide = side === "left" ? "left" : "right";
+function applyRunConfiguration({ placement, side } = {}) {
+  const reviewingCompletedReport = showingCompletedReport && Boolean(completedFormReport?.snapshot);
+  const next = selectRunConfiguration({
+    currentPlacement: phonePlacement,
+    currentSide: pocketSide,
+    reviewingCompletedReport,
+    reportPlacement: completedReportPlacement(),
+    reportSide: completedFormReport?.pocketSide,
+    selectedPlacement: placement,
+    selectedSide: side
+  });
+  phonePlacement = next.placement;
+  pocketSide = next.side;
+  writeStoredText(phonePlacementStorageKey, phonePlacement);
   writeStoredText(pocketSideStorageKey, pocketSide);
   showingCompletedReport = false;
   resetSelectedMeasurement();
+}
+
+function setRunConfiguration({ placement, side } = {}) {
+  if (active || savedSession) return;
+  applyRunConfiguration({ placement, side });
   render(true);
 }
 
+function setPocketSide(side) {
+  setRunConfiguration({ side });
+}
+
 function setPhonePlacement(placement) {
-  if (active || savedSession) return;
-  phonePlacement = placement === "hand" ? "hand" : "hip";
-  writeStoredText(phonePlacementStorageKey, phonePlacement);
-  showingCompletedReport = false;
-  resetSelectedMeasurement();
-  render(true);
+  setRunConfiguration({ placement });
 }
 
 function toggleCompletedReport() {
@@ -188,14 +204,15 @@ function completedReportPlacement(report = completedFormReport) {
   return report?.version === 2 && report?.phonePlacement === "hand" ? "hand" : "hip";
 }
 
-function renderPhonePlacement({ placement = phonePlacement, side = pocketSide, reviewing = false } = {}) {
+function renderPhonePlacement({ placement = phonePlacement, side = pocketSide } = {}) {
+  const controlsLocked = runConfigurationLocked({ active, hasSavedSession: Boolean(savedSession) });
   els["placement-hip"].setAttribute("aria-pressed", String(placement === "hip"));
   els["placement-hand"].setAttribute("aria-pressed", String(placement === "hand"));
-  els["placement-hip"].disabled = active || Boolean(savedSession) || reviewing;
-  els["placement-hand"].disabled = active || Boolean(savedSession) || reviewing;
+  els["placement-hip"].disabled = controlsLocked;
+  els["placement-hand"].disabled = controlsLocked;
   for (const candidateSide of ["left", "right"]) {
     els[`pocket-side-${candidateSide}`].setAttribute("aria-pressed", String(side === candidateSide));
-    els[`pocket-side-${candidateSide}`].disabled = active || Boolean(savedSession) || reviewing;
+    els[`pocket-side-${candidateSide}`].disabled = controlsLocked;
     els[`pocket-side-${candidateSide}`].textContent = `${candidateSide.toUpperCase()} ${placement === "hand" ? "HAND" : "HIP"}`;
   }
   els["form-side-label"].textContent = placement === "hand" ? "PHONE HAND" : "POCKET SIDE";
@@ -226,7 +243,7 @@ function renderFormLab() {
   const isReview = !active && showingCompletedReport && Boolean(completedFormReport?.snapshot);
   const displayPlacement = isReview ? completedReportPlacement() : phonePlacement;
   const displaySide = isReview ? (completedFormReport.pocketSide === "left" ? "left" : "right") : pocketSide;
-  renderPhonePlacement({ placement: displayPlacement, side: displaySide, reviewing: isReview });
+  renderPhonePlacement({ placement: displayPlacement, side: displaySide });
   if (displayPlacement === "hand" && els["form-lab"].nextElementSibling !== els["metric-grid"]) {
     els["metric-grid"].before(els["form-lab"]);
   } else if (displayPlacement === "hip" && els["metric-grid"].nextElementSibling !== els["form-lab"]) {
@@ -957,6 +974,7 @@ function failPreflight(message, source = "motion") {
 async function startSession() {
   try {
     await requestMotionPermission();
+    applyRunConfiguration();
     detector = new HipMotionCadenceDetector();
     fusion = new RunSignalFusion();
     coach = new RunRhythmCoach();
