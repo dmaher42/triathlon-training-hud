@@ -538,10 +538,10 @@ body[data-session="active"][data-run-phase="demo"] .voice-dock {
   top: max(16px, env(safe-area-inset-top));
   right: 16px;
   width: 154px;
-  min-height: 40px;
+  min-height: 44px;
   border-radius: 12px;
 }
-body[data-session="active"] .voice-toggle { min-height: 38px; padding: 6px 9px; }
+body[data-session="active"] .voice-toggle { min-height: 44px; padding: 6px 9px; }
 body[data-session="active"] .voice-toggle svg { width: 18px; }
 body[data-session="active"] .voice-toggle strong { font-size: .68rem; }
 body[data-session="active"] .status-card,

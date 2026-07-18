@@ -43,3 +43,8 @@ test("saved motion reports remain visible and can return cleanly to Ready", () =
   assert.match(css, /\.form-lab\.is-report-review \.form-measures/);
   assert.match(css, /\.form-lab\.has-report-toggle:not\(\.is-report-review\) > header/);
 });
+
+test("the compact active voice control remains a full mobile touch target", () => {
+  assert.match(css, /body\[data-session="active"\][\s\S]*\.voice-dock[\s\S]*min-height:\s*44px/);
+  assert.match(css, /body\[data-session="active"\] \.voice-toggle \{ min-height:\s*44px/);
+});
