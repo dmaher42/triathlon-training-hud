@@ -31,7 +31,16 @@ export function interruptionSummary(interruptions = [], nowEpochMs = Date.now())
   }, { count: 0, totalMs: 0 });
 }
 
-export function makePersistedSession({ startedAtEpochMs, savedAtEpochMs = Date.now(), coachState, formState = null, pocketSide = "right", interruptions = [] }) {
+export function makePersistedSession({
+  startedAtEpochMs,
+  savedAtEpochMs = Date.now(),
+  coachState,
+  formState = null,
+  armState = null,
+  phonePlacement = "hip",
+  pocketSide = "right",
+  interruptions = []
+}) {
   return {
     version: RUN_SESSION_VERSION,
     active: true,
@@ -39,7 +48,9 @@ export function makePersistedSession({ startedAtEpochMs, savedAtEpochMs = Date.n
     savedAtEpochMs: finite(savedAtEpochMs),
     coachState,
     formState,
-    pocketSide,
+    armState,
+    phonePlacement: phonePlacement === "hand" ? "hand" : "hip",
+    pocketSide: pocketSide === "left" ? "left" : "right",
     interruptions
   };
 }
@@ -57,6 +68,8 @@ export function parsePersistedSession(raw, { nowEpochMs = Date.now(), maxAgeMs =
       ...value,
       startedAtEpochMs,
       savedAtEpochMs,
+      phonePlacement: value.phonePlacement === "hand" ? "hand" : "hip",
+      pocketSide: value.pocketSide === "left" ? "left" : "right",
       interruptions: Array.isArray(value.interruptions) ? value.interruptions.slice(0, 100) : []
     };
   } catch (_) {

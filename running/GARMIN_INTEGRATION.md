@@ -14,10 +14,11 @@ The watch data field will:
 
 The phone will:
 
-- retain hip-pocket motion context;
+- retain the selected hip-pocket or phone-hand motion context;
 - prefer fresh Garmin cadence over phone-estimated cadence;
 - speak coaching messages and status summaries;
-- continue with phone-only cadence if Garmin telemetry becomes stale.
+- continue with phone-only cadence if Garmin telemetry becomes stale in Hip Pocket mode;
+- leave step cadence unavailable in Hand Swing mode rather than relabelling arm cycles as steps.
 
 ## Version 1 watch controls
 

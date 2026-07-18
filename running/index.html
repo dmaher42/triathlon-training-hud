@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#06100c">
   <meta name="description" content="A low-distraction running rhythm and continuity coach.">
   <meta name="mobile-web-app-capable" content="yes">
@@ -29,10 +29,10 @@
       <span class="connection-pill muted" id="screen-connection"><i></i> SCREEN CHECK</span>
     </section>
 
-    <section class="preflight-panel" id="preflight-panel" aria-label="Pocket readiness">
+    <section class="preflight-panel" id="preflight-panel" aria-label="Run readiness">
       <span id="preflight-motion" data-state="waiting"><i></i>MOTION</span>
       <span id="preflight-screen" data-state="waiting"><i></i>SCREEN</span>
-      <span id="preflight-pocket" data-state="waiting"><i></i>POCKET LOCK</span>
+      <span id="preflight-pocket" data-state="waiting"><i></i>RUN LOCK</span>
       <span id="preflight-battery" data-state="waiting"><i></i>BATTERY</span>
       <span id="preflight-save" data-state="waiting"><i></i>SAVE CHECK</span>
     </section>
@@ -44,7 +44,7 @@
         <span class="status-glyph" id="status-glyph" aria-hidden="true">✓</span>
       </div>
       <p class="status-message" id="status-message">Ready for a steady opening run.</p>
-      <div class="baseline-track" aria-label="Cadence baseline learning progress">
+      <div class="baseline-track" id="baseline-track" role="progressbar" aria-label="Cadence baseline learning progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <span id="baseline-progress" style="width:0%"></span>
       </div>
     </section>
@@ -54,6 +54,7 @@
       <div class="pre-run-options">
         <button type="button" id="start-vibration"><strong>START VIBRATION: ON</strong><span>Tap to change</span></button>
       </div>
+      <p class="hand-mode-note" id="hand-mode-note" hidden>Phone measures your selected hand. Garmin is needed for step cadence.</p>
       <button class="start-button" id="start-session" type="button">START RUN</button>
       <button class="resume-button" id="resume-session" type="button" hidden>RESUME SAVED RUN</button>
       <button class="stop-button" id="stop-session" type="button" hidden>FINISH RUN</button>
@@ -66,7 +67,7 @@
       <button class="pocket-lock-button" type="button" id="pocket-lock"><strong>POCKET LOCK</strong><span>Block accidental touches</span></button>
     </section>
 
-    <section class="metric-grid" aria-label="Run coaching measurements">
+    <section class="metric-grid" id="metric-grid" aria-label="Run coaching measurements">
       <article class="metric-card cadence-card">
         <header><span>CADENCE</span><small>CURRENT VS TARGET</small></header>
         <div class="cadence-compare">
@@ -100,21 +101,30 @@
       </article>
     </section>
 
-    <section class="form-lab" id="form-lab" aria-label="Silent hip motion measurement">
-      <header><span>HIP MOTION LAB</span><small>MEASUREMENT ONLY · NO COACHING</small></header>
-      <div class="pocket-side" role="group" aria-label="Phone pocket side">
-        <span>PHONE POSITION</span>
+    <section class="form-lab" id="form-lab" aria-label="Running motion measurement">
+      <header>
+        <span id="form-lab-title">HIP MOTION LAB</span>
+        <span class="form-header-actions"><small id="form-lab-note">MEASUREMENT ONLY · NO COACHING</small><button type="button" id="form-report-toggle" hidden>NEW RUN</button></span>
+      </header>
+      <div class="placement-mode" role="group" aria-label="Phone placement mode">
+        <span>PHONE MODE</span>
+        <button type="button" id="placement-hip" aria-pressed="true">HIP POCKET</button>
+        <button type="button" id="placement-hand" aria-pressed="false" aria-describedby="form-boundary">HAND SWING</button>
+      </div>
+      <div class="pocket-side" role="group" aria-label="Phone side">
+        <span id="form-side-label">POCKET SIDE</span>
         <button type="button" id="pocket-side-left" aria-pressed="false">LEFT HIP</button>
         <button type="button" id="pocket-side-right" aria-pressed="true">RIGHT HIP</button>
       </div>
       <div class="form-measures">
-        <span><b id="form-vertical">—</b>BOUNCE</span>
-        <span><b id="form-horizontal">—</b>HORIZONTAL</span>
-        <span><b id="form-rotation">—</b>ROTATION</span>
-        <span><b id="form-impact">—</b>IMPACT</span>
+        <span><b id="form-vertical">—</b><em id="form-label-vertical">BOUNCE</em></span>
+        <span><b id="form-horizontal">—</b><em id="form-label-horizontal">HORIZONTAL</em></span>
+        <span><b id="form-rotation">—</b><em id="form-label-rotation">ROTATION</em></span>
+        <span><b id="form-impact">—</b><em id="form-label-impact">IMPACT</em></span>
       </div>
-      <footer><span id="form-status">Starts by learning your opening movement</span><b id="form-confidence">0% CONFIDENCE</b></footer>
-      <div class="form-progress"><span id="form-progress" style="width:0%"></span></div>
+      <footer><span id="form-status" aria-live="polite">Starts by learning your opening movement</span><b id="form-confidence">0% CONFIDENCE</b></footer>
+      <div class="form-progress" id="form-progress-track" role="progressbar" aria-labelledby="form-status" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="form-progress" style="width:0%"></span></div>
+      <p class="form-boundary" id="form-boundary" hidden>Measures the phone hand only. It cannot compare both arms or measure elbow position.</p>
       <div class="form-segment-review" id="form-segment-review" hidden>
         <span id="form-middle">MIDDLE —</span>
         <span id="form-late">FINAL —</span>
@@ -139,7 +149,7 @@
         <details class="voice-command-details">
           <summary>COMMANDS</summary>
           <div class="voice-command-list" aria-label="Available voice commands">
-            <span>START RUN</span><span>COACH STATUS</span><span>PLANNED WALK</span><span>RESUME RUNNING</span><span>PROMPTS OFF</span><span>PROMPTS ON</span><span>FINISH RUN</span>
+            <span>START RUN</span><span>COACH STATUS</span><span>ARM STATUS</span><span>PLANNED WALK</span><span>RESUME RUNNING</span><span>PROMPTS OFF</span><span>PROMPTS ON</span><span>FINISH RUN</span>
           </div>
         </details>
       </div>
@@ -149,13 +159,13 @@
 
   </main>
 
-  <section class="pocket-lock-screen" id="pocket-lock-screen" hidden aria-label="Pocket lock active">
+  <section class="pocket-lock-screen" id="pocket-lock-screen" role="dialog" aria-modal="true" hidden aria-label="Run lock active">
     <div class="pocket-lock-mark" aria-hidden="true">●</div>
-    <p>POCKET LOCKED</p>
+    <p id="pocket-lock-label">POCKET LOCKED</p>
     <strong id="pocket-lock-status">RUN ACTIVE</strong>
     <div class="pocket-lock-readings">
       <span><b id="pocket-lock-time">0:00</b>TIME</span>
-      <span><b id="pocket-lock-cadence">—</b>CADENCE</span>
+      <span><b id="pocket-lock-cadence">—</b><i id="pocket-lock-metric-label">CADENCE</i></span>
     </div>
     <small class="pocket-lock-health" id="pocket-lock-health">MOTION LIVE · SCREEN PROTECTED</small>
     <button type="button" id="pocket-unlock">PRESS AND HOLD TO UNLOCK</button>

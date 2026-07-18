@@ -12,12 +12,32 @@ test("persists and validates a recent active run", () => {
     savedAtEpochMs: 10_000,
     coachState: { version: 1 },
     formState: { version: 1 },
+    armState: { version: 1 },
+    phonePlacement: "hand",
     pocketSide: "left",
     interruptions: []
   });
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).startedAtEpochMs, 1_000);
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).pocketSide, "left");
+  assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).phonePlacement, "hand");
+  assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).armState.version, 1);
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 50_000, maxAgeMs: 20_000 }), null);
+});
+
+test("restores legacy saved runs as hip-pocket sessions", () => {
+  const legacy = {
+    version: 1,
+    active: true,
+    startedAtEpochMs: 1_000,
+    savedAtEpochMs: 10_000,
+    coachState: { version: 1 },
+    formState: { version: 2 },
+    pocketSide: "left",
+    interruptions: []
+  };
+  const restored = parsePersistedSession(legacy, { nowEpochMs: 12_000 });
+  assert.equal(restored.phonePlacement, "hip");
+  assert.equal(restored.pocketSide, "left");
 });
 
 test("reports interruption count and missing duration honestly", () => {

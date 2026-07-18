@@ -4,6 +4,7 @@ import { RunSignalFusion } from "./signal-fusion.js";
 import { BrowserVoiceController, VOICE_INTENTS, parseVoiceCommand } from "./voice-commands.js";
 import { createRunControlAck, normaliseRunControlMessage } from "./control-protocol.js";
 import { HipFormAnalyzer } from "./hip-form-analyzer.js";
+import { ArmSwingAnalyzer } from "./arm-swing-analyzer.js";
 import {
   closeInterruption, createInterruption, interruptionSummary,
   makePersistedSession, parsePersistedSession
@@ -12,7 +13,7 @@ import {
 const doc = document;
 const els = Object.fromEntries([
   "status-card", "status-value", "status-message", "status-glyph",
-  "baseline-progress", "baseline-mini-progress",
+  "baseline-progress", "baseline-mini-progress", "baseline-track",
   "cadence-value", "cadence-target", "cadence-delta", "baseline-value", "baseline-state",
   "baseline-summary", "stable-value", "stability-summary", "summary-state", "session-time", "walk-value", "stop-value", "interruption-value",
   "phone-connection", "garmin-connection", "screen-connection", "install-app", "start-session", "stop-session", "run-controls",
@@ -23,7 +24,10 @@ const els = Object.fromEntries([
   "preflight-panel", "preflight-motion", "preflight-screen", "preflight-pocket", "preflight-battery", "preflight-save",
   "form-lab", "form-vertical", "form-horizontal", "form-rotation", "form-impact",
   "form-status", "form-confidence", "form-progress", "pocket-side-left", "pocket-side-right",
-  "form-segment-review", "form-middle", "form-late"
+  "form-segment-review", "form-middle", "form-late", "placement-hip", "placement-hand",
+  "form-lab-title", "form-lab-note", "form-side-label", "form-boundary", "form-report-toggle", "hand-mode-note", "metric-grid", "form-progress-track",
+  "form-label-vertical", "form-label-horizontal", "form-label-rotation", "form-label-impact",
+  "pocket-lock-label", "pocket-lock-metric-label"
 ].map(id => [id, doc.getElementById(id)]));
 
 let detector = new HipMotionCadenceDetector();
@@ -31,6 +35,8 @@ let fusion = new RunSignalFusion();
 let coach = new RunRhythmCoach();
 let formAnalyzer = new HipFormAnalyzer();
 let formSnapshot = formAnalyzer.snapshot(0);
+let armAnalyzer = new ArmSwingAnalyzer();
+let armSnapshot = armAnalyzer.snapshot(0);
 let snapshot = coach.snapshot(0);
 let active = false;
 let wakeLock = null;
@@ -57,6 +63,7 @@ const activeSessionStorageKey = "run-durability-active-session-v1";
 const completedFormStorageKey = "run-durability-completed-form-v1";
 let pocketLocked = false;
 let pocketUnlockTimer = null;
+let lockReturnFocus = null;
 let installPrompt = null;
 const demoEnabled = new URLSearchParams(window.location.search).has("demo");
 let batteryStatus = { supported: false, sufficient: null, level: null, charging: null };
@@ -69,11 +76,19 @@ let lastPersistAttemptAtMs = -Infinity;
 let savedSession = parsePersistedSession(readStoredText(activeSessionStorageKey));
 const pocketSideStorageKey = "run-durability-pocket-side-v1";
 let pocketSide = readStoredText(pocketSideStorageKey) === "left" ? "left" : "right";
+const phonePlacementStorageKey = "run-durability-phone-placement-v1";
+let phonePlacement = readStoredText(phonePlacementStorageKey) === "hand" ? "hand" : "hip";
 let storageHealthy = null;
 let completedFormReport = readStoredJson(completedFormStorageKey);
-if (savedSession && completedFormReport?.version === 1 && completedFormReport.completedAtEpochMs >= savedSession.savedAtEpochMs) {
+let showingCompletedReport = Boolean(completedFormReport?.completedAtEpochMs && completedFormReport?.snapshot);
+if (savedSession && completedFormReport?.completedAtEpochMs >= savedSession.savedAtEpochMs) {
   savedSession = null;
   try { localStorage.removeItem(activeSessionStorageKey); } catch (_) {}
+}
+if (savedSession) {
+  phonePlacement = savedSession.phonePlacement === "hand" ? "hand" : "hip";
+  pocketSide = savedSession.pocketSide === "left" ? "left" : "right";
+  showingCompletedReport = false;
 }
 
 function toneFor(status) {
@@ -135,17 +150,60 @@ function renderStartVibration() {
 }
 
 function setPocketSide(side) {
-  if (active) return;
+  if (active || savedSession) return;
   pocketSide = side === "left" ? "left" : "right";
   writeStoredText(pocketSideStorageKey, pocketSide);
-  renderPocketSide();
+  showingCompletedReport = false;
+  resetSelectedMeasurement();
+  render(true);
 }
 
-function renderPocketSide() {
-  for (const side of ["left", "right"]) {
-    els[`pocket-side-${side}`].setAttribute("aria-pressed", String(pocketSide === side));
-    els[`pocket-side-${side}`].disabled = active;
+function setPhonePlacement(placement) {
+  if (active || savedSession) return;
+  phonePlacement = placement === "hand" ? "hand" : "hip";
+  writeStoredText(phonePlacementStorageKey, phonePlacement);
+  showingCompletedReport = false;
+  resetSelectedMeasurement();
+  render(true);
+}
+
+function toggleCompletedReport() {
+  if (active || savedSession || !completedFormReport?.snapshot) return;
+  showingCompletedReport = !showingCompletedReport;
+  if (!showingCompletedReport) resetSelectedMeasurement();
+  render(true);
+}
+
+function resetSelectedMeasurement() {
+  if (phonePlacement === "hand") {
+    armAnalyzer = new ArmSwingAnalyzer();
+    armSnapshot = armAnalyzer.snapshot(0);
+  } else {
+    formAnalyzer = new HipFormAnalyzer();
+    formSnapshot = formAnalyzer.snapshot(0);
   }
+}
+
+function completedReportPlacement(report = completedFormReport) {
+  return report?.version === 2 && report?.phonePlacement === "hand" ? "hand" : "hip";
+}
+
+function renderPhonePlacement({ placement = phonePlacement, side = pocketSide, reviewing = false } = {}) {
+  els["placement-hip"].setAttribute("aria-pressed", String(placement === "hip"));
+  els["placement-hand"].setAttribute("aria-pressed", String(placement === "hand"));
+  els["placement-hip"].disabled = active || Boolean(savedSession) || reviewing;
+  els["placement-hand"].disabled = active || Boolean(savedSession) || reviewing;
+  for (const candidateSide of ["left", "right"]) {
+    els[`pocket-side-${candidateSide}`].setAttribute("aria-pressed", String(side === candidateSide));
+    els[`pocket-side-${candidateSide}`].disabled = active || Boolean(savedSession) || reviewing;
+    els[`pocket-side-${candidateSide}`].textContent = `${candidateSide.toUpperCase()} ${placement === "hand" ? "HAND" : "HIP"}`;
+  }
+  els["form-side-label"].textContent = placement === "hand" ? "PHONE HAND" : "POCKET SIDE";
+  els["pocket-lock-label"].textContent = placement === "hand" ? "RUN LOCKED" : "POCKET LOCKED";
+  els["pocket-lock"].querySelector("strong").textContent = placement === "hand" ? "RUN LOCK" : "POCKET LOCK";
+  els["pocket-lock-screen"].setAttribute("aria-label", placement === "hand" ? "Run lock active" : "Pocket lock active");
+  els["hand-mode-note"].hidden = placement !== "hand";
+  doc.body.dataset.phonePlacement = placement;
 }
 
 function formatFormChange(value) {
@@ -159,39 +217,112 @@ function segmentReviewLabel(label, drift) {
   return `${label} BOUNCE ${formatFormChange(drift.verticalPercent)}${rotation}`;
 }
 
+function armSegmentReviewLabel(label, drift) {
+  if (!drift || !Number.isFinite(drift.rangePercent)) return `${label} —`;
+  return `${label} RANGE ${formatFormChange(drift.rangePercent)}`;
+}
+
 function renderFormLab() {
-  const drift = formSnapshot.drift || {};
-  els["form-vertical"].textContent = formatFormChange(drift.verticalPercent);
-  els["form-horizontal"].textContent = formatFormChange(drift.horizontalPercent);
-  els["form-rotation"].textContent = formSnapshot.totalSamples && formSnapshot.capabilities?.rotationAvailable === false
-    ? "N/A"
-    : formatFormChange(drift.rotationPercent);
-  els["form-impact"].textContent = formatFormChange(drift.impactPercent);
-  els["form-progress"].style.width = `${formSnapshot.baselineProgress || 0}%`;
-  els["form-confidence"].textContent = `${formSnapshot.confidence || 0}% CONFIDENCE`;
-  const isReview = !active && Boolean(formSnapshot.totalSamples);
-  const reviewStatus = !formSnapshot.baselineReady
-    ? `Saved ${pocketSide} hip run · insufficient data for comparison`
-    : formSnapshot.segments?.late
-      ? `Saved ${pocketSide} hip report · opening, middle and final retained`
-      : formSnapshot.segments?.middle
-        ? `Saved ${pocketSide} hip report · final section not reached`
-        : `Saved ${pocketSide} hip baseline · middle section not reached`;
+  const isReview = !active && showingCompletedReport && Boolean(completedFormReport?.snapshot);
+  const displayPlacement = isReview ? completedReportPlacement() : phonePlacement;
+  const displaySide = isReview ? (completedFormReport.pocketSide === "left" ? "left" : "right") : pocketSide;
+  renderPhonePlacement({ placement: displayPlacement, side: displaySide, reviewing: isReview });
+  if (displayPlacement === "hand" && els["form-lab"].nextElementSibling !== els["metric-grid"]) {
+    els["metric-grid"].before(els["form-lab"]);
+  } else if (displayPlacement === "hip" && els["metric-grid"].nextElementSibling !== els["form-lab"]) {
+    els["metric-grid"].after(els["form-lab"]);
+  }
+  const displaySnapshot = isReview
+    ? completedFormReport.snapshot
+    : displayPlacement === "hand" ? armSnapshot : formSnapshot;
+  const handMode = displayPlacement === "hand";
+  els["form-lab"].dataset.mode = displayPlacement;
+  els["form-lab-title"].textContent = handMode ? "ARM SWING MONITOR" : "HIP MOTION LAB";
+  els["form-lab-note"].textContent = handMode ? "ONE HAND · PERSONAL BASELINE" : "MEASUREMENT ONLY · NO COACHING";
+  els["form-report-toggle"].hidden = active || Boolean(savedSession) || !completedFormReport?.snapshot;
+  els["form-report-toggle"].textContent = isReview ? "NEW RUN" : "VIEW LAST RUN";
+  els["form-boundary"].hidden = !handMode;
+  let formStatus;
+
+  if (handMode) {
+    const garminState = fusion.snapshot(performance.now());
+    const cycleRate = Number.isFinite(displaySnapshot.armCycleRpm) ? `${Math.round(displaySnapshot.armCycleRpm)}/m` : "—";
+    const regularity = Number.isFinite(displaySnapshot.regularityPercent) ? `${displaySnapshot.regularityPercent}%` : "—";
+    const range = displaySnapshot.placementConsistent === false
+      ? "N/A"
+      : displaySnapshot.baselineReady
+      ? formatFormChange(displaySnapshot.rangeChangePercent)
+      : displaySnapshot.totalSwings ? "LEARN" : "—";
+    const cadenceMatch = Number.isFinite(displaySnapshot.cadenceMatchPercent)
+      ? `${displaySnapshot.cadenceMatchPercent}%`
+      : isReview ? "NO DATA" : garminState.garminConnected ? "WAITING" : "OFFLINE";
+    els["form-vertical"].textContent = cycleRate;
+    els["form-horizontal"].textContent = regularity;
+    els["form-rotation"].textContent = range;
+    els["form-impact"].textContent = cadenceMatch;
+    els["form-label-vertical"].textContent = "ARM CYCLES";
+    els["form-label-horizontal"].textContent = "CYCLE REGULARITY";
+    els["form-label-rotation"].textContent = displaySnapshot.capabilities?.signalSource === "acceleration" ? "MOTION SIZE" : "RANGE";
+    els["form-label-impact"].textContent = "GARMIN MATCH";
+    const reviewStatus = !displaySnapshot.baselineReady
+      ? `Saved ${displaySide} hand run · insufficient arm baseline`
+      : displaySnapshot.segments?.late
+        ? `Saved ${displaySide} hand report · opening, middle and final retained`
+        : displaySnapshot.segments?.middle
+          ? `Saved ${displaySide} hand report · final section not reached`
+          : `Saved ${displaySide} hand baseline · middle section not reached`;
+    formStatus = isReview
+      ? reviewStatus
+      : displaySnapshot.placementConsistent === false
+        ? "Grip changed — range unavailable for this run"
+        : displaySnapshot.baselineReady
+          ? Number.isFinite(displaySnapshot.regularityPercent)
+            ? `Arm rhythm ${displaySnapshot.regularityPercent}% regular · range compared with opening`
+            : "Arm rhythm settling after the opening baseline"
+          : active
+            ? `Learning ${displaySide}-hand swing · ${displaySnapshot.baselineProgress || 0}%`
+            : "Starts by learning ten minutes of natural arm swing";
+    els["form-middle"].textContent = armSegmentReviewLabel("MIDDLE", displaySnapshot.segmentDrift?.middle);
+    els["form-late"].textContent = armSegmentReviewLabel("FINAL", displaySnapshot.segmentDrift?.late);
+  } else {
+    const drift = displaySnapshot.drift || {};
+    els["form-vertical"].textContent = formatFormChange(drift.verticalPercent);
+    els["form-horizontal"].textContent = formatFormChange(drift.horizontalPercent);
+    els["form-rotation"].textContent = displaySnapshot.totalSamples && displaySnapshot.capabilities?.rotationAvailable === false
+      ? "N/A"
+      : formatFormChange(drift.rotationPercent);
+    els["form-impact"].textContent = formatFormChange(drift.impactPercent);
+    els["form-label-vertical"].textContent = "BOUNCE";
+    els["form-label-horizontal"].textContent = "HORIZONTAL";
+    els["form-label-rotation"].textContent = "ROTATION";
+    els["form-label-impact"].textContent = "IMPACT";
+    const reviewStatus = !displaySnapshot.baselineReady
+      ? `Saved ${displaySide} hip run · insufficient data for comparison`
+      : displaySnapshot.segments?.late
+        ? `Saved ${displaySide} hip report · opening, middle and final retained`
+        : displaySnapshot.segments?.middle
+          ? `Saved ${displaySide} hip report · final section not reached`
+          : `Saved ${displaySide} hip baseline · middle section not reached`;
+    formStatus = isReview
+      ? reviewStatus
+      : displaySnapshot.placementConsistent === false
+        ? "Phone position changed — measurement confidence reduced"
+        : displaySnapshot.baselineReady
+          ? displaySnapshot.capabilities?.rotationAvailable === false
+            ? "Recent movement compared · rotation unavailable"
+            : "Recent five minutes compared with your opening movement"
+          : active
+            ? `Learning ${displaySide} hip movement · ${displaySnapshot.baselineProgress || 0}%`
+            : "Starts by learning ten minutes of running";
+    els["form-middle"].textContent = segmentReviewLabel("MIDDLE", displaySnapshot.segmentDrift?.middle);
+    els["form-late"].textContent = segmentReviewLabel("FINAL", displaySnapshot.segmentDrift?.late);
+  }
+  if (els["form-status"].textContent !== formStatus) els["form-status"].textContent = formStatus;
+  const formProgress = displaySnapshot.baselineProgress || 0;
+  els["form-progress"].style.width = `${formProgress}%`;
+  els["form-progress-track"].setAttribute("aria-valuenow", String(formProgress));
+  els["form-confidence"].textContent = `${displaySnapshot.confidence || 0}% CONFIDENCE`;
   els["form-segment-review"].hidden = !isReview;
-  els["form-middle"].textContent = segmentReviewLabel("MIDDLE", formSnapshot.segmentDrift?.middle);
-  els["form-late"].textContent = segmentReviewLabel("FINAL", formSnapshot.segmentDrift?.late);
-  els["form-status"].textContent = isReview
-    ? reviewStatus
-    : formSnapshot.placementConsistent === false
-      ? "Phone position changed — measurement confidence reduced"
-      : formSnapshot.baselineReady
-        ? formSnapshot.capabilities?.rotationAvailable === false
-          ? "Recent movement compared · rotation unavailable"
-          : "Recent five minutes compared with your opening movement"
-        : active
-          ? `Learning ${pocketSide} hip movement · ${formSnapshot.baselineProgress || 0}%`
-          : "Starts by learning ten minutes of running";
-  renderPocketSide();
 }
 
 function toggleStartVibration() {
@@ -275,7 +406,9 @@ function persistActiveSession(force = false) {
   const payload = makePersistedSession({
     startedAtEpochMs: sessionStartedAtEpochMs,
     coachState: coach.exportState(),
-    formState: formAnalyzer.exportState(),
+    formState: phonePlacement === "hip" ? formAnalyzer.exportState() : null,
+    armState: phonePlacement === "hand" ? armAnalyzer.exportState() : null,
+    phonePlacement,
     pocketSide,
     interruptions
   });
@@ -327,10 +460,34 @@ function glyphFor(status) {
   return "✓";
 }
 
+function armStatusSupplement() {
+  const reportIsHand = !active && showingCompletedReport && completedReportPlacement() === "hand";
+  if (!(active && phonePlacement === "hand") && !reportIsHand) return "";
+  const current = reportIsHand ? completedFormReport.snapshot : armSnapshot;
+  const cycle = Number.isFinite(current.armCycleRpm) ? `${Math.round(current.armCycleRpm)} arm cycles per minute` : "arm cycle rate is settling";
+  const regularity = Number.isFinite(current.regularityPercent) ? `${current.regularityPercent} percent regular` : "regularity is settling";
+  if (!current.baselineReady) {
+    return ` Arm swing learning is ${current.baselineProgress || 0} percent complete. Current phone-hand rhythm is ${cycle} and ${regularity}.`;
+  }
+  const range = Number.isFinite(current.rangeChangePercent)
+    ? ` Range is ${Math.abs(current.rangeChangePercent)} percent ${current.rangeChangePercent >= 0 ? "larger" : "smaller"} than your opening pattern.`
+    : "";
+  const cadenceMatch = Number.isFinite(current.cadenceMatchPercent)
+    ? ` Garmin cadence match is ${current.cadenceMatchPercent} percent.`
+    : "";
+  return ` Arm rhythm is ${cycle} and ${regularity}.${range}${cadenceMatch}`;
+}
+
 function statusSentence() {
+  const handReport = !active && showingCompletedReport && completedReportPlacement() === "hand";
+  const handMode = (active && phonePlacement === "hand") || handReport;
+  if (handMode && !Number.isFinite(snapshot.cadenceSpm)) {
+    const lead = handReport ? "Saved arm swing report." : "Arm swing monitoring is active.";
+    return `${lead} Step cadence needs a live Garmin connection.${armStatusSupplement()} ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}.`;
+  }
   const cadence = Number.isFinite(snapshot.cadenceSpm) ? `${Math.round(snapshot.cadenceSpm)} steps per minute` : "cadence is still settling";
   const baseline = Number.isFinite(snapshot.baselineCadenceSpm) ? `Your baseline is ${snapshot.baselineCadenceSpm}` : `Baseline learning is ${snapshot.baselineProgress} percent complete`;
-  return `${snapshot.message} Current ${cadence}. ${baseline}. ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}.`;
+  return `${snapshot.message} Current ${cadence}. ${baseline}. ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}.${armStatusSupplement()}`;
 }
 
 function voiceIdleState() {
@@ -485,7 +642,7 @@ async function executeRunIntent(intent) {
       reply("Finish cancelled. Keep running.");
       break;
     case VOICE_INTENTS.HELP:
-      reply("You can say start run, coach status, planned walk, resume running, prompts off, prompts on, finish run, or stop listening.");
+      reply("You can say start run, coach status, arm status, planned walk, resume running, prompts off, prompts on, finish run, or stop listening.");
       break;
     case VOICE_INTENTS.VOICE_OFF:
       voiceController?.disable();
@@ -511,39 +668,63 @@ function render(force = false) {
   if (!force && now - lastRenderAt < 180) return;
   lastRenderAt = now;
 
-  els["status-card"].dataset.tone = toneFor(snapshot.status);
-  els["status-value"].textContent = snapshot.status;
-  els["status-value"].classList.toggle("is-long", snapshot.status.length > 8);
-  els["status-message"].textContent = snapshot.message;
-  els["status-glyph"].textContent = glyphFor(snapshot.status);
+  const fusedState = fusion.snapshot(now);
+  const renderedPlacement = !active && showingCompletedReport ? completedReportPlacement() : phonePlacement;
+  const handWithoutGarmin = renderedPlacement === "hand" && fusedState.cadenceSource !== "garmin";
+  const showArmStatus = active && handWithoutGarmin && snapshot.status === "CALIBRATING";
+  const displayStatus = showArmStatus
+    ? armSnapshot.capabilities?.signalSource ? "ARM LIVE" : "ARM CHECK"
+    : snapshot.status;
+  const displayMessage = showArmStatus
+    ? armSnapshot.capabilities?.signalSource
+      ? `Monitoring ${pocketSide}-hand swing. Garmin is needed for step cadence.`
+      : "Move your selected hand naturally while the phone confirms arm motion."
+    : snapshot.message;
+  els["status-card"].dataset.tone = toneFor(displayStatus);
+  els["status-value"].textContent = displayStatus;
+  els["status-value"].classList.toggle("is-long", displayStatus.length > 8);
+  els["status-message"].textContent = displayMessage;
+  els["status-glyph"].textContent = glyphFor(displayStatus);
 
-  const progress = snapshot.baselineProgress || 0;
   const cadence = Number.isFinite(snapshot.cadenceSpm) ? Math.round(snapshot.cadenceSpm) : null;
   const baseline = Number.isFinite(snapshot.baselineCadenceSpm) ? snapshot.baselineCadenceSpm : null;
+  const useArmProgress = renderedPlacement === "hand" && baseline === null;
+  const progress = useArmProgress
+    ? (showingCompletedReport ? completedFormReport?.snapshot?.baselineProgress : armSnapshot.baselineProgress) || 0
+    : snapshot.baselineProgress || 0;
   els["baseline-progress"].style.width = `${progress}%`;
   els["baseline-mini-progress"].style.width = `${progress}%`;
+  els["baseline-track"].setAttribute("aria-valuenow", String(progress));
+  els["baseline-track"].setAttribute("aria-label", useArmProgress ? "Arm swing baseline learning progress" : "Cadence baseline learning progress");
 
   els["cadence-value"].textContent = cadence ?? "—";
   els["cadence-target"].textContent = baseline ?? "—";
   els["baseline-value"].textContent = baseline ?? "—";
-  els["baseline-state"].textContent = baseline ? "CONFIRMED" : snapshot.active ? `${progress}%` : "NOT STARTED";
+  els["baseline-state"].textContent = baseline
+    ? "CONFIRMED"
+    : handWithoutGarmin ? fusedState.garminConnected ? "WAITING" : "GARMIN OFFLINE"
+    : snapshot.active ? `${progress}%` : "NOT STARTED";
   els["baseline-summary"].textContent = baseline
     ? "Confirmed from your opening natural rhythm"
-    : snapshot.active ? "Learning from steady running samples" : "Starts with two minutes of natural running";
+    : handWithoutGarmin
+      ? fusedState.garminConnected ? "Waiting for Garmin step cadence" : "Connect Garmin for step cadence coaching"
+      : snapshot.active ? "Learning from steady running samples" : "Starts with two minutes of natural running";
 
   if (cadence !== null && baseline !== null) {
     const delta = (cadence - baseline) / baseline * 100;
     els["cadence-delta"].textContent = `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%`;
     els["cadence-delta"].dataset.delta = delta < -3 ? "low" : "good";
   } else {
-    els["cadence-delta"].textContent = snapshot.active ? "SETTLING" : "WAITING";
+    els["cadence-delta"].textContent = handWithoutGarmin
+      ? fusedState.garminConnected ? "WAITING" : "GARMIN OFFLINE"
+      : snapshot.active ? "SETTLING" : "WAITING";
     els["cadence-delta"].dataset.delta = "";
   }
 
-  els["stable-value"].textContent = `${snapshot.stablePercent || 0}%`;
+  els["stable-value"].textContent = baseline === null ? "—" : `${snapshot.stablePercent || 0}%`;
   els["stability-summary"].textContent = baseline
     ? snapshot.driftActive ? "Below your personal rhythm band" : `${snapshot.stablePercent || 0}% of running held steady`
-    : snapshot.active ? "Available after the baseline is learned" : "Waiting for your opening rhythm";
+    : handWithoutGarmin ? "Requires Garmin step cadence" : snapshot.active ? "Available after the baseline is learned" : "Waiting for your opening rhythm";
   const elapsedMs = active && sessionStartedAtMs !== null
     ? Math.max(0, snapshot.timestampMs - sessionStartedAtMs)
     : lastSessionElapsedMs;
@@ -554,12 +735,20 @@ function render(force = false) {
   els["summary-state"].textContent = snapshot.status === "REVIEW" ? "FINAL" : active ? "LIVE" : "READY";
   els["pocket-lock-status"].textContent = snapshot.status;
   els["pocket-lock-time"].textContent = formatMinutes(elapsedMs);
-  els["pocket-lock-cadence"].textContent = cadence ?? "—";
+  if (phonePlacement === "hand") {
+    els["pocket-lock-cadence"].textContent = Number.isFinite(armSnapshot.regularityPercent) ? `${armSnapshot.regularityPercent}%` : "—";
+    els["pocket-lock-metric-label"].textContent = "ARM REGULARITY";
+  } else {
+    els["pocket-lock-cadence"].textContent = cadence ?? "—";
+    els["pocket-lock-metric-label"].textContent = "CADENCE";
+  }
 
   if (!interruptionActive) {
     els["pocket-lock-health"].textContent = storageHealthy === false
       ? "RUN ACTIVE · SAVE FAILED"
-      : preflightConfirmed ? "MOTION LIVE · SCREEN PROTECTED" : "POCKET CHECK IN PROGRESS";
+      : preflightConfirmed
+        ? phonePlacement === "hand" ? "ARM MOTION LIVE · SCREEN PROTECTED" : "MOTION LIVE · SCREEN PROTECTED"
+        : phonePlacement === "hand" ? "HAND CHECK IN PROGRESS" : "POCKET CHECK IN PROGRESS";
   }
   els["start-session"].hidden = active || Boolean(savedSession);
   els["resume-session"].hidden = active || !savedSession;
@@ -570,7 +759,9 @@ function render(force = false) {
   doc.body.dataset.session = active ? "active" : snapshot.status === "REVIEW" ? "review" : "ready";
   els["voice-help"].textContent = active
     ? fieldSession && !preflightConfirmed
-      ? "Move the phone gently while the app confirms motion and screen protection."
+      ? phonePlacement === "hand"
+        ? "Hold the phone naturally and move your arm while the app confirms motion and screen protection."
+        : "Move the phone gently while the app confirms motion and screen protection."
       : voiceController?.enabled
         ? "Hands-free controls are active. Say “Voice help” to hear the commands."
         : "Tap the microphone to enable hands-free commands."
@@ -601,13 +792,15 @@ function maybeConfirmPreflight() {
   preflightConfirmed = true;
   setPreflightItem("preflight-motion", "MOTION LIVE", "ready");
   setPreflightItem("preflight-screen", "SCREEN PROTECTED", "ready");
-  setPreflightItem("preflight-pocket", "POCKET LOCKED", "ready");
+  setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCKED" : "POCKET LOCKED", "ready");
   setPocketLock(true, { announce: false });
   render(true);
   if (!preflightAnnounced) {
     preflightAnnounced = true;
     if (startVibrationEnabled) navigator.vibrate?.([120, 80, 180]);
-    speak("Preflight passed. Run naturally while I learn your rhythm.");
+    speak(phonePlacement === "hand"
+      ? "Preflight passed. Hold the phone naturally and let your arm swing normally while I learn its rhythm."
+      : "Preflight passed. Run naturally while I learn your rhythm.");
   }
 }
 
@@ -673,34 +866,66 @@ function processSignal(signal) {
 
 function hasMotionVector(event) {
   const vector = event.accelerationIncludingGravity || event.acceleration;
-  return Boolean(vector) && [vector.x, vector.y, vector.z].some(value => Number.isFinite(Number(value)));
+  const accelerationAvailable = Boolean(vector) && [vector.x, vector.y, vector.z].some(value => Number.isFinite(Number(value)));
+  const rotation = event.rotationRate;
+  const rotationAvailable = Boolean(rotation) && [rotation.alpha, rotation.beta, rotation.gamma].some(value => Number.isFinite(Number(value)));
+  return phonePlacement === "hand" ? accelerationAvailable || rotationAvailable : accelerationAvailable;
 }
 
 function onDeviceMotion(event) {
   if (!active || !hasMotionVector(event)) return;
   let firstMotionSignal = false;
-  if (fieldSession && !motionSignalConfirmed) {
-    motionSignalConfirmed = true;
-    firstMotionSignal = true;
-    clearMotionTimeout();
-    setConnection("phone-connection", "MOTION CONFIRMED");
-    if (interruptionActive) endInterruption();
-  }
   const timestampMs = performance.now();
-  lastMotionAtMs = timestampMs;
-  if (interruptionActive?.reason === "motion-gap") endInterruption();
-  const phone = detector.update({
-    timestampMs,
-    acceleration: event.acceleration,
-    accelerationIncludingGravity: event.accelerationIncludingGravity
-  });
-  formSnapshot = formAnalyzer.update({
-    timestampMs,
-    accelerationIncludingGravity: event.accelerationIncludingGravity,
-    rotationRate: event.rotationRate,
-    movementState: phone.movementState,
-    stepDetected: phone.stepDetected
-  });
+  let phone;
+  let armSampleAccepted = false;
+  if (phonePlacement === "hand") {
+    const cadenceReference = fusion.snapshot(timestampMs);
+    const previousArmSamples = armAnalyzer.totalSamples;
+    armSnapshot = armAnalyzer.update({
+      timestampMs,
+      acceleration: event.acceleration,
+      accelerationIncludingGravity: event.accelerationIncludingGravity,
+      rotationRate: event.rotationRate,
+      cadenceSpm: cadenceReference.cadenceSpm,
+      cadenceSource: cadenceReference.cadenceSource,
+      movementStateOverride: cadenceReference.cadenceSource === "garmin" ? cadenceReference.movementState : null,
+      recordingAllowed: !snapshot.plannedBreakActive
+    });
+    armSampleAccepted = armAnalyzer.totalSamples > previousArmSamples;
+    phone = {
+      cadenceSpm: null,
+      movementState: armSnapshot.movementState,
+      motionIntensity: armSnapshot.motionIntensity,
+      stepDetected: armSnapshot.halfSwingDetected
+    };
+  } else {
+    phone = detector.update({
+      timestampMs,
+      acceleration: event.acceleration,
+      accelerationIncludingGravity: event.accelerationIncludingGravity
+    });
+    formSnapshot = formAnalyzer.update({
+      timestampMs,
+      accelerationIncludingGravity: event.accelerationIncludingGravity,
+      rotationRate: event.rotationRate,
+      movementState: phone.movementState,
+      stepDetected: phone.stepDetected
+    });
+  }
+  const usableMotion = phonePlacement === "hand"
+    ? armSampleAccepted
+    : true;
+  if (usableMotion) {
+    lastMotionAtMs = timestampMs;
+    if (interruptionActive?.reason === "motion-gap") endInterruption();
+    if (fieldSession && !motionSignalConfirmed) {
+      motionSignalConfirmed = true;
+      firstMotionSignal = true;
+      clearMotionTimeout();
+      setConnection("phone-connection", "MOTION CONFIRMED");
+      if (interruptionActive) endInterruption();
+    }
+  }
   processSignal(fusion.updatePhone({ timestampMs, ...phone }));
   persistActiveSession();
   if (firstMotionSignal) maybeConfirmPreflight();
@@ -736,6 +961,7 @@ async function startSession() {
     fusion = new RunSignalFusion();
     coach = new RunRhythmCoach();
     formAnalyzer = new HipFormAnalyzer();
+    armAnalyzer = new ArmSwingAnalyzer();
     active = true;
     fieldSession = true;
     motionSignalConfirmed = false;
@@ -748,9 +974,10 @@ async function startSession() {
     interruptionActive = null;
     lastMotionAtMs = null;
     savedSession = null;
+    showingCompletedReport = false;
     setPreflightItem("preflight-motion", "MOTION CHECK", "waiting");
     setPreflightItem("preflight-screen", "SCREEN CHECK", "waiting");
-    setPreflightItem("preflight-pocket", "POCKET ARMING", "waiting");
+    setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK ARMING" : "POCKET ARMING", "waiting");
     updateBatteryDisplay();
     setConnection("phone-connection", "WAITING FOR MOTION", "warning");
     setConnection("screen-connection", "CHECKING SCREEN", "warning");
@@ -758,9 +985,12 @@ async function startSession() {
     snapshot = {
       ...coach.start(sessionStartedAtMs),
       status: "PREFLIGHT",
-      message: "Checking phone motion and screen-awake protection."
+      message: phonePlacement === "hand"
+        ? "Checking hand motion and screen-awake protection."
+        : "Checking phone motion and screen-awake protection."
     };
     formSnapshot = formAnalyzer.start(sessionStartedAtMs);
+    armSnapshot = armAnalyzer.start(sessionStartedAtMs);
     render(true);
     startResilienceMonitor();
     persistActiveSession(true);
@@ -795,9 +1025,12 @@ async function resumeSavedSession() {
     fusion = new RunSignalFusion();
     coach = new RunRhythmCoach();
     formAnalyzer = new HipFormAnalyzer();
+    armAnalyzer = new ArmSwingAnalyzer();
     const now = performance.now();
     snapshot = coach.restoreState(restored.coachState, now);
+    phonePlacement = restored.phonePlacement === "hand" ? "hand" : "hip";
     formSnapshot = restored.formState ? formAnalyzer.restoreState(restored.formState, now) : formAnalyzer.start(now);
+    armSnapshot = restored.armState ? armAnalyzer.restoreState(restored.armState, now) : armAnalyzer.start(now);
     pocketSide = restored.pocketSide === "left" ? "left" : "right";
     active = true;
     fieldSession = true;
@@ -810,6 +1043,7 @@ async function resumeSavedSession() {
     preflightAnnounced = true;
     lastMotionAtMs = null;
     savedSession = null;
+    showingCompletedReport = false;
     if (!interruptionActive) {
       interruptions.push(createInterruption({ reason: "app-restarted", startedAtEpochMs: restored.savedAtEpochMs }));
       interruptionActive = interruptions.at(-1);
@@ -818,7 +1052,7 @@ async function resumeSavedSession() {
     setConnection("screen-connection", "RECOVERING SCREEN", "warning");
     setPreflightItem("preflight-motion", "MOTION CHECK", "waiting");
     setPreflightItem("preflight-screen", "SCREEN CHECK", "waiting");
-    setPreflightItem("preflight-pocket", "POCKET ARMING", "waiting");
+    setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK ARMING" : "POCKET ARMING", "waiting");
     window.addEventListener("devicemotion", onDeviceMotion);
     render(true);
     startResilienceMonitor();
@@ -826,7 +1060,7 @@ async function resumeSavedSession() {
     motionSignalTimeout = setTimeout(() => {
       if (active && !motionSignalConfirmed) setConnection("phone-connection", "NO MOTION YET", "warning");
     }, 6_000);
-    speak("Saved run restored. Move the phone to confirm motion, then pocket lock will reactivate.");
+    speak(`Saved run restored. Move the phone to confirm motion, then ${phonePlacement === "hand" ? "run lock" : "pocket lock"} will reactivate.`);
     persistActiveSession(true);
   } catch (error) {
     snapshot = { ...snapshot, status: "SENSOR ERROR", message: error?.message || "The saved run could not resume.", events: [] };
@@ -842,17 +1076,29 @@ function finishSession() {
   lastSessionElapsedMs = sessionStartedAtMs === null ? 0 : Math.max(0, snapshot.timestampMs - sessionStartedAtMs);
   if (interruptionActive) endInterruption();
   const interruptionData = interruptionSummary(interruptions);
-  formSnapshot = formAnalyzer.snapshot(performance.now(), { force: true });
+  if (phonePlacement === "hand") armSnapshot = armAnalyzer.snapshot(performance.now(), { force: true });
+  else formSnapshot = formAnalyzer.snapshot(performance.now(), { force: true });
+  const armFinishNote = phonePlacement !== "hand"
+    ? ""
+    : !armSnapshot.baselineReady
+      ? ` Arm swing baseline reached ${armSnapshot.baselineProgress || 0} percent, so no range comparison was made.`
+      : Number.isFinite(armSnapshot.armCycleRpm) && Number.isFinite(armSnapshot.regularityPercent)
+        ? ` Arm swing finished at ${Math.round(armSnapshot.armCycleRpm)} cycles per minute with ${armSnapshot.regularityPercent} percent regularity.${Number.isFinite(armSnapshot.rangeChangePercent) ? ` Range was ${Math.abs(armSnapshot.rangeChangePercent)} percent ${armSnapshot.rangeChangePercent >= 0 ? "larger" : "smaller"} than the opening pattern.` : ""}`
+        : " Arm swing data was insufficient for a final rhythm score.";
   let completedSaved = !fieldSession;
   if (fieldSession) {
     const completedPayload = {
-      version: 1,
+      version: 2,
       completedAtEpochMs: Date.now(),
+      phonePlacement,
       pocketSide,
-      snapshot: formSnapshot
+      snapshot: phonePlacement === "hand" ? armSnapshot : formSnapshot
     };
     completedSaved = writeStoredJson(completedFormStorageKey, completedPayload);
-    if (completedSaved) completedFormReport = completedPayload;
+    if (completedSaved) {
+      completedFormReport = completedPayload;
+      showingCompletedReport = true;
+    }
   }
   active = false;
   fieldSession = false;
@@ -868,7 +1114,12 @@ function finishSession() {
   const interruptionNote = interruptionData.count
     ? ` Recording was interrupted ${interruptionData.count} ${interruptionData.count === 1 ? "time" : "times"} for about ${formatMinutes(interruptionData.totalMs)}.`
     : " Recording remained continuous.";
-  const summary = `Field test complete. ${snapshot.stablePercent} percent of running time was inside your rhythm band. ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}. Longest steady block ${formatMinutes(snapshot.longestStableBlockMs)}.${interruptionNote}`;
+  const rhythmSummary = Number.isFinite(snapshot.baselineCadenceSpm)
+    ? `${snapshot.stablePercent} percent of measured running cadence was inside your rhythm band. Longest steady block ${formatMinutes(snapshot.longestStableBlockMs)}.`
+    : phonePlacement === "hand"
+      ? "Step-cadence efficiency was not scored because no completed Garmin cadence baseline was available."
+      : "The step-cadence baseline was not completed, so rhythm-band time was not scored.";
+  const summary = `Field test complete. ${rhythmSummary} ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}.${interruptionNote}${armFinishNote}`;
   snapshot = { ...snapshot, status: "REVIEW", message: summary, events: [] };
   setConnection("phone-connection", "PHONE READY");
   speak(summary);
@@ -889,6 +1140,7 @@ function startDemo() {
     cueCooldownMs: 0
   });
   formAnalyzer = new HipFormAnalyzer();
+  armAnalyzer = new ArmSwingAnalyzer();
   active = true;
   fieldSession = false;
   motionSignalConfirmed = false;
@@ -898,6 +1150,7 @@ function startDemo() {
   lastSessionElapsedMs = 0;
   handleSnapshot(coach.start(demoStartedAt));
   formSnapshot = formAnalyzer.start(demoStartedAt);
+  armSnapshot = armAnalyzer.start(demoStartedAt);
   setConnection("phone-connection", "DEMO SIGNAL LIVE");
   setConnection("screen-connection", "DEMO MODE", "muted");
   speak("Short demonstration started.");
@@ -975,6 +1228,7 @@ async function installRunningApp() {
 
 async function setPocketLock(locked, { announce = true } = {}) {
   pocketLocked = Boolean(locked && active);
+  if (pocketLocked) lockReturnFocus = els["pocket-lock"];
   els["pocket-lock-screen"].hidden = !pocketLocked;
   doc.querySelector(".run-shell").inert = pocketLocked;
   doc.body.classList.toggle("pocket-locked", pocketLocked);
@@ -982,10 +1236,16 @@ async function setPocketLock(locked, { announce = true } = {}) {
   if (pocketLocked) {
     await requestWakeLock();
     try { await doc.documentElement.requestFullscreen?.({ navigationUI: "hide" }); } catch (_) {}
-    setPreflightItem("preflight-pocket", "POCKET LOCKED", "ready");
-    if (announce) reply("Pocket lock on. Press and hold the unlock button for two seconds to unlock.");
+    setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCKED" : "POCKET LOCKED", "ready");
+    els["pocket-unlock"].focus({ preventScroll: true });
+    if (announce) reply(`${phonePlacement === "hand" ? "Run lock" : "Pocket lock"} on. Press and hold the unlock button for two seconds to unlock.`);
   } else if (doc.fullscreenElement) {
     try { await doc.exitFullscreen(); } catch (_) {}
+  }
+  if (!pocketLocked && lockReturnFocus) {
+    const focusTarget = lockReturnFocus;
+    lockReturnFocus = null;
+    requestAnimationFrame(() => focusTarget.focus({ preventScroll: true }));
   }
 }
 
@@ -1023,6 +1283,9 @@ els["resume-run"].addEventListener("click", resumeRunning);
 els["speak-status"].addEventListener("click", () => reply(statusSentence()));
 els["silence-coach"].addEventListener("click", toggleVoicePrompts);
 els["start-vibration"].addEventListener("click", toggleStartVibration);
+els["placement-hip"].addEventListener("click", () => setPhonePlacement("hip"));
+els["placement-hand"].addEventListener("click", () => setPhonePlacement("hand"));
+els["form-report-toggle"].addEventListener("click", toggleCompletedReport);
 els["pocket-side-left"].addEventListener("click", () => setPocketSide("left"));
 els["pocket-side-right"].addEventListener("click", () => setPocketSide("right"));
 els["voice-toggle"].addEventListener("click", toggleVoiceControls);
@@ -1063,13 +1326,15 @@ window.addEventListener("appinstalled", () => {
 els["install-app"].hidden = isInstalledApp();
 renderVoicePromptsToggle();
 renderStartVibration();
-renderPocketSide();
 initialiseBatteryCheck();
 initialiseStorageCheck();
 if (savedSession) {
   snapshot = { ...snapshot, status: "SAVED RUN", message: "A previous run can be resumed without losing its recorded summary.", events: [] };
-} else if (completedFormReport?.version === 1 && completedFormReport.snapshot) {
-  formSnapshot = completedFormReport.snapshot;
+} else if ([1, 2].includes(completedFormReport?.version) && completedFormReport.snapshot) {
+  phonePlacement = completedReportPlacement();
   pocketSide = completedFormReport.pocketSide === "left" ? "left" : "right";
+  if (phonePlacement === "hand") armSnapshot = completedFormReport.snapshot;
+  else formSnapshot = completedFormReport.snapshot;
+  showingCompletedReport = true;
 }
 render(true);

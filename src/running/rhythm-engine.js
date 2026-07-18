@@ -54,6 +54,7 @@ export class RunRhythmCoach {
     this.silencedUntilMs = -Infinity;
     this.lastCueAtMs = -Infinity;
     this.runningMs = 0;
+    this.measuredRunningMs = 0;
     this.walkingMs = 0;
     this.stoppedMs = 0;
     this.stableRunningMs = 0;
@@ -113,6 +114,7 @@ export class RunRhythmCoach {
         this[key] = value;
       }
     }
+    if (!("measuredRunningMs" in state)) this.measuredRunningMs = finite(state.runningMs) ?? 0;
     this.lastUpdateAtMs = nextNow;
     return this.snapshot(nextNow);
   }
@@ -171,6 +173,8 @@ export class RunRhythmCoach {
   accumulate(deltaMs, state, cadence) {
     if (state === "running") {
       this.runningMs += deltaMs;
+      if (cadence === null) return;
+      this.measuredRunningMs += deltaMs;
       const threshold = this.baselineCadenceSpm === null
         ? null
         : this.baselineCadenceSpm * (1 - this.config.driftRatio);
@@ -317,7 +321,9 @@ export class RunRhythmCoach {
   }
 
   snapshot(timestampMs = this.lastUpdateAtMs ?? 0, events = []) {
-    const stablePercent = this.runningMs > 0 ? Math.round(this.stableRunningMs / this.runningMs * 100) : 0;
+    const stablePercent = this.measuredRunningMs > 0
+      ? Math.round(this.stableRunningMs / this.measuredRunningMs * 100)
+      : 0;
     const baselineProgress = this.baselineCadenceSpm !== null
       ? 100
       : Math.round(clamp(this.baselineRunningMs / Math.max(1, this.config.baselineDurationMs), 0, 1) * 100);

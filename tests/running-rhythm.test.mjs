@@ -28,6 +28,25 @@ test("keeps missing cadence empty while the phone is waiting for steps", () => {
   coach.start(0);
   const waiting = coach.update({ timestampMs: 250, cadenceSpm: null, movementState: "unknown" });
   assert.equal(waiting.cadenceSpm, null);
+  assert.equal(waiting.stablePercent, 0);
+});
+
+test("does not treat missing cadence as either stable or unstable running", () => {
+  const coach = makeCoach();
+  learnBaseline(coach);
+  coach.update({ timestampMs: 4_000, cadenceSpm: 170, movementState: "running" });
+  const beforeDropout = coach.update({ timestampMs: 5_000, cadenceSpm: 170, movementState: "running" });
+  const duringDropout = coach.update({ timestampMs: 6_000, cadenceSpm: null, movementState: "running" });
+  assert.equal(duringDropout.stablePercent, beforeDropout.stablePercent);
+});
+
+test("restores stable-time history saved before measured cadence time was added", () => {
+  const coach = makeCoach();
+  const before = learnBaseline(coach);
+  const legacyState = coach.exportState();
+  delete legacyState.state.measuredRunningMs;
+  const restored = new RunRhythmCoach().restoreState(legacyState, 20_000);
+  assert.equal(restored.stablePercent, before.stablePercent);
 });
 
 test("learns a personal cadence baseline from steady running samples", () => {

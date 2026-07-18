@@ -43,7 +43,7 @@ export function parseVoiceCommand(transcript, { awaitingFinishConfirmation = fal
   if (matches(text, [/^(start|begin)(\s+the)?\s+(run|coach|session)$/, /^start$/])) {
     return { intent: VOICE_INTENTS.START, transcript: text };
   }
-  if (matches(text, [/^(coach\s+)?status$/, /^run\s+(status|summary|update)$/, /^how\s+am\s+i\s+doing$/, /^update\s+me$/])) {
+  if (matches(text, [/^(coach\s+)?status$/, /^run\s+(status|summary|update)$/, /^arm\s+(status|swing|update)$/, /^how\s+am\s+i\s+doing$/, /^update\s+me$/])) {
     return { intent: VOICE_INTENTS.STATUS, transcript: text };
   }
   if (matches(text, [/^(mark\s+)?(a\s+)?planned\s+walk$/, /^start\s+(a\s+)?walk(\s+break)?$/, /^walk\s+break$/])) {

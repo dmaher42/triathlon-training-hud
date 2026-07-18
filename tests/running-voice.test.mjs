@@ -6,6 +6,7 @@ const commandCases = [
   ["start run", VOICE_INTENTS.START],
   ["Hey coach begin the session", VOICE_INTENTS.START],
   ["coach status", VOICE_INTENTS.STATUS],
+  ["arm status", VOICE_INTENTS.STATUS],
   ["how am I doing", VOICE_INTENTS.STATUS],
   ["mark a planned walk", VOICE_INTENTS.PLANNED_WALK],
   ["back to running", VOICE_INTENTS.RESUME],
