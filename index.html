@@ -356,24 +356,29 @@
     .immersive .immersive-road span:nth-child(3) { right: 25%; transform: rotate(-8deg); transform-origin: top; }
     .immersive .ride-plan-status { align-self: center; justify-self: center; border: 1px solid rgba(111,153,179,.35); border-radius: 999px; padding: 3px 12px; background: rgba(3,12,19,.58); backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px); }
     .immersive-trainer-panel { display: none; }
-    .aero.immersive { background-image: linear-gradient(180deg, rgba(2,8,13,.58), rgba(2,8,13,.2) 42%, rgba(2,7,11,.48)), url("%BASE_URL%assets/immersive-training-room.webp"); }
-    .aero.immersive::before { background: linear-gradient(90deg, rgba(2,8,13,.58), rgba(2,8,13,.09) 28% 70%, rgba(2,8,13,.62)), linear-gradient(180deg, rgba(2,7,11,.3), transparent 48%, rgba(2,7,11,.4)); }
+    .aero.immersive { background-image: linear-gradient(180deg, rgba(2,8,13,.48), rgba(2,8,13,.1) 42%, rgba(2,7,11,.34)), url("%BASE_URL%assets/immersive-training-room.webp"); background-position: center 58%; }
+    .aero.immersive::before { background: linear-gradient(90deg, rgba(2,8,13,.58), rgba(2,8,13,.03) 30% 68%, rgba(2,8,13,.62)), linear-gradient(180deg, rgba(2,7,11,.25), transparent 48%, rgba(2,7,11,.3)); }
     .immersive .ride-phase-header { display: flex; min-height: 46px; align-items: center; justify-content: flex-end; margin-top: 10px; }
-    .immersive .ride-phase-header::before { content: "TRI HUD"; position: absolute; left: 50%; color: rgba(223,233,241,.78); font-size: .78rem; font-weight: 900; letter-spacing: .18em; transform: translateX(-50%); }
+    .immersive .ride-phase-header::before { content: "RIDE DASHBOARD"; position: absolute; left: 50%; color: rgba(223,233,241,.78); font-size: .7rem; font-weight: 900; letter-spacing: .18em; transform: translateX(-50%); }
     .immersive .ride-phase-strip { display: none; }
     .immersive .aero-dashboard { grid-template-columns: minmax(205px, .64fr) minmax(450px, 1.72fr) minmax(220px, .68fr); grid-template-rows: minmax(248px, .78fr) minmax(190px, .58fr) auto; gap: clamp(10px, 1.35vw, 15px); }
     .immersive .aero-hero { justify-content: center; padding: 15px 18px 13px; border-radius: 20px; background: rgba(6,16,24,.62); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-    .immersive .aero-interval { position: static; align-self: flex-start; margin: 0 0 3px; font-size: clamp(.5rem, 1.1vmin, .62rem); }
-    .immersive .aero-title { max-width: 100%; margin: 0 0 8px; font-size: clamp(.62rem, 1.35vmin, .78rem); white-space: normal; }
-    .immersive .aero-clock .timer { font-size: clamp(3.45rem, 9.2vw, 5.8rem); }
+    .immersive .aero-interval { position: static; order: -3; align-self: center; margin: 8px 0 2px; font-size: clamp(.48rem, 1.02vmin, .58rem); }
+    .immersive .aero-title { order: -2; max-width: 100%; margin: 0 0 5px; color: #9cb6c7; font-size: clamp(.58rem, 1.2vmin, .7rem); white-space: normal; }
+    .immersive .aero-clock { order: -1; }
+    .immersive .aero-clock .timer { font-size: clamp(2.9rem, 7vw, 4.4rem); }
     .immersive .aero-percentage { font-size: clamp(.7rem, 1.8vmin, .9rem); }
     .immersive .challenge-progress { width: min(84%, 650px); margin-top: 8px; }
     .immersive .challenge-best { margin-top: 7px; font-size: clamp(.5rem, 1.15vmin, .62rem); }
-    .immersive .hero-metrics { width: min(96%, 700px); margin-top: 8px; border-color: rgba(117,166,194,.58); border-radius: 12px; background: rgba(3,12,19,.75); }
-    .immersive .hero-metrics span { padding: 7px 9px; font-size: clamp(.46rem, 1.08vmin, .56rem); }
-    .immersive .hero-metrics strong { font-size: clamp(1rem, 2.3vmin, 1.25rem); }
+    .immersive .hero-metrics { order: -4; width: min(98%, 720px); margin: 0; border-color: rgba(117,166,194,.66); border-radius: 12px; background: rgba(3,12,19,.8); }
+    .immersive .hero-metrics span { padding: 8px 10px; color: #8197a7; font-size: clamp(.48rem, 1.12vmin, .59rem); }
+    .immersive .hero-metrics strong { color: #edf5f8; font-size: clamp(1.25rem, 3.1vmin, 1.7rem); }
     .immersive .immersive-trainer-panel { grid-column: 2; grid-row: 2; z-index: 3; display: flex; width: min(74%, 430px); align-self: center; justify-self: center; flex-direction: column; gap: 4px; border: 1px solid rgba(117,166,194,.5); border-radius: 17px; padding: 10px 15px 12px; background: rgba(6,17,25,.66); box-shadow: inset 0 0 26px rgba(83,142,177,.06); backdrop-filter: blur(17px); -webkit-backdrop-filter: blur(17px); }
     .immersive-trainer-title { margin: 0; color: #8199aa; font-size: .52rem; font-weight: 950; letter-spacing: .14em; text-transform: uppercase; }
+    .immersive-trainer-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .immersive-trainer-state { border: 1px solid rgba(139,171,187,.32); border-radius: 999px; padding: 3px 7px; color: #87aa9a; font-size: .43rem; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
+    .immersive-trainer-state.offline { color: #8d9ba6; }
+    .immersive-trainer-note { margin: 3px 0 0; color: #7f919d; font-size: .48rem; line-height: 1.3; text-align: center; }
     .immersive .immersive-trainer-panel .trainer-metrics { grid-template-columns: 1fr; width: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; }
     .immersive .immersive-trainer-panel .trainer-metric-row { grid-template-columns: minmax(100px, 1fr) auto 110px; align-items: center; gap: 10px; border-right: 0; border-bottom: 1px solid rgba(117,166,194,.18); padding: 6px 0; color: #8ea0ad; }
     .immersive .immersive-trainer-panel .trainer-metric-row:last-child { border-bottom: 0; }
@@ -383,6 +388,7 @@
     .immersive .immersive-trainer-panel .stopped-row svg { display: none; }
     .immersive .immersive-trainer-panel .stopped-row small { justify-self: end; color: #b29370; }
     .immersive .trainer-metrics.is-disconnected { opacity: .62; }
+    .immersive .trainer-metrics.is-disconnected svg { opacity: .25; }
     .immersive .dashboard-card { border-radius: 18px; background: rgba(6,16,24,.61); backdrop-filter: blur(17px); -webkit-backdrop-filter: blur(17px); }
     .immersive .dashboard-card.type-water, .immersive .dashboard-card.type-stretch { padding-bottom: 50px; }
     .immersive .dashboard-card.type-fuel { padding-bottom: 43px; }
@@ -1093,7 +1099,7 @@
           ? `class="dashboard-card type-${type} due${isUrgent ? " urgent" : ""} reminder-done" data-reminder-id="${reminder.id}" aria-label="Complete ${labels[type]} reminder"`
           : `class="dashboard-card type-${type}" data-log-action="${type}" aria-label="Record ${labels[type]} completed"`;
         return `<button ${actionAttributes} type="button" data-dashboard-card="${type}" data-action-type="${type}" data-default-label="${reminder ? "TAP WHEN DONE" : ""}" aria-keyshortcuts="${shortcuts[type]}" ${locked ? "disabled" : ""}>
-          ${queueBadge}<span class="status-ring" data-reminder-ring="${type}" style="--ring-progress:${progressDegrees}deg" aria-hidden="true">${icons[type]}<strong class="card-time reminder-time${reminder ? " due" : ""}" data-reminder="${type}">${model.remindersEnabled ? formatTime(remaining) : "—:—"}</strong></span>
+          ${queueBadge}<span class="status-ring" data-reminder-ring="${type}" style="--ring-progress:${progressDegrees}deg" aria-hidden="true">${icons[type]}<strong class="card-time reminder-time${reminder ? " due" : ""}" data-reminder="${type}">${model.remindersEnabled ? formatTime(remaining) : "OFF"}</strong></span>
           <span class="card-label">${labels[type]}</span><span class="immersive-card-data"><small>${detail}</small><span><b>${logged}</b> LOGGED <b>${Math.round(progressPercent)}%</b> TO NEXT</span><i><em style="width:${progressPercent}%"></em></i></span>${extra}<span class="card-action">${locked ? "✓ LOGGED" : reminder ? "TAP WHEN DONE" : ""}</span>
         </button>`;
       }).join("");
@@ -1189,12 +1195,12 @@
           <section class="aero-hero" aria-label="Current Aero interval">
             <button class="hero-tap-target" id="aero-hero-action" type="button" aria-label="${advanceLabel}" aria-keyshortcuts="Enter Space"><span class="visually-hidden">${advanceLabel}</span></button>
             <span class="aero-interval">Interval ${model.intervalNumber} • ${formatTime(model.currentIntervalTargetSec)} target</span>
-            <h1 class="aero-title">${title}</h1><div class="aero-clock"><span class="timer${model.intervalComplete || model.rideTargetReached ? " message" : ""}" id="aero-timer">${headline}</span><span class="aero-percentage" id="aero-percentage">(${aeroAdherencePercent()}%)</span></div>
+            <h1 class="aero-title">${title}</h1><div class="aero-clock"><span class="timer${model.intervalComplete || model.rideTargetReached ? " message" : ""}" id="aero-timer">${headline}</span><span class="aero-percentage" id="aero-percentage">${aeroAdherencePercent()}% AERO</span></div>
             <div class="challenge-progress" aria-hidden="true"><div class="challenge-progress-fill" id="challenge-progress-fill" style="width:${challengeProgress}%"></div></div>
             <p class="challenge-best" id="challenge-best">${personalBestMarkup()}</p>
             ${subtitle ? `<p class="aero-subtitle">${subtitle}</p>` : ""}
             <div class="hero-metrics" aria-label="Ride position times"><span>Overall <strong id="overall-time">${formatTime(positionTimes.overallMs / 1000)}</strong></span><span>Aero <strong id="total-aero">${formatTime(positionTimes.aeroMs / 1000)}</strong></span><span>Upright <strong id="upright-time">${formatTime(positionTimes.uprightMs / 1000)}</strong></span></div>${immersive ? "" : trainerMarkup}
-          </section>${immersive ? `<section class="immersive-trainer-panel" aria-label="Smart trainer data"><p class="immersive-trainer-title">Smart trainer data</p>${trainerMarkup}</section>` : ""}<div class="immersive-road" aria-hidden="true"><span></span><span></span><span></span></div>${scheduleMarkup()}${planStatusMarkup()}
+          </section>${immersive ? `<section class="immersive-trainer-panel" aria-label="Smart trainer data"><div class="immersive-trainer-head"><p class="immersive-trainer-title">Smart trainer data</p><span class="immersive-trainer-state${model.trainerRideEnabled ? "" : " offline"}">${model.trainerRideEnabled ? "Live" : "Not connected"}</span></div>${trainerMarkup}${model.trainerRideEnabled ? "" : '<p class="immersive-trainer-note">Power and cadence appear when a trainer is connected from the main menu.</p>'}</section>` : ""}<div class="immersive-road" aria-hidden="true"><span></span><span></span><span></span></div>${scheduleMarkup()}${planStatusMarkup()}
         </div>${cameraLearningPromptMarkup()}${actionFeedbackMarkup()}
       </section>`;
     }
@@ -2192,7 +2198,7 @@
         const upright = doc.getElementById("upright-time");
         if (upright) upright.textContent = formatTime(positionTimes.uprightMs / 1000);
         const percentage = doc.getElementById("aero-percentage");
-        if (percentage) percentage.textContent = `(${aeroAdherencePercent()}%)`;
+        if (percentage) percentage.textContent = `${aeroAdherencePercent()}% AERO`;
         const personalBestSec = Math.max(model.personalBestSec, model.bestIntervalMs / 1000);
         const chaseTargetSec = personalBestSec || model.currentIntervalTargetSec;
         const challengeProgress = doc.getElementById("challenge-progress-fill");
@@ -2201,7 +2207,10 @@
         if (challengeBest) challengeBest.innerHTML = personalBestMarkup();
         getReminderRows().forEach(item => {
           const node = doc.querySelector(`[data-reminder="${item.type}"]`);
-          if (node) { node.textContent = item.remaining <= 0 ? "00:00" : formatTime(item.remaining); node.classList.toggle("due", item.remaining <= 0); }
+          if (node) {
+            node.textContent = model.remindersEnabled ? item.remaining <= 0 ? "00:00" : formatTime(item.remaining) : "OFF";
+            node.classList.toggle("due", model.remindersEnabled && item.remaining <= 0);
+          }
           const ring = doc.querySelector(`[data-reminder-ring="${item.type}"]`);
           if (ring) ring.style.setProperty("--ring-progress", `${Math.max(0, Math.min(360, Math.max(0, item.remaining) / reminderCadence(item.type) * 360))}deg`);
         });
