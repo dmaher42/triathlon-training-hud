@@ -20,24 +20,51 @@ export function getRidePhase(elapsedSec, plannedSec, phases = RIDE_PHASES) {
   return { ...safePhases[index], index, number: index + 1, count: safePhases.length, progress, phaseProgress };
 }
 
-export function getLiveChallenge({ reminderRows = [], intervalRemainingSec = 0, intervalElapsedSec = 0 } = {}) {
+export function getLiveChallenge({ intervalRemainingSec = 0, intervalElapsedSec = 0 } = {}) {
   const intervalRemaining = Math.max(0, finite(intervalRemainingSec));
-  const nextReminder = reminderRows
-    .filter(row => Number.isFinite(Number(row?.remaining)))
-    .sort((a, b) => Number(a.remaining) - Number(b.remaining))[0];
-  const reminderRemaining = nextReminder ? Math.max(0, finite(nextReminder.remaining)) : Infinity;
-  // Timers are sampled a few milliseconds apart, so treat targets within one second as simultaneous.
-  // This keeps a Water reminder aligned with an equally timed Aero interval instead of flickering labels.
-  const usesReminder = Boolean(nextReminder) && reminderRemaining <= intervalRemaining + 1;
-  const actionLabels = { water: "Water", fuel: "Fuel", stretch: "Stretch" };
-  const label = usesReminder ? `Hold Aero to ${actionLabels[nextReminder.type] || "Next Action"}` : "Complete Aero Interval";
-  const remainingSec = usesReminder ? reminderRemaining : intervalRemaining;
-  const targetSec = Math.max(1, remainingSec + Math.max(0, finite(intervalElapsedSec)));
-  return { label, remainingSec, targetSec, type: usesReminder ? nextReminder.type : "interval" };
+  const targetSec = Math.max(1, intervalRemaining + Math.max(0, finite(intervalElapsedSec)));
+  return { label: "Complete Aero Interval", remainingSec: intervalRemaining, targetSec, type: "interval" };
+}
+
+export function getLiveCameraAeroStreakMs({
+  nowMs = 0,
+  cameraEnabled = false,
+  positionAeroActive = false,
+  streakStartedAt = 0
+} = {}) {
+  if (!cameraEnabled || !positionAeroActive || finite(streakStartedAt) <= 0) return 0;
+  return Math.max(0, finite(nowMs) - finite(streakStartedAt));
+}
+
+export function getLongestCameraAeroStreak(events = [], rideSeconds = 0) {
+  let activeAtSec = null;
+  let bestSec = 0;
+  for (const event of Array.isArray(events) ? events : []) {
+    const at = Number(event?.at);
+    if (!Number.isFinite(at) || at < 0) continue;
+    if (event.type === "aero-position-start" && event.source === "camera") {
+      if (activeAtSec === null) activeAtSec = at;
+      continue;
+    }
+    if (activeAtSec !== null && ["aero-position-stop", "ride-recovered"].includes(event.type)) {
+      bestSec = Math.max(bestSec, at - activeAtSec);
+      activeAtSec = null;
+    }
+  }
+  if (activeAtSec !== null) bestSec = Math.max(bestSec, Math.max(0, finite(rideSeconds) - activeAtSec));
+  return Math.max(0, bestSec);
 }
 
 export function getPersonalBest(history = [], currentBestSec = 0) {
-  return Math.max(0, finite(currentBestSec), ...history.map(ride => Math.max(0, finite(ride?.bestIntervalSeconds))));
+  const savedBests = (Array.isArray(history) ? history : []).map(ride => {
+    const explicit = Number(ride?.bestAeroStreakSeconds);
+    if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+    const hasCameraEvents = Array.isArray(ride?.events)
+      && ride.events.some(event => event?.type === "aero-position-start" && event?.source === "camera");
+    if (!ride?.camera?.enabled && !hasCameraEvents) return 0;
+    return getLongestCameraAeroStreak(ride.events, ride.rideSeconds);
+  });
+  return Math.max(0, finite(currentBestSec), ...savedBests);
 }
 
 export function getPositionTimes(rideElapsedMs = 0, aeroElapsedMs = 0) {

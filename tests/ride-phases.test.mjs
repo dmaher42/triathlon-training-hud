@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getLiveAeroDurations, getLiveChallenge, getPersonalBest, getPlanStatus, getPositionTimes, getRidePhase } from "../src/ride-phases.js";
+import {
+  getLiveAeroDurations,
+  getLiveCameraAeroStreakMs,
+  getLiveChallenge,
+  getLongestCameraAeroStreak,
+  getPersonalBest,
+  getPlanStatus,
+  getPositionTimes,
+  getRidePhase
+} from "../src/ride-phases.js";
 
 test("ride phases advance evenly across the planned ride", () => {
   assert.equal(getRidePhase(0, 6000).name, "Warm Up");
@@ -10,14 +19,16 @@ test("ride phases advance evenly across the planned ride", () => {
   assert.equal(getRidePhase(7000, 6000).index, 4);
 });
 
-test("challenge targets the next reminder when it arrives before the interval ends", () => {
+test("reminder countdowns never replace the main Aero interval clock", () => {
   const challenge = getLiveChallenge({
     reminderRows: [{ type: "fuel", remaining: 600 }, { type: "water", remaining: 120 }],
     intervalRemainingSec: 300,
     intervalElapsedSec: 240
   });
-  assert.equal(challenge.label, "Hold Aero to Water");
-  assert.equal(challenge.remainingSec, 120);
+  assert.equal(challenge.label, "Complete Aero Interval");
+  assert.equal(challenge.remainingSec, 300);
+  assert.equal(challenge.targetSec, 540);
+  assert.equal(challenge.type, "interval");
 });
 
 test("challenge keeps the Aero interval target when it arrives first", () => {
@@ -26,9 +37,45 @@ test("challenge keeps the Aero interval target when it arrives first", () => {
   assert.equal(challenge.remainingSec, 90);
 });
 
-test("personal best includes saved and current ride intervals", () => {
-  assert.equal(getPersonalBest([{ bestIntervalSeconds: 720 }, { bestIntervalSeconds: 840 }], 600), 840);
+test("personal best uses camera-observed Aero streaks instead of capped interval targets", () => {
+  const history = [
+    { bestAeroStreakSeconds: 910, bestIntervalSeconds: 600, camera: { enabled: true } },
+    {
+      bestIntervalSeconds: 1200,
+      rideSeconds: 1000,
+      camera: { enabled: true },
+      events: [
+        { type: "aero-position-start", source: "camera", at: 100 },
+        { type: "aero-position-stop", source: "camera", at: 940 }
+      ]
+    },
+    { bestIntervalSeconds: 1800, camera: { enabled: false } }
+  ];
+  assert.equal(getPersonalBest(history, 600), 910);
   assert.equal(getPersonalBest([], 300), 300);
+});
+
+test("camera Aero streak keeps counting past an interval target until camera upright", () => {
+  assert.equal(getLiveCameraAeroStreakMs({
+    nowMs: 721_000,
+    cameraEnabled: true,
+    positionAeroActive: true,
+    streakStartedAt: 1_000
+  }), 720_000);
+  assert.equal(getLiveCameraAeroStreakMs({
+    nowMs: 900_000,
+    cameraEnabled: true,
+    positionAeroActive: false,
+    streakStartedAt: 1_000
+  }), 0);
+  assert.equal(getLongestCameraAeroStreak([
+    { type: "aero-position-start", source: "manual", at: 0 },
+    { type: "aero-position-stop", source: "manual", at: 30 },
+    { type: "aero-position-start", source: "camera", at: 60 },
+    { type: "aero-position-stop", source: "camera", at: 780 },
+    { type: "aero-position-start", source: "camera", at: 800 },
+    { type: "ride-recovered", at: 920 }
+  ], 1000), 720);
 });
 
 test("overall time is always split between Aero and upright time", () => {

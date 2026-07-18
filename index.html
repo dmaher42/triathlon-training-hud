@@ -162,6 +162,7 @@
     .camera-auto-toggle.off { border-color: #a4b2c2; color: #d5deea; }
     .ride-utility-button { border: 1px solid #4d6e89; background: #142434; color: #d9e9f4; letter-spacing: .04em; }
     .trainer-reconnect-utility { border-color: #e3a84b; background: #513718; color: #ffe6ad; box-shadow: 0 0 0 2px rgba(255,190,80,.12); }
+    .heart-rate-utility { border-color: #d36a76; background: #55232b; color: #ffd8dc; box-shadow: 0 0 0 2px rgba(239,112,127,.1); }
     .ride-pause-button { min-width: 68px; border: 1px solid #806f54; background: #282218; color: #d3c19e; letter-spacing: .06em; }
     .camera-review { width: min(100%, 420px); margin: 0 0 12px; padding: 10px; border: 1px solid #285b4a; border-radius: 12px; background: #09231d; text-align: left; }
     .camera-review h2 { margin: 0 0 7px; color: #6dffad; font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; }
@@ -253,13 +254,18 @@
     .hero-metrics span { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 6px 8px; border-right: 1px solid #2b343e; color: #718092; font-size: clamp(.46rem, 1.2vmin, .58rem); font-weight: 950; letter-spacing: .12em; text-align: center; text-transform: uppercase; }
     .hero-metrics span:last-child { border-right: 0; }
     .hero-metrics strong { overflow: hidden; color: #d7e0e8; font-family: var(--hud-mono); font-size: clamp(.9rem, 2.5vmin, 1.15rem); letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
-    .trainer-metrics { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(92%, 650px); margin-top: 6px; border: 1px solid #31483f; border-radius: 10px; background: rgba(8,18,14,.72); }
+    .trainer-metrics { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: min(96%, 760px); margin-top: 6px; border: 1px solid #31483f; border-radius: 10px; background: rgba(8,18,14,.72); }
+    .trainer-metrics.heart-rate-only { grid-template-columns: minmax(150px, 230px); width: min(92%, 230px); }
     .trainer-metric-row { display: grid; min-width: 0; grid-template-columns: 1fr; gap: 2px; padding: 5px 6px; border-right: 1px solid #263d35; color: #708d7d; font-size: clamp(.43rem, 1.1vmin, .54rem); font-weight: 950; letter-spacing: .1em; text-transform: uppercase; }
     .trainer-metric-row:last-child { border-right: 0; }
     .trainer-metric-row em { font-style: normal; }
     .trainer-metric-row svg { display: none; }
     .trainer-metric-row small { color: #708d7d; font-size: .48rem; }
     .trainer-metrics strong { color: #b9d2c3; font-family: var(--hud-mono); font-size: clamp(.64rem, 1.7vmin, .82rem); font-variant-numeric: tabular-nums; }
+    .trainer-metric-row.sensor-offline { opacity: .52; }
+    .heart-rate-row { border-color: #513139; color: #b7878e; }
+    .heart-rate-row strong { color: #ffb8c0; }
+    .heart-rate-row small { color: #b98e94; line-height: 1.25; }
     .trainer-metrics.is-stopped { border-color: #745f42; background: #19160f; }
     .trainer-metrics.is-stopped strong { color: #cbb58e; }
     .reminder-zone, .reminder-card-grid { display: contents; }
@@ -360,8 +366,9 @@
     .immersive-trainer-panel { display: none; }
     .aero.immersive { background-color: #173349; background-image: linear-gradient(180deg, rgba(8,24,35,.08), rgba(38,83,107,.04) 42%, rgba(4,18,27,.14)), url("%BASE_URL%assets/immersive-training-room.webp"); background-position: center 58%; }
     .aero.immersive::before { background: linear-gradient(90deg, rgba(14,37,53,.2), rgba(74,139,170,.08) 30% 68%, rgba(14,37,53,.22)), linear-gradient(180deg, rgba(90,157,187,.12), transparent 55%, rgba(8,28,42,.15)); }
-    .immersive .ride-phase-header { display: flex; width: min(calc(100vw - 28px), 1600px); min-height: 46px; align-items: center; justify-content: flex-end; margin-top: 10px; }
-    .immersive .ride-phase-header::before { content: "RIDE DASHBOARD"; position: absolute; left: 50%; color: rgba(223,233,241,.78); font-size: .7rem; font-weight: 900; letter-spacing: .18em; transform: translateX(-50%); }
+    .aero.immersive { padding-top: 10px; }
+    .immersive .ride-phase-header { display: flex; width: min(calc(100vw - 28px), 1600px); min-height: 46px; align-items: center; justify-content: flex-end; margin: 4px auto 6px; }
+    .immersive .pip-mini, .immersive .camera-auto-toggle, .immersive .ride-utility-button, .immersive .ride-pause-button { min-height: 46px; }
     .immersive .ride-phase-strip { display: none; }
     .immersive .aero-dashboard { grid-template-columns: minmax(190px, .72fr) minmax(430px, 1.8fr) minmax(200px, .76fr); grid-template-rows: minmax(248px, .78fr) minmax(205px, .62fr) auto; width: min(calc(100vw - 28px), 1600px); gap: clamp(10px, 1.35vw, 18px); }
     .immersive .aero-hero { justify-content: center; padding: 15px 18px 13px; border-color: rgba(168,218,241,.78); border-radius: 20px; background: rgba(19,45,61,.82); box-shadow: 0 12px 30px rgba(1,10,16,.2), inset 0 0 38px rgba(141,207,238,.08); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
@@ -383,10 +390,13 @@
     .immersive-trainer-note { margin: 3px 0 0; color: #7f919d; font-size: .48rem; line-height: 1.3; text-align: center; }
     .trainer-reconnect-action { min-height: 48px; border: 1px solid #f0b654; border-radius: 10px; padding: 9px 14px; background: #69491d; color: #fff0c8; font-size: .72rem; font-weight: 1000; letter-spacing: .07em; cursor: pointer; }
     .trainer-reconnect-action:disabled, .trainer-reconnect-utility:disabled { cursor: wait; opacity: .72; }
-    .immersive .immersive-trainer-panel .trainer-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; }
+    .immersive .immersive-trainer-panel .trainer-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; }
     .immersive .immersive-trainer-panel .trainer-metric-row { grid-template-columns: minmax(76px, .8fr) auto minmax(90px, .8fr); align-items: center; gap: 10px; border: 1px solid rgba(144,195,219,.24); border-radius: 10px; padding: 9px 10px; background: rgba(5,21,31,.38); color: #b0c3d0; }
     .immersive .immersive-trainer-panel .trainer-metric-row:last-child { border-bottom: 1px solid rgba(214,177,112,.48); }
     .immersive .immersive-trainer-panel .trainer-metric-row strong { color: #f5fbff; font-size: clamp(1.15rem, 2.5vmin, 1.55rem); }
+    .immersive .immersive-trainer-panel .heart-rate-row { grid-template-columns: minmax(60px, .8fr) auto minmax(56px, .6fr); border-color: rgba(227,118,131,.5); background: rgba(70,24,31,.5); }
+    .immersive .immersive-trainer-panel .heart-rate-row strong { color: #ffd0d5; }
+    .immersive .immersive-trainer-panel .heart-rate-row small { justify-self: end; color: #d9a7ad; font-size: .48rem; text-align: right; }
     .immersive .immersive-trainer-panel .trainer-metric-row svg { display: block; width: 100%; height: 30px; }
     .immersive .immersive-trainer-panel .trainer-metric-row polyline { fill: none; stroke: #8fb4c8; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; vector-effect: non-scaling-stroke; }
     .immersive .immersive-trainer-panel .stopped-row { grid-column: 1 / -1; grid-template-columns: minmax(160px, 1fr) auto auto; min-height: 70px; border-color: rgba(226,186,112,.55); background: rgba(77,53,21,.52); color: #ffe3a8; }
@@ -689,7 +699,8 @@
       updateCompletedActionReason
     } from "/src/habit-learning.js";
     import { clearActiveRide, loadActiveRide, loadHistory, loadSettings, resetLearningFor, saveActiveRide, saveRide, saveSettings } from "/src/history-store.js";
-    import { RIDE_PHASES, getLiveAeroDurations, getLiveChallenge, getPersonalBest, getPlanStatus, getPositionTimes, getRidePhase } from "/src/ride-phases.js";
+    import { HeartRateMonitorConnection, HeartRateTracker } from "/src/heart-rate-connection.js";
+    import { RIDE_PHASES, getLiveAeroDurations, getLiveCameraAeroStreakMs, getLiveChallenge, getLongestCameraAeroStreak, getPersonalBest, getPlanStatus, getPositionTimes, getRidePhase } from "/src/ride-phases.js";
     import { PedallingTracker, SmartTrainerConnection } from "/src/trainer-connection.js";
     const nutritionPlan = [
       "Take 1 Gel + Big Drink of Water",
@@ -742,6 +753,9 @@
       intervalSegmentStartedAt: 0,
       accumulatedAeroMs: 0,
       bestIntervalMs: 0,
+      cameraAeroStreakStartedAt: 0,
+      lastCameraAeroStreakMs: 0,
+      bestCameraAeroStreakMs: 0,
       personalBestSec: 0,
       fuelEverySec: 30 * 60,
       waterEverySec: 10 * 60,
@@ -792,7 +806,12 @@
       trainerDeviceName: "",
       trainerRideEnabled: false,
       trainerSnapshot: { watts: null, cadence: null, stopCount: 0, stoppedMs: 0, longestStopMs: 0, averageWatts: null, averageCadence: null, isStopped: false },
-      trainerSeries: { watts: [], cadence: [] }
+      trainerSeries: { watts: [], cadence: [] },
+      heartRateStatus: "disconnected",
+      heartRateMessage: "Optional: connect a Bluetooth heart-rate strap or start HR broadcast on your watch.",
+      heartRateDeviceName: "",
+      heartRateRideEnabled: false,
+      heartRateSnapshot: { bpm: null, averageBpm: null, maxBpm: null, sampleCount: 0 }
     };
 
     let audioContext = null;
@@ -814,6 +833,7 @@
     const activeRoot = () => activeDocument().getElementById("app");
     const now = () => performance.now();
     const pedallingTracker = new PedallingTracker({ stopDelayMs: 3000 });
+    const heartRateTracker = new HeartRateTracker();
     const trainer = new SmartTrainerConnection({
       onUpdate: measurement => {
         if (model.rideStartedAt && !["setup", "review", "history", "ride-paused"].includes(model.state)) {
@@ -834,6 +854,26 @@
           persistActiveRide(true);
         }
         if (model.state === "setup") render(); else render();
+      }
+    });
+    const heartRate = new HeartRateMonitorConnection({
+      onUpdate: measurement => {
+        if (model.rideStartedAt && ["aero", "paused", "action"].includes(model.state)) {
+          model.heartRateSnapshot = heartRateTracker.update(measurement);
+        } else {
+          model.heartRateSnapshot = { ...model.heartRateSnapshot, bpm: measurement.bpm };
+        }
+        updateTrainerUi(activeDocument());
+      },
+      onStatus: status => {
+        model.heartRateStatus = status.state;
+        model.heartRateMessage = status.message;
+        if (status.deviceName) model.heartRateDeviceName = status.deviceName;
+        if (status.state === "disconnected" && model.heartRateRideEnabled && model.rideStartedAt) {
+          model.heartRateSnapshot = heartRateTracker.pause();
+          persistActiveRide(true);
+        }
+        render();
       }
     });
 
@@ -880,20 +920,41 @@
     function totalAeroMs() { return model.accumulatedAeroMs + liveAeroMs(); }
     function currentIntervalMs() { return model.intervalAccumulatedMs + liveIntervalAeroMs(); }
     function intervalRemainingSec() { return Math.max(0, model.currentIntervalTargetSec - currentIntervalMs() / 1000); }
+    function cameraAeroStreakMs(timestamp = now()) {
+      return getLiveCameraAeroStreakMs({
+        nowMs: timestamp,
+        cameraEnabled: model.cameraEnabled,
+        positionAeroActive: model.positionAeroActive,
+        streakStartedAt: model.cameraAeroStreakStartedAt
+      });
+    }
+    function cameraAeroBestMs(timestamp = now()) {
+      return Math.max(0, Number(model.bestCameraAeroStreakMs) || 0, cameraAeroStreakMs(timestamp));
+    }
+    function latestCameraAeroStreakMs(timestamp = now()) {
+      return cameraAeroStreakMs(timestamp) || Math.max(0, Number(model.lastCameraAeroStreakMs) || 0);
+    }
 
     function startAeroPosition(timestamp = now(), source = "manual") {
       if (!model.rideStartedAt || model.ridePausedAt || !["aero", "paused", "action"].includes(model.state) || model.positionAeroActive) return false;
       model.positionAeroActive = true;
       model.aeroSegmentStartedAt = timestamp;
+      if (model.cameraEnabled && source === "camera") model.cameraAeroStreakStartedAt = timestamp;
       model.events.push({ type: "aero-position-start", source, at: rideMs() / 1000 });
       return true;
     }
 
     function pauseAeroPosition(timestamp = now(), source = "manual") {
       if (!model.positionAeroActive) return false;
+      const completedCameraStreakMs = cameraAeroStreakMs(timestamp);
+      if (completedCameraStreakMs > 0) {
+        model.lastCameraAeroStreakMs = completedCameraStreakMs;
+        model.bestCameraAeroStreakMs = Math.max(Number(model.bestCameraAeroStreakMs) || 0, completedCameraStreakMs);
+      }
       if (model.aeroSegmentStartedAt) model.accumulatedAeroMs += Math.max(0, timestamp - model.aeroSegmentStartedAt);
       model.positionAeroActive = false;
       model.aeroSegmentStartedAt = 0;
+      model.cameraAeroStreakStartedAt = 0;
       model.events.push({ type: "aero-position-stop", source, at: rideMs() / 1000 });
       return true;
     }
@@ -942,6 +1003,7 @@
           rideElapsedMs: rideMs(),
           totalAeroMs: totalAeroMs(),
           currentIntervalMs: currentIntervalMs(),
+          currentCameraAeroStreakMs: cameraAeroStreakMs(),
           actionRemainingMs
         }
       };
@@ -969,6 +1031,9 @@
       const elapsedMs = Math.max(0, Number(saved.timing.rideElapsedMs) || 0);
       const aeroMs = Math.max(0, Number(saved.timing.totalAeroMs) || 0);
       const intervalMs = Math.max(0, Number(saved.timing.currentIntervalMs) || 0);
+      const derivedCameraBestMs = getLongestCameraAeroStreak(saved.model.events, elapsedMs / 1000) * 1000;
+      const recoveredCameraStreakMs = Math.max(0, Number(saved.timing.currentCameraAeroStreakMs) || 0);
+      const recoveredCameraBestMs = Math.max(0, Number(saved.model.bestCameraAeroStreakMs) || 0, recoveredCameraStreakMs, derivedCameraBestMs);
       Object.assign(model, saved.model, {
         pipWindow: null,
         state: "ride-paused",
@@ -983,6 +1048,10 @@
         positionAeroActive: false,
         aeroSegmentStartedAt: 0,
         intervalSegmentStartedAt: 0,
+        cameraAeroStreakStartedAt: 0,
+        lastCameraAeroStreakMs: Math.max(0, Number(saved.model.lastCameraAeroStreakMs) || 0, recoveredCameraStreakMs),
+        bestCameraAeroStreakMs: recoveredCameraBestMs,
+        personalBestSec: getPersonalBest(loadHistory()),
         notified: new Set(Array.isArray(saved.model.notified) ? saved.model.notified : []),
         cameraEnabled: false,
         cameraAutoControl: false,
@@ -990,14 +1059,17 @@
         cameraLearningPrompt: null,
         trainerStatus: "disconnected",
         trainerMessage: "Ride recovered. Reconnect the trainer to continue live power and cadence.",
+        heartRateStatus: "disconnected",
+        heartRateMessage: "Ride recovered. Reconnect heart rate to continue live BPM.",
         rideAdjustmentOpen: false,
         rideAdjustmentError: "",
         rideExitConfirmation: null,
-        recoveryNotice: "Ride recovered after the page closed or reloaded. Check the plan, reconnect the trainer if needed, then resume."
+        recoveryNotice: "Ride recovered after the page closed or reloaded. Check the plan, reconnect any sensors you were using, then resume."
       });
       model.events ||= [];
       model.events.push({ type: "ride-recovered", at: elapsedMs / 1000, recoveredAtIso: new Date().toISOString() });
       model.trainerSnapshot = pedallingTracker.restore(model.trainerSnapshot, restoredAt);
+      model.heartRateSnapshot = heartRateTracker.restore(model.heartRateSnapshot);
       document.body.classList.remove("camera-preview");
       persistActiveRide(true);
       requestScreenWakeLock();
@@ -1050,7 +1122,6 @@
 
     function currentChallenge() {
       return getLiveChallenge({
-        reminderRows: getReminderRows(),
         intervalRemainingSec: intervalRemainingSec(),
         intervalElapsedSec: currentIntervalMs() / 1000
       });
@@ -1067,13 +1138,16 @@
     }
 
     function personalBestMarkup() {
-      const bestSec = Math.max(model.personalBestSec, model.bestIntervalMs / 1000);
-      const currentSec = currentIntervalMs() / 1000;
-      if (!bestSec) return `<span>FIRST TARGET</span><strong>${formatTime(model.currentIntervalTargetSec)}</strong>`;
-      const difference = bestSec - currentSec;
-      return difference > 0
-        ? `<span>BEST ${formatTime(bestSec)}</span><strong>${formatTime(difference)} TO MATCH</strong>`
-        : `<span>PERSONAL BEST</span><strong>+${formatTime(Math.abs(difference))}</strong>`;
+      if (!model.cameraEnabled) return `<span>BEST CAMERA AERO</span><strong>CAMERA OFF</strong>`;
+      const previousBestSec = Math.max(0, Number(model.personalBestSec) || 0, (Number(model.bestCameraAeroStreakMs) || 0) / 1000);
+      const currentSec = cameraAeroStreakMs() / 1000;
+      if (!currentSec) return previousBestSec
+        ? `<span>BEST CAMERA AERO</span><strong>${formatTime(previousBestSec)}</strong>`
+        : `<span>CAMERA AERO STREAK</span><strong>WAITING</strong>`;
+      if (!previousBestSec) return `<span>CAMERA AERO STREAK</span><strong>${formatTime(currentSec)}</strong>`;
+      const difference = previousBestSec - currentSec;
+      if (difference > 0) return `<span>BEST CAMERA AERO ${formatTime(previousBestSec)}</span><strong>${formatTime(difference)} TO MATCH</strong>`;
+      return `<span>NEW CAMERA AERO BEST</span><strong>+${formatTime(Math.abs(difference))}</strong>`;
     }
 
     function planStatusMarkup() {
@@ -1188,6 +1262,11 @@
               <button class="trainer-connect-button${model.trainerStatus === "connected" ? " connected" : ""}" id="${model.trainerStatus === "connected" ? "disconnect-trainer" : "connect-trainer"}" type="button" ${model.trainerStatus === "connecting" || !trainer.supported ? "disabled" : ""}>${!trainer.supported ? "NOT SUPPORTED" : model.trainerStatus === "connecting" ? "CONNECTING..." : model.trainerStatus === "connected" ? "DISCONNECT" : "CONNECT TRAINER"}</button>
             </div><p class="trainer-support-note">Start pedalling to wake the trainer before connecting. TiA reads measurements only and does not change resistance.</p>
           </div>
+          <div class="setup-section setup-span"><p class="section-title"><span class="section-icon" aria-hidden="true">&#9829;</span>Heart rate <span class="section-optional">Optional</span></p>
+            <div class="trainer-connect"><div><strong>${model.heartRateStatus === "connected" ? model.heartRateDeviceName || "Heart-rate monitor" : "Bluetooth HR monitor"}</strong><span id="heart-rate-setup-status">${model.heartRateMessage}</span></div>
+              <button class="trainer-connect-button${model.heartRateStatus === "connected" ? " connected" : ""}" id="${model.heartRateStatus === "connected" ? "disconnect-heart-rate" : "connect-heart-rate"}" type="button" ${["connecting", "reconnecting"].includes(model.heartRateStatus) || !heartRate.supported ? "disabled" : ""}>${!heartRate.supported ? "NOT SUPPORTED" : ["connecting", "reconnecting"].includes(model.heartRateStatus) ? "CONNECTING..." : model.heartRateStatus === "connected" ? "DISCONNECT" : heartRate.canReconnect ? "RECONNECT HR" : "CONNECT HR"}</button>
+            </div><p class="trainer-support-note">Use a standard Bluetooth heart-rate strap, or start heart-rate broadcast on your watch before connecting.</p>
+          </div>
           <div class="setup-section setup-span"><p class="section-title"><span class="section-icon" aria-hidden="true">&#9678;</span>Camera <span class="section-optional">Optional</span></p>
             <label class="camera-choice" for="camera-enabled"><input id="camera-enabled" type="checkbox"><span><strong>Use position detection</strong><span>Compare Aero and upright positions locally. No video is uploaded or saved.</span></span></label>
             <div class="camera-options" id="camera-options" hidden>
@@ -1293,7 +1372,8 @@
       const pip = "documentPictureInPicture" in window ? '<button class="pip-mini" id="pip-ride" type="button">PiP</button>' : "";
       const dashboardTarget = model.dashboardStyle === "immersive" ? "PRACTICAL" : "IMMERSIVE";
       const reconnect = trainerReconnectMarkup({ compact: true });
-      return `<div class="ride-control-cluster">${cameraBadge}<div class="ride-utility-controls">${autoToggle}${reconnect}${pip}<button class="ride-utility-button" id="switch-dashboard" type="button" aria-label="Switch to ${dashboardTarget.toLowerCase()} dashboard">${dashboardTarget}</button><button class="ride-utility-button" id="adjust-ride" type="button">ADJUST</button><button class="ride-pause-button" id="pause-ride" type="button" aria-label="Pause the entire ride" aria-keyshortcuts="P">PAUSE</button></div></div>`;
+      const heartRateControl = heartRateControlMarkup({ compact: true });
+      return `<div class="ride-control-cluster">${cameraBadge}<div class="ride-utility-controls">${autoToggle}${reconnect}${heartRateControl}${pip}<button class="ride-utility-button" id="switch-dashboard" type="button" aria-label="Switch to ${dashboardTarget.toLowerCase()} dashboard">${dashboardTarget}</button><button class="ride-utility-button" id="adjust-ride" type="button">ADJUST</button><button class="ride-pause-button" id="pause-ride" type="button" aria-label="Pause the entire ride" aria-keyshortcuts="P">PAUSE</button></div></div>`;
     }
 
     function trainerReconnectMarkup({ compact = false } = {}) {
@@ -1302,6 +1382,30 @@
       const label = reconnecting ? "RECONNECTING..." : compact ? "RECONNECT TRAINER" : "RECONNECT TRAINER DATA";
       const className = compact ? "ride-utility-button trainer-reconnect-utility" : "trainer-reconnect-action";
       return `<button class="${className}" data-reconnect-trainer type="button"${reconnecting ? " disabled" : ""}>${label}</button>`;
+    }
+
+    function heartRateControlMarkup({ compact = false } = {}) {
+      if (heartRate.connected || !heartRate.supported) return "";
+      const busy = ["connecting", "reconnecting"].includes(model.heartRateStatus);
+      const reconnecting = heartRate.canReconnect;
+      const label = busy ? "CONNECTING HR..." : reconnecting ? "RECONNECT HR" : "CONNECT HR";
+      const className = compact ? "ride-utility-button heart-rate-utility" : "trainer-reconnect-action heart-rate-utility";
+      return `<button class="${className}" data-connect-heart-rate type="button"${busy ? " disabled" : ""}>${label}</button>`;
+    }
+
+    function trainingSensorState() {
+      const connected = Number(model.trainerRideEnabled && trainer.connected) + Number(model.heartRateRideEnabled && heartRate.connected);
+      if (connected === 2) return "2 sensors live";
+      if (connected === 1) return "1 sensor live";
+      return "Not connected";
+    }
+
+    function trainingSensorNote() {
+      const notes = [];
+      if (model.trainerRideEnabled && !trainer.connected) notes.push("Trainer data paused; recorded stopped-pedalling totals are preserved.");
+      if (model.heartRateRideEnabled && !heartRate.connected) notes.push("Heart-rate data paused; recorded average and maximum BPM are preserved.");
+      if (!model.heartRateRideEnabled && !heartRate.connected) notes.push("Connect HR to add live, average and maximum BPM to this ride.");
+      return notes.join(" ");
     }
 
     function trainerSparklinePoints(values = []) {
@@ -1328,13 +1432,22 @@
     }
 
     function trainerMetricsMarkup() {
-      if (!model.trainerRideEnabled && model.dashboardStyle !== "immersive") return "";
+      const immersive = model.dashboardStyle === "immersive";
+      const showTrainer = model.trainerRideEnabled || immersive;
+      const showHeartRate = model.heartRateRideEnabled || immersive;
+      if (!showTrainer && !showHeartRate) return "";
       const data = model.trainerSnapshot;
-      const disconnected = !model.trainerRideEnabled || !trainer.connected;
-      return `<div class="trainer-metrics${data.isStopped ? " is-stopped" : ""}${disconnected ? " is-disconnected" : ""}" id="trainer-metrics" aria-label="Smart trainer measurements">
-        <span class="trainer-metric-row"><em>Power</em><strong id="trainer-watts">${Number.isFinite(data.watts) ? `${Math.round(data.watts)} W` : "-- W"}</strong><svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline id="trainer-watts-spark" points="${trainerSparklinePoints(model.trainerSeries?.watts)}"/></svg></span>
-        <span class="trainer-metric-row"><em>Cadence</em><strong id="trainer-cadence">${Number.isFinite(data.cadence) ? `${Math.round(data.cadence)} RPM` : "-- RPM"}</strong><svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline id="trainer-cadence-spark" points="${trainerSparklinePoints(model.trainerSeries?.cadence)}"/></svg></span>
-        <span class="trainer-metric-row stopped-row"><em>Stopped pedalling</em><strong id="trainer-stopped-time">${formatTime(data.stoppedMs / 1000)}</strong><small><b id="trainer-stops">${data.stopCount}</b> ${data.stopCount === 1 ? "STOP" : "STOPS"}</small></span>
+      const heart = model.heartRateSnapshot;
+      const trainerOffline = !model.trainerRideEnabled || !trainer.connected;
+      const heartRateOffline = !model.heartRateRideEnabled || !heartRate.connected;
+      const noLiveSensors = trainerOffline && heartRateOffline;
+      const trainerRows = showTrainer ? `
+        <span class="trainer-metric-row${trainerOffline ? " sensor-offline" : ""}"><em>Power</em><strong id="trainer-watts">${Number.isFinite(data.watts) ? `${Math.round(data.watts)} W` : "-- W"}</strong><svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline id="trainer-watts-spark" points="${trainerSparklinePoints(model.trainerSeries?.watts)}"/></svg></span>
+        <span class="trainer-metric-row${trainerOffline ? " sensor-offline" : ""}"><em>Cadence</em><strong id="trainer-cadence">${Number.isFinite(data.cadence) ? `${Math.round(data.cadence)} RPM` : "-- RPM"}</strong><svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline id="trainer-cadence-spark" points="${trainerSparklinePoints(model.trainerSeries?.cadence)}"/></svg></span>` : "";
+      const heartRateRow = showHeartRate ? `<span class="trainer-metric-row heart-rate-row${heartRateOffline ? " sensor-offline" : ""}"><em>Heart rate</em><strong id="heart-rate-bpm">${Number.isFinite(heart.bpm) ? `${Math.round(heart.bpm)} BPM` : "-- BPM"}</strong><small id="heart-rate-summary">AVG ${Number.isFinite(heart.averageBpm) ? Math.round(heart.averageBpm) : "--"}<br>MAX ${Number.isFinite(heart.maxBpm) ? Math.round(heart.maxBpm) : "--"}</small></span>` : "";
+      const stoppedRow = showTrainer ? `<span class="trainer-metric-row stopped-row${trainerOffline ? " sensor-offline" : ""}"><em>Stopped pedalling</em><strong id="trainer-stopped-time">${formatTime(data.stoppedMs / 1000)}</strong><small><b id="trainer-stops">${data.stopCount}</b> ${data.stopCount === 1 ? "STOP" : "STOPS"}</small></span>` : "";
+      return `<div class="trainer-metrics${data.isStopped ? " is-stopped" : ""}${noLiveSensors ? " is-disconnected" : ""}${showHeartRate && !showTrainer ? " heart-rate-only" : ""}" id="trainer-metrics" aria-label="Training data measurements">
+        ${trainerRows}${heartRateRow}${stoppedRow}
       </div>`;
     }
 
@@ -1343,44 +1456,48 @@
       const due = getDueActions();
       const challenge = currentChallenge();
       const positionTimes = getPositionTimes(rideMs(), totalAeroMs());
+      const targetMet = model.intervalComplete && !model.rideTargetReached;
+      const cameraStreakActive = model.cameraEnabled && model.positionAeroActive && cameraAeroStreakMs() > 0;
       const title = model.rideTargetReached
         ? "RIDE COMPLETE"
-        : model.intervalComplete
-          ? "BREAK TIME"
+        : targetMet
+          ? model.cameraEnabled
+            ? cameraStreakActive ? "TARGET MET • CAMERA AERO CONTINUES" : "TARGET MET • AERO STREAK SAVED"
+            : "TARGET MET • KEEP RIDING"
           : `CURRENT CHALLENGE • ${challenge.label}`;
       const subtitle = model.rideTargetReached
         ? "TAP TO FINISH & REVIEW"
-        : model.intervalComplete
-          ? "TAP TO RECOVER"
+        : targetMet
+          ? cameraStreakActive
+            ? "STAY AERO — THIS FULL CAMERA STREAK COUNTS TOWARD YOUR BEST"
+            : model.cameraAutoControl
+              ? "NEXT INTERVAL STARTS WHEN THE CAMERA SEES AERO"
+              : "START THE NEXT INTERVAL WHEN YOU ARE READY"
           : due.length
             ? `${ACTION_LABELS[due[0].type].toUpperCase()} DUE • TAP TO START BREAK`
             : "";
-      const headline = formatHeroTime(model.intervalComplete || model.rideTargetReached ? 0 : challenge.remainingSec);
+      const completedEffortSec = model.cameraEnabled ? latestCameraAeroStreakMs() / 1000 : currentIntervalMs() / 1000;
+      const headline = formatHeroTime(model.rideTargetReached ? 0 : targetMet ? completedEffortSec : challenge.remainingSec);
       const advanceLabel = model.rideTargetReached
         ? "Finish and review"
-        : model.intervalComplete
-          ? "Start recovery"
-          : due.length
+        : due.length
             ? "Start next due break"
             : paused
-              ? "Resume Aero"
+              ? targetMet ? "Start next Aero interval" : "Resume Aero"
               : "Pause Aero";
-      const personalBestSec = Math.max(model.personalBestSec, model.bestIntervalMs / 1000);
-      const challengeProgress = personalBestSec
-        ? Math.min(100, currentIntervalMs() / 10 / personalBestSec)
-        : Math.min(100, currentIntervalMs() / 10 / Math.max(1, model.currentIntervalTargetSec));
+      const challengeProgress = Math.min(100, currentIntervalMs() / 10 / Math.max(1, model.currentIntervalTargetSec));
       const trainerMarkup = trainerMetricsMarkup();
-      return `<section class="screen active-ride aero ${immersive ? "immersive" : "practical"}${model.intervalComplete || model.rideTargetReached ? " alert" : ""}" data-dashboard-style="${model.dashboardStyle || "practical"}" data-advance="true" role="region" aria-label="Aero training dashboard. Click the background to advance.">
+      return `<section class="screen active-ride aero ${immersive ? "immersive" : "practical"}${model.rideTargetReached ? " alert" : ""}" data-dashboard-style="${model.dashboardStyle || "practical"}" data-advance="true" role="region" aria-label="Aero training dashboard. Click the background to advance.">
         ${progressMarkup()}<div class="ride-phase-header">${ridePhasesMarkup()}${rideControlsMarkup()}</div><button class="screen-advance-control" type="button" aria-keyshortcuts="Enter Space">${advanceLabel}</button><div class="aero-dashboard">
           <section class="aero-hero" aria-label="Current Aero interval">
             <button class="hero-tap-target" id="aero-hero-action" type="button" aria-label="${advanceLabel}" aria-keyshortcuts="Enter Space"><span class="visually-hidden">${advanceLabel}</span></button>
             <span class="aero-interval">Interval ${model.intervalNumber} • ${formatTime(model.currentIntervalTargetSec)} target</span>
-            <h1 class="aero-title">${title}</h1><div class="aero-clock"><span class="timer${model.intervalComplete || model.rideTargetReached ? " message" : ""}" id="aero-timer">${headline}</span><span class="aero-percentage" id="aero-percentage">${aeroAdherencePercent()}% AERO</span></div>
+            <h1 class="aero-title">${title}</h1><div class="aero-clock"><span class="timer${model.rideTargetReached ? " message" : ""}" id="aero-timer">${headline}</span><span class="aero-percentage" id="aero-percentage">${aeroAdherencePercent()}% AERO</span></div>
             <div class="challenge-progress" aria-hidden="true"><div class="challenge-progress-fill" id="challenge-progress-fill" style="width:${challengeProgress}%"></div></div>
             <p class="challenge-best" id="challenge-best">${personalBestMarkup()}</p>
             ${subtitle ? `<p class="aero-subtitle">${subtitle}</p>` : ""}
             <div class="hero-metrics" aria-label="Ride position times"><span>Overall <strong id="overall-time">${formatTime(positionTimes.overallMs / 1000)}</strong></span><span>Aero <strong id="total-aero">${formatTime(positionTimes.aeroMs / 1000)}</strong></span><span>Upright <strong id="upright-time">${formatTime(positionTimes.uprightMs / 1000)}</strong></span></div>${immersive ? "" : trainerMarkup}
-          </section>${immersive ? `<section class="immersive-trainer-panel" aria-label="Smart trainer data"><div class="immersive-trainer-head"><p class="immersive-trainer-title">Smart trainer data</p><span class="immersive-trainer-state${trainer.connected ? "" : " offline"}">${trainer.connected ? "Live" : "Not connected"}</span></div>${trainerMarkup}${trainer.connected ? "" : `<p class="immersive-trainer-note">${model.trainerRideEnabled ? "Recorded stopped-pedalling totals are preserved. Reconnect to resume live power, cadence and accountability timing." : "Connect the trainer from the main menu before a ride to track power, cadence and stopped-pedalling time."}</p>${trainerReconnectMarkup()}`}</section>` : ""}<div class="immersive-road" aria-hidden="true"><span></span><span></span><span></span></div>${scheduleMarkup()}${planStatusMarkup()}
+          </section>${immersive ? `<section class="immersive-trainer-panel" aria-label="Training sensor data"><div class="immersive-trainer-head"><p class="immersive-trainer-title">Training data</p><span class="immersive-trainer-state${trainingSensorState() === "Not connected" ? " offline" : ""}">${trainingSensorState()}</span></div>${trainerMarkup}${trainingSensorNote() ? `<p class="immersive-trainer-note">${trainingSensorNote()}</p>` : ""}${trainerReconnectMarkup()}${heartRateControlMarkup()}</section>` : ""}<div class="immersive-road" aria-hidden="true"><span></span><span></span><span></span></div>${scheduleMarkup()}${planStatusMarkup()}
         </div>${cameraLearningPromptMarkup()}${actionFeedbackMarkup()}
       </section>`;
     }
@@ -1418,6 +1535,7 @@
           ${model.recoveryNotice ? `<p class="recovery-note">${model.recoveryNotice}</p>` : ""}
           <p class="ride-pause-copy">Ride time, reminders and your Aero interval are frozen until you resume.</p>
           ${trainerReconnectMarkup()}
+          ${heartRateControlMarkup()}
           ${model.rideAdjustmentOpen ? rideAdjustmentMarkup() : `<button class="ride-adjust-action" id="open-ride-adjust" type="button">ADJUST RIDE TIMERS</button>`}
           <button class="ride-adjust-action" id="switch-dashboard-paused" type="button">USE ${model.dashboardStyle === "immersive" ? "PRACTICAL" : "IMMERSIVE"} UI</button>
           <button class="ride-resume-action" id="resume-ride" type="button" aria-keyshortcuts="P">RESUME RIDE</button>
@@ -1488,6 +1606,9 @@
 
     function reviewMarkup() {
       const s = model.summary;
+      const reviewedBestCameraAeroSec = Number.isFinite(Number(s.bestAeroStreakSeconds))
+        ? Number(s.bestAeroStreakSeconds)
+        : getLongestCameraAeroStreak(s.events, s.rideSeconds);
       const historicCounts = s.legacy?.counts || {};
       const waterCount = Number.isFinite(Number(s.waterCount)) ? Number(s.waterCount) : Number(historicCounts.water || 0);
       const fuelCount = Number.isFinite(Number(s.fuelCount)) ? Number(s.fuelCount) : Number(historicCounts.fuel || 0);
@@ -1503,6 +1624,9 @@
         <p><strong>Stops:</strong> ${s.trainer.stopCount || 0} • <strong>Total stopped:</strong> ${formatTime((s.trainer.stoppedMs || 0) / 1000)} • <strong>Longest:</strong> ${formatTime((s.trainer.longestStopMs || 0) / 1000)}</p>
         <p><strong>Average power:</strong> ${Number.isFinite(s.trainer.averageWatts) ? `${Math.round(s.trainer.averageWatts)} W` : "Not available"} • <strong>Average cadence:</strong> ${Number.isFinite(s.trainer.averageCadence) ? `${Math.round(s.trainer.averageCadence)} RPM` : "Not available"}</p>
         <p>A stop is counted after three seconds without a completed pedal revolution.</p></div>` : "";
+      const heartRateReview = s.heartRate?.enabled ? `<div class="camera-review"><h2>Heart rate • ${s.heartRate.deviceName || "Heart-rate monitor"}</h2>
+        <p><strong>Average:</strong> ${Number.isFinite(s.heartRate.averageBpm) ? `${Math.round(s.heartRate.averageBpm)} BPM` : "Not available"} • <strong>Maximum:</strong> ${Number.isFinite(s.heartRate.maxBpm) ? `${Math.round(s.heartRate.maxBpm)} BPM` : "Not available"}</p>
+        <p>Based on ${Number(s.heartRate.sampleCount) || 0} live Bluetooth heart-rate samples recorded while the ride was running.</p></div>` : "";
       const observations = s.coachingObservations || [];
       const coaching = observations.length
         ? `<div class="coaching-box"><h2>Coaching summary • ${s.mode || "fixed"} mode</h2>${observations.map(text => `<p>${text}</p>`).join("")}<p>These are patterns in recorded data, not medical advice or proof of cause.</p></div>`
@@ -1512,13 +1636,13 @@
           <div class="review-card"><strong>${formatTime(s.rideSeconds)}</strong><span>Total ride</span></div>
           <div class="review-card"><strong>${formatTime(s.aeroSeconds)}</strong><span>Total Aero</span></div>
           <div class="review-card"><strong>${s.aeroPercent}%</strong><span>Ride in Aero</span></div>
-          <div class="review-card"><strong>${formatTime(s.bestIntervalSeconds)}</strong><span>Best interval</span></div>
+          <div class="review-card"><strong>${formatTime(reviewedBestCameraAeroSec)}</strong><span>Best camera Aero</span></div>
           <div class="review-card"><strong>${s.completedIntervals}</strong><span>Intervals hit</span></div>
           <div class="review-card"><strong>${waterCount} / ${fuelCount} / ${stretchCount}</strong><span>Water / Fuel / Stretch</span></div>
         </div>
         ${model.historySaveError ? `<div class="coaching-box"><p>${model.historySaveError}</p></div>` : ""}${coaching}${reviewReasonEditorMarkup(s)}
         ${reviewActionSection(s, "fuel")}${reviewActionSection(s, "water")}${reviewActionSection(s, "stretch")}
-        ${trainerReview}${cameraReview}
+        ${trainerReview}${heartRateReview}${cameraReview}
         <div class="interval-list"><h2>Aero intervals</h2>${intervalLines}</div>
         <div class="setup-actions"><button class="action secondary" id="view-history" type="button">VIEW RIDE HISTORY</button><button class="action" id="new-ride" type="button">START ANOTHER RIDE</button></div>
       </section>`;
@@ -1568,9 +1692,12 @@
       doc.getElementById("switch-dashboard")?.addEventListener("click", event => { event.stopPropagation(); switchDashboardStyle(); });
       doc.getElementById("switch-dashboard-paused")?.addEventListener("click", event => { event.stopPropagation(); switchDashboardStyle(); });
       doc.querySelectorAll("[data-reconnect-trainer]").forEach(button => button.addEventListener("click", async event => { event.stopPropagation(); await reconnectTrainer(); }));
+      doc.querySelectorAll("[data-connect-heart-rate]").forEach(button => button.addEventListener("click", async event => { event.stopPropagation(); await connectHeartRate({ reuseDevice: heartRate.canReconnect }); }));
       doc.getElementById("camera-auto-toggle")?.addEventListener("click", event => { event.stopPropagation(); toggleCameraAutoControl(); });
       doc.getElementById("connect-trainer")?.addEventListener("click", async event => { event.stopPropagation(); await connectTrainer(); });
       doc.getElementById("disconnect-trainer")?.addEventListener("click", event => { event.stopPropagation(); disconnectTrainer(); });
+      doc.getElementById("connect-heart-rate")?.addEventListener("click", async event => { event.stopPropagation(); await connectHeartRate({ reuseDevice: heartRate.canReconnect }); });
+      doc.getElementById("disconnect-heart-rate")?.addEventListener("click", event => { event.stopPropagation(); disconnectHeartRate(); });
       doc.querySelectorAll("[data-camera-learning-answer]").forEach(button => button.addEventListener("click", event => {
         event.stopPropagation();
         handleCameraLearningResponse(button.dataset.cameraLearningAnswer === "yes");
@@ -1833,15 +1960,7 @@
         render();
       } else if (action === "resume") {
         model.cameraPauseReason = "";
-        if (model.intervalComplete) {
-          model.state = "aero";
-          model.intervalSegmentStartedAt = 0;
-          startAeroPosition(now(), "camera");
-          model.events.push({ type: "camera-auto-position-resume", at: rideMs() / 1000, interval: model.intervalNumber });
-          render();
-        } else {
-          startOrResumeAero("camera");
-        }
+        startOrResumeAero("camera");
       }
     }
 
@@ -1909,6 +2028,39 @@
       announce("Trainer disconnected.");
     }
 
+    async function connectHeartRate({ reuseDevice = false } = {}) {
+      const addingMidRide = Boolean(model.rideStartedAt && !model.heartRateRideEnabled);
+      if (addingMidRide) {
+        heartRateTracker.reset();
+        model.heartRateSnapshot = heartRateTracker.snapshot();
+      }
+      try {
+        if (reuseDevice) await heartRate.reconnect();
+        else await heartRate.connect();
+        if (model.rideStartedAt) {
+          model.heartRateRideEnabled = true;
+          model.events.push({ type: addingMidRide ? "heart-rate-connected" : "heart-rate-reconnected", at: rideMs() / 1000 });
+          persistActiveRide(true);
+        }
+        render();
+        announce("Heart rate connected. Live BPM recording started.");
+      } catch (error) {
+        model.heartRateStatus = "error";
+        model.heartRateMessage = error?.message || "Heart-rate monitor could not connect. Restart broadcast and try again.";
+        render();
+        announce(model.heartRateMessage);
+      }
+    }
+
+    function disconnectHeartRate() {
+      heartRate.disconnect();
+      model.heartRateStatus = "disconnected";
+      model.heartRateDeviceName = "";
+      model.heartRateMessage = "Heart-rate monitor disconnected. Restart broadcast before reconnecting.";
+      render();
+      announce("Heart-rate monitor disconnected.");
+    }
+
     function startRide(doc) {
       let values;
       try {
@@ -1926,6 +2078,7 @@
       values.mode = doc.querySelector("[name='ride-mode']:checked")?.value || "fixed";
       values.dashboardStyle = doc.querySelector("[name='dashboard-style']:checked")?.value || "practical";
       values.trainerEnabled = trainer.connected;
+      values.heartRateEnabled = heartRate.connected;
       values.remindersEnabled = values.mode !== "observation" || Boolean(doc.getElementById("observation-reminders")?.checked);
       const savedSettings = loadSettings();
       const selectedIntervals = { water: values.waterEvery, fuel: values.fuelEvery, stretch: values.stretchEvery };
@@ -1978,6 +2131,7 @@
         aeroSegmentStartedAt: cameraEnabled ? 0 : startedAt,
         intervalSegmentStartedAt: autoControl ? 0 : startedAt,
         intervalNumber: 1, intervalComplete: false, intervalRecorded: false, bestIntervalMs: 0,
+        cameraAeroStreakStartedAt: 0, lastCameraAeroStreakMs: 0, bestCameraAeroStreakMs: 0,
         personalBestSec: getPersonalBest(loadHistory()),
         intervals: [], events: [{ type: "ride-start", at: 0 }, { type: "ride-phase-start", phase: 1, name: RIDE_PHASES[0].name, at: 0 }, ...(autoControl ? [{ type: "camera-auto-enabled", at: 0 }] : [])], notified: new Set(),
         rideMode: values.mode, dashboardStyle: values.dashboardStyle, remindersEnabled: values.remindersEnabled, reminders: [], completedActions: [],
@@ -1990,9 +2144,12 @@
          cameraLearningPrompt: null, cameraLearningLastAsked: { aero: -Infinity, upright: -Infinity }, cameraLearningApplying: false,
          trainerRideEnabled: Boolean(values.trainerEnabled),
          trainerSnapshot: { watts: null, cadence: null, stopCount: 0, stoppedMs: 0, longestStopMs: 0, averageWatts: null, averageCadence: null, isStopped: false },
-         trainerSeries: { watts: [], cadence: [] }
+         trainerSeries: { watts: [], cadence: [] },
+         heartRateRideEnabled: Boolean(values.heartRateEnabled),
+         heartRateSnapshot: { bpm: null, averageBpm: null, maxBpm: null, sampleCount: 0 }
       });
       pedallingTracker.reset(startedAt);
+      heartRateTracker.reset();
       document.body.classList.remove("camera-preview");
       if (cameraEnabled) {
         cameraObserver.beginSession();
@@ -2156,6 +2313,7 @@
       model.rideExitConfirmation = null;
       model.ridePausedAt = now();
       if (model.trainerRideEnabled) model.trainerSnapshot = pedallingTracker.pause(model.ridePausedAt);
+      if (model.heartRateRideEnabled) model.heartRateSnapshot = heartRateTracker.pause();
       model.state = "ride-paused";
       model.events.push({ type: "ride-pause", at: rideMs() / 1000, from: pausedFrom });
       persistActiveRide(true);
@@ -2205,7 +2363,11 @@
         model.events.push({ type: "interval-complete", at: rideMs() / 1000, interval: model.intervalNumber });
         model.intervalRecorded = true;
       }
-      beep(); render();
+      beep();
+      announce(model.cameraEnabled
+        ? "Aero target met. Your camera Aero streak is still counting."
+        : "Aero target met. Keep riding or pause when ready.");
+      render();
     }
 
     function startOrResumeAero(source = "manual") {
@@ -2391,12 +2553,10 @@
         if (model.rideTargetReached) { finishRide(); return; }
         const due = getDueActions()[0];
         if (due) startAction(due.type, true, due.id);
-        else if (model.intervalComplete) startAction("stretch", false);
         else { model.state = "paused"; model.events.push({ type: "aero-pause", at: rideMs() / 1000 }); render(); }
       } else if (model.state === "paused") {
         const due = getDueActions()[0];
         if (due) startAction(due.type, true, due.id);
-        else if (model.intervalComplete) startAction("stretch", false);
         else startOrResumeAero();
       } else if (model.state === "action") completeActionAndContinue();
     }
@@ -2419,6 +2579,12 @@
         deviceName: model.trainerDeviceName || "Tacx Bushido Smart",
         ...pedallingTracker.snapshot(now()),
         connectedAtFinish: trainer.connected
+      } : { enabled: false };
+      const heartRateSummary = model.heartRateRideEnabled ? {
+        enabled: true,
+        deviceName: model.heartRateDeviceName || "Heart-rate monitor",
+        ...heartRateTracker.snapshot(),
+        connectedAtFinish: heartRate.connected
       } : { enabled: false };
       if (cameraSummary.enabled) Object.assign(cameraSummary, {
         autoControlUsed: model.cameraAutoEverEnabled,
@@ -2449,9 +2615,11 @@
         reminderStats,
         aeroSeconds: model.accumulatedAeroMs / 1000,
         aeroPercent: rideSeconds ? Math.round(model.accumulatedAeroMs / 10 / rideSeconds) : 0,
-        bestIntervalSeconds: model.bestIntervalMs / 1000, completedIntervals: model.intervals.filter(item => item.success).length,
+        bestIntervalSeconds: model.bestIntervalMs / 1000,
+        bestAeroStreakSeconds: cameraAeroBestMs() / 1000,
+        completedIntervals: model.intervals.filter(item => item.success).length,
         waterCount: count("water"), fuelCount: count("fuel"), stretchCount: count("stretch"),
-        intervals: model.intervals.map(item => ({ ...item })), camera: cameraSummary, trainer: trainerSummary
+        intervals: model.intervals.map(item => ({ ...item })), camera: cameraSummary, trainer: trainerSummary, heartRate: heartRateSummary
       };
       model.summary.coachingObservations = buildCoachingObservations(model.summary, loadHistory());
       model.reviewReasonEditorDismissed = false;
@@ -2552,7 +2720,9 @@
       if (["aero", "paused"].includes(model.state)) {
         const timer = doc.getElementById("aero-timer");
         const challenge = currentChallenge();
-        if (timer && !model.intervalComplete && !model.rideTargetReached) timer.textContent = formatHeroTime(challenge.remainingSec);
+        if (timer && !model.rideTargetReached) timer.textContent = formatHeroTime(model.intervalComplete
+          ? model.cameraEnabled ? latestCameraAeroStreakMs() / 1000 : currentIntervalMs() / 1000
+          : challenge.remainingSec);
         const positionTimes = getPositionTimes(rideMs(), totalAeroMs());
         const overall = doc.getElementById("overall-time");
         if (overall) overall.textContent = formatTime(positionTimes.overallMs / 1000);
@@ -2562,10 +2732,8 @@
         if (upright) upright.textContent = formatTime(positionTimes.uprightMs / 1000);
         const percentage = doc.getElementById("aero-percentage");
         if (percentage) percentage.textContent = `${aeroAdherencePercent()}% AERO`;
-        const personalBestSec = Math.max(model.personalBestSec, model.bestIntervalMs / 1000);
-        const chaseTargetSec = personalBestSec || model.currentIntervalTargetSec;
         const challengeProgress = doc.getElementById("challenge-progress-fill");
-        if (challengeProgress) challengeProgress.style.width = `${Math.min(100, currentIntervalMs() / 10 / Math.max(1, chaseTargetSec))}%`;
+        if (challengeProgress) challengeProgress.style.width = `${Math.min(100, currentIntervalMs() / 10 / Math.max(1, model.currentIntervalTargetSec))}%`;
         const challengeBest = doc.getElementById("challenge-best");
         if (challengeBest) challengeBest.innerHTML = personalBestMarkup();
         getReminderRows().forEach(item => {
@@ -2609,8 +2777,9 @@
     }
 
     function updateTrainerUi(doc) {
-      if (!doc || !model.trainerRideEnabled) return;
+      if (!doc || (!model.trainerRideEnabled && !model.heartRateRideEnabled)) return;
       const data = model.trainerSnapshot;
+      const heart = model.heartRateSnapshot;
       const watts = doc.getElementById("trainer-watts");
       if (watts) watts.textContent = Number.isFinite(data.watts) ? `${Math.round(data.watts)} W` : "-- W";
       const cadence = doc.getElementById("trainer-cadence");
@@ -2623,13 +2792,23 @@
       if (wattsSpark) wattsSpark.setAttribute("points", trainerSparklinePoints(model.trainerSeries?.watts));
       const cadenceSpark = doc.getElementById("trainer-cadence-spark");
       if (cadenceSpark) cadenceSpark.setAttribute("points", trainerSparklinePoints(model.trainerSeries?.cadence));
+      const bpm = doc.getElementById("heart-rate-bpm");
+      if (bpm) bpm.textContent = Number.isFinite(heart.bpm) ? `${Math.round(heart.bpm)} BPM` : "-- BPM";
+      const heartSummary = doc.getElementById("heart-rate-summary");
+      if (heartSummary) heartSummary.innerHTML = `AVG ${Number.isFinite(heart.averageBpm) ? Math.round(heart.averageBpm) : "--"}<br>MAX ${Number.isFinite(heart.maxBpm) ? Math.round(heart.maxBpm) : "--"}`;
       const metrics = doc.getElementById("trainer-metrics");
       metrics?.classList.toggle("is-stopped", Boolean(data.isStopped));
-      metrics?.classList.toggle("is-disconnected", !trainer.connected);
+      const trainerLive = model.trainerRideEnabled && trainer.connected;
+      const heartRateLive = model.heartRateRideEnabled && heartRate.connected;
+      metrics?.classList.toggle("is-disconnected", !trainerLive && !heartRateLive);
+      doc.getElementById("trainer-watts")?.closest(".trainer-metric-row")?.classList.toggle("sensor-offline", !trainerLive);
+      doc.getElementById("trainer-cadence")?.closest(".trainer-metric-row")?.classList.toggle("sensor-offline", !trainerLive);
+      doc.getElementById("trainer-stopped-time")?.closest(".trainer-metric-row")?.classList.toggle("sensor-offline", !trainerLive);
+      bpm?.closest(".trainer-metric-row")?.classList.toggle("sensor-offline", !heartRateLive);
       const state = doc.querySelector(".immersive-trainer-state");
       if (state) {
-        state.textContent = trainer.connected ? "Live" : "Not connected";
-        state.classList.toggle("offline", !trainer.connected);
+        state.textContent = trainingSensorState();
+        state.classList.toggle("offline", !trainerLive && !heartRateLive);
       }
     }
 
@@ -2698,11 +2877,21 @@
       aero: {
         elapsedSeconds: Math.round(totalAeroMs() / 100) / 10,
         intervalRemainingSeconds: Math.round(intervalRemainingSec() * 10) / 10,
-        aeroClockPaused: model.state !== "aero" || model.intervalComplete || model.rideTargetReached
+        intervalTargetMet: model.intervalComplete,
+        aeroClockPaused: model.state !== "aero" || model.intervalComplete || model.rideTargetReached,
+        cameraStreakSeconds: Math.round(cameraAeroStreakMs() / 100) / 10,
+        bestCameraStreakSeconds: Math.round(cameraAeroBestMs() / 100) / 10
       },
       cameraLearningPrompt: model.cameraLearningPrompt && now() < model.cameraLearningPrompt.expiresAt
         ? { detectedState: model.cameraLearningPrompt.detectedState, answers: ["Yes", "No"] }
         : null,
+      trainingData: {
+        trainerConnected: trainer.connected,
+        heartRateConnected: heartRate.connected,
+        heartRateBpm: model.heartRateSnapshot.bpm,
+        averageHeartRateBpm: model.heartRateSnapshot.averageBpm,
+        maximumHeartRateBpm: model.heartRateSnapshot.maxBpm
+      },
       action: model.state === "action" || model.ridePausedFromState === "action" ? {
         type: model.currentAction,
         finished: model.actionFinished,
@@ -2711,9 +2900,9 @@
           : null
       } : null,
       availableControls: model.state === "ride-paused"
-        ? ["Adjust Ride Timers", "Switch Dashboard", "Resume Ride", "End & Review", "Back to Main Menu"]
+        ? [!heartRate.connected ? "Connect HR" : null, "Adjust Ride Timers", "Switch Dashboard", "Resume Ride", "End & Review", "Back to Main Menu"].filter(Boolean)
         : ["aero", "paused", "action"].includes(model.state)
-          ? ["Switch Dashboard", "Adjust Ride", "Pause", "Water", "Fuel", "Stretch"]
+          ? [!heartRate.connected ? "Connect HR" : null, "Switch Dashboard", "Adjust Ride", "Pause", "Water", "Fuel", "Stretch"].filter(Boolean)
           : []
     });
 
