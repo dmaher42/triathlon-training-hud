@@ -156,10 +156,12 @@
     .camera-learning-answer:active { background: #2a313c; }
     .ride-control-cluster { display: contents; }
     .ride-utility-controls { position: absolute; top: 27px; right: 10px; z-index: 18; display: flex; align-items: center; gap: 6px; }
-    .pip-mini, .camera-auto-toggle, .ride-pause-button { min-height: 42px; border-radius: 9px; padding: 6px 9px; font-size: .62rem; font-weight: 1000; cursor: pointer; }
+    .pip-mini, .camera-auto-toggle, .ride-utility-button, .ride-pause-button { min-height: 42px; border-radius: 9px; padding: 6px 9px; font-size: .62rem; font-weight: 1000; cursor: pointer; }
     .pip-mini { min-width: 42px; border: 1px solid #3a424d; background: #11151b; color: #cbd3dc; }
     .camera-auto-toggle { border: 1px solid #607b6d; background: #121915; color: #9eb5a9; }
     .camera-auto-toggle.off { border-color: #a4b2c2; color: #d5deea; }
+    .ride-utility-button { border: 1px solid #4d6e89; background: #142434; color: #d9e9f4; letter-spacing: .04em; }
+    .trainer-reconnect-utility { border-color: #e3a84b; background: #513718; color: #ffe6ad; box-shadow: 0 0 0 2px rgba(255,190,80,.12); }
     .ride-pause-button { min-width: 68px; border: 1px solid #806f54; background: #282218; color: #d3c19e; letter-spacing: .06em; }
     .camera-review { width: min(100%, 420px); margin: 0 0 12px; padding: 10px; border: 1px solid #285b4a; border-radius: 12px; background: #09231d; text-align: left; }
     .camera-review h2 { margin: 0 0 7px; color: #6dffad; font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; }
@@ -229,7 +231,7 @@
     .aero .ride-control-cluster { display: flex; align-items: stretch; gap: 8px; }
     .aero .ride-control-cluster .camera-badge { position: static; display: flex; max-width: 128px; align-items: center; border-radius: 12px; padding-inline: 9px; }
     .aero .ride-utility-controls { position: static; align-items: stretch; }
-    .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { min-height: 58px; border-radius: 12px; }
+    .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-utility-button, .aero .ride-pause-button { min-height: 58px; border-radius: 12px; }
     .aero-dashboard { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(390px, 1.55fr) minmax(180px, .7fr); grid-template-rows: minmax(245px, 1fr) minmax(145px, .54fr) auto auto; gap: clamp(8px, 1.5vw, 14px); width: min(100%, 1180px); height: min(100%, 800px); min-height: 0; margin: 0 auto; }
     .aero-hero { position: relative; grid-column: 2; grid-row: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(12px, 2.6vh, 22px); border: 1px solid #526c80; border-radius: clamp(18px, 3vmin, 24px); background: rgba(17,25,33,.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
     .aero-hero::before { content: ""; position: absolute; inset: 10px; border: 1px solid rgba(124,163,190,.1); border-radius: 15px; pointer-events: none; }
@@ -304,7 +306,7 @@
     .immersive .ride-phase-header { position: relative; z-index: 5; width: min(92%, 1120px); margin-top: 15px; }
     .immersive .ride-phase-strip { border-color: rgba(130,169,195,.48); background: rgba(5,14,22,.62); backdrop-filter: blur(13px); -webkit-backdrop-filter: blur(13px); }
     .immersive .ride-phase.current { background: rgba(69,112,142,.74); }
-    .immersive .pip-mini, .immersive .camera-auto-toggle, .immersive .ride-pause-button, .immersive .camera-badge { background: rgba(6,15,23,.7); backdrop-filter: blur(13px); -webkit-backdrop-filter: blur(13px); }
+    .immersive .pip-mini, .immersive .camera-auto-toggle, .immersive .ride-utility-button, .immersive .ride-pause-button, .immersive .camera-badge { background: rgba(13,39,55,.86); backdrop-filter: blur(13px); -webkit-backdrop-filter: blur(13px); }
     .immersive .aero-dashboard { grid-template-columns: minmax(205px, .62fr) minmax(450px, 1.7fr) minmax(220px, .66fr); grid-template-rows: minmax(250px, .78fr) minmax(190px, .54fr) auto auto; width: min(94%, 1160px); }
     .immersive .aero-dashboard > * { position: relative; z-index: 2; }
     .immersive .aero-hero { grid-column: 2; grid-row: 1; border-color: rgba(132,180,209,.62); background: rgba(4,14,23,.53); box-shadow: inset 0 0 36px rgba(93,155,191,.08); }
@@ -356,13 +358,13 @@
     .immersive .immersive-road span:nth-child(3) { right: 25%; transform: rotate(-8deg); transform-origin: top; }
     .immersive .ride-plan-status { align-self: center; justify-self: center; border: 1px solid rgba(111,153,179,.35); border-radius: 999px; padding: 3px 12px; background: rgba(3,12,19,.58); backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px); }
     .immersive-trainer-panel { display: none; }
-    .aero.immersive { background-image: linear-gradient(180deg, rgba(2,8,13,.48), rgba(2,8,13,.1) 42%, rgba(2,7,11,.34)), url("%BASE_URL%assets/immersive-training-room.webp"); background-position: center 58%; }
-    .aero.immersive::before { background: linear-gradient(90deg, rgba(2,8,13,.58), rgba(2,8,13,.03) 30% 68%, rgba(2,8,13,.62)), linear-gradient(180deg, rgba(2,7,11,.25), transparent 48%, rgba(2,7,11,.3)); }
-    .immersive .ride-phase-header { display: flex; min-height: 46px; align-items: center; justify-content: flex-end; margin-top: 10px; }
+    .aero.immersive { background-color: #173349; background-image: linear-gradient(180deg, rgba(8,24,35,.08), rgba(38,83,107,.04) 42%, rgba(4,18,27,.14)), url("%BASE_URL%assets/immersive-training-room.webp"); background-position: center 58%; }
+    .aero.immersive::before { background: linear-gradient(90deg, rgba(14,37,53,.2), rgba(74,139,170,.08) 30% 68%, rgba(14,37,53,.22)), linear-gradient(180deg, rgba(90,157,187,.12), transparent 55%, rgba(8,28,42,.15)); }
+    .immersive .ride-phase-header { display: flex; width: min(calc(100vw - 28px), 1600px); min-height: 46px; align-items: center; justify-content: flex-end; margin-top: 10px; }
     .immersive .ride-phase-header::before { content: "RIDE DASHBOARD"; position: absolute; left: 50%; color: rgba(223,233,241,.78); font-size: .7rem; font-weight: 900; letter-spacing: .18em; transform: translateX(-50%); }
     .immersive .ride-phase-strip { display: none; }
-    .immersive .aero-dashboard { grid-template-columns: minmax(205px, .64fr) minmax(450px, 1.72fr) minmax(220px, .68fr); grid-template-rows: minmax(248px, .78fr) minmax(190px, .58fr) auto; gap: clamp(10px, 1.35vw, 15px); }
-    .immersive .aero-hero { justify-content: center; padding: 15px 18px 13px; border-radius: 20px; background: rgba(6,16,24,.62); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+    .immersive .aero-dashboard { grid-template-columns: minmax(190px, .72fr) minmax(430px, 1.8fr) minmax(200px, .76fr); grid-template-rows: minmax(248px, .78fr) minmax(205px, .62fr) auto; width: min(calc(100vw - 28px), 1600px); gap: clamp(10px, 1.35vw, 18px); }
+    .immersive .aero-hero { justify-content: center; padding: 15px 18px 13px; border-color: rgba(168,218,241,.78); border-radius: 20px; background: rgba(19,45,61,.82); box-shadow: 0 12px 30px rgba(1,10,16,.2), inset 0 0 38px rgba(141,207,238,.08); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
     .immersive .aero-interval { position: static; order: -3; align-self: center; margin: 8px 0 2px; font-size: clamp(.48rem, 1.02vmin, .58rem); }
     .immersive .aero-title { order: -2; max-width: 100%; margin: 0 0 5px; color: #9cb6c7; font-size: clamp(.58rem, 1.2vmin, .7rem); white-space: normal; }
     .immersive .aero-clock { order: -1; }
@@ -373,23 +375,30 @@
     .immersive .hero-metrics { order: -4; width: min(98%, 720px); margin: 0; border-color: rgba(117,166,194,.66); border-radius: 12px; background: rgba(3,12,19,.8); }
     .immersive .hero-metrics span { padding: 8px 10px; color: #8197a7; font-size: clamp(.48rem, 1.12vmin, .59rem); }
     .immersive .hero-metrics strong { color: #edf5f8; font-size: clamp(1.25rem, 3.1vmin, 1.7rem); }
-    .immersive .immersive-trainer-panel { grid-column: 2; grid-row: 2; z-index: 3; display: flex; width: min(74%, 430px); align-self: center; justify-self: center; flex-direction: column; gap: 4px; border: 1px solid rgba(117,166,194,.5); border-radius: 17px; padding: 10px 15px 12px; background: rgba(6,17,25,.66); box-shadow: inset 0 0 26px rgba(83,142,177,.06); backdrop-filter: blur(17px); -webkit-backdrop-filter: blur(17px); }
-    .immersive-trainer-title { margin: 0; color: #8199aa; font-size: .52rem; font-weight: 950; letter-spacing: .14em; text-transform: uppercase; }
+    .immersive .immersive-trainer-panel { grid-column: 2; grid-row: 2; z-index: 3; display: flex; width: min(96%, 760px); align-self: center; justify-self: center; flex-direction: column; gap: 7px; border: 1px solid rgba(168,218,241,.7); border-radius: 17px; padding: 12px 17px 14px; background: rgba(18,43,58,.86); box-shadow: 0 10px 26px rgba(1,10,16,.22), inset 0 0 26px rgba(135,198,228,.08); backdrop-filter: blur(17px); -webkit-backdrop-filter: blur(17px); }
+    .immersive-trainer-title { margin: 0; color: #bad1df; font-size: .62rem; font-weight: 950; letter-spacing: .14em; text-transform: uppercase; }
     .immersive-trainer-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .immersive-trainer-state { border: 1px solid rgba(139,171,187,.32); border-radius: 999px; padding: 3px 7px; color: #87aa9a; font-size: .43rem; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
     .immersive-trainer-state.offline { color: #8d9ba6; }
     .immersive-trainer-note { margin: 3px 0 0; color: #7f919d; font-size: .48rem; line-height: 1.3; text-align: center; }
-    .immersive .immersive-trainer-panel .trainer-metrics { grid-template-columns: 1fr; width: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; }
-    .immersive .immersive-trainer-panel .trainer-metric-row { grid-template-columns: minmax(100px, 1fr) auto 110px; align-items: center; gap: 10px; border-right: 0; border-bottom: 1px solid rgba(117,166,194,.18); padding: 6px 0; color: #8ea0ad; }
-    .immersive .immersive-trainer-panel .trainer-metric-row:last-child { border-bottom: 0; }
-    .immersive .immersive-trainer-panel .trainer-metric-row strong { color: #e3edf3; font-size: clamp(.86rem, 2vmin, 1.08rem); }
-    .immersive .immersive-trainer-panel .trainer-metric-row svg { display: block; width: 110px; height: 27px; }
+    .trainer-reconnect-action { min-height: 48px; border: 1px solid #f0b654; border-radius: 10px; padding: 9px 14px; background: #69491d; color: #fff0c8; font-size: .72rem; font-weight: 1000; letter-spacing: .07em; cursor: pointer; }
+    .trainer-reconnect-action:disabled, .trainer-reconnect-utility:disabled { cursor: wait; opacity: .72; }
+    .immersive .immersive-trainer-panel .trainer-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; }
+    .immersive .immersive-trainer-panel .trainer-metric-row { grid-template-columns: minmax(76px, .8fr) auto minmax(90px, .8fr); align-items: center; gap: 10px; border: 1px solid rgba(144,195,219,.24); border-radius: 10px; padding: 9px 10px; background: rgba(5,21,31,.38); color: #b0c3d0; }
+    .immersive .immersive-trainer-panel .trainer-metric-row:last-child { border-bottom: 1px solid rgba(214,177,112,.48); }
+    .immersive .immersive-trainer-panel .trainer-metric-row strong { color: #f5fbff; font-size: clamp(1.15rem, 2.5vmin, 1.55rem); }
+    .immersive .immersive-trainer-panel .trainer-metric-row svg { display: block; width: 100%; height: 30px; }
     .immersive .immersive-trainer-panel .trainer-metric-row polyline { fill: none; stroke: #8fb4c8; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; vector-effect: non-scaling-stroke; }
+    .immersive .immersive-trainer-panel .stopped-row { grid-column: 1 / -1; grid-template-columns: minmax(160px, 1fr) auto auto; min-height: 70px; border-color: rgba(226,186,112,.55); background: rgba(77,53,21,.52); color: #ffe3a8; }
+    .immersive .immersive-trainer-panel .stopped-row em { display: grid; gap: 3px; }
+    .immersive .immersive-trainer-panel .stopped-row em::after { content: "ACCOUNTABILITY TIMER"; color: #d7bc88; font-size: .48rem; letter-spacing: .14em; }
+    .immersive .immersive-trainer-panel .stopped-row strong { color: #fff1c9; font-size: clamp(2.4rem, 5vmin, 3.6rem); }
     .immersive .immersive-trainer-panel .stopped-row svg { display: none; }
-    .immersive .immersive-trainer-panel .stopped-row small { justify-self: end; color: #b29370; }
+    .immersive .immersive-trainer-panel .stopped-row small { justify-self: end; color: #e5c58d; font-size: .66rem; }
+    .immersive .trainer-metrics.is-stopped .stopped-row { border-color: #ffcb62; background: rgba(116,70,19,.78); box-shadow: 0 0 0 2px rgba(255,203,98,.16); }
     .immersive .trainer-metrics.is-disconnected { opacity: .62; }
     .immersive .trainer-metrics.is-disconnected svg { opacity: .25; }
-    .immersive .dashboard-card { border-radius: 18px; background: rgba(6,16,24,.61); backdrop-filter: blur(17px); -webkit-backdrop-filter: blur(17px); }
+    .immersive .dashboard-card { border-radius: 18px; background: rgba(18,43,58,.82); box-shadow: 0 10px 28px rgba(1,10,16,.18); backdrop-filter: blur(17px); -webkit-backdrop-filter: blur(17px); }
     .immersive .dashboard-card.type-water, .immersive .dashboard-card.type-stretch { padding-bottom: 50px; }
     .immersive .dashboard-card.type-fuel { padding-bottom: 43px; }
     .immersive .water-schedule span:nth-child(3), .immersive .fuel-schedule span:nth-child(3) { display: none; }
@@ -410,7 +419,7 @@
     .paused .timer, .ride-session-paused .timer, .action-screen .timer { font-family: var(--hud-mono); }
     .ride-session-paused { cursor: default; background: #0e1116; }
     .ride-session-paused .eyebrow { color: #ffe36a; }
-    .ride-pause-panel { display: grid; width: min(100%, 390px); gap: 10px; margin-top: 18px; padding: 14px; border: 1px solid #343b46; border-radius: 16px; background: #13171e; }
+    .ride-pause-panel { display: grid; width: min(100%, 620px); gap: 10px; margin-top: 18px; padding: 14px; border: 1px solid #343b46; border-radius: 16px; background: #13171e; }
     .ride-pause-copy { margin: 0 0 2px; color: #b9c9dc; font-size: .76rem; line-height: 1.4; font-weight: 750; }
     .ride-resume-action, .ride-exit-action { min-height: 54px; border: 0; border-radius: 11px; padding: 10px 12px; font-weight: 1000; cursor: pointer; }
     .ride-resume-action { min-height: 64px; background: #35f08a; color: #04130b; font-size: 1.1rem; }
@@ -419,6 +428,19 @@
     .ride-exit-action.end { border-color: #d9b630; color: #ffe36a; }
     .ride-exit-action.confirm { border-color: #ffe36a; background: #493800; color: #fff5bd; }
     .ride-save-note { margin: -2px 0 0; color: #8194aa; font-size: .61rem; font-weight: 800; }
+    .ride-adjust-action { min-height: 48px; border: 1px solid #4d7797; border-radius: 11px; background: #173048; color: #d9edf9; font-size: .76rem; font-weight: 1000; cursor: pointer; }
+    .ride-adjust-form { display: grid; gap: 11px; border: 1px solid #3e5d74; border-radius: 12px; padding: 12px; background: #0d1823; text-align: left; }
+    .ride-adjust-form h2 { margin: 0; color: #e5f4fd; font-size: .88rem; letter-spacing: .08em; text-transform: uppercase; }
+    .ride-adjust-form > p { margin: -5px 0 0; color: #9bb0c2; font-size: .65rem; line-height: 1.35; }
+    .ride-adjust-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .ride-adjust-field { display: grid; gap: 4px; color: #c9d9e5; font-size: .6rem; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
+    .ride-adjust-field input { width: 100%; min-width: 0; border: 1px solid #68869d; border-radius: 8px; padding: 9px; background: #253b4d; color: #8fe0ff; font-family: var(--hud-mono); font-size: 1rem; font-weight: 1000; text-align: center; }
+    .ride-adjust-error { min-height: 17px; margin: 0; color: #ff9da5; font-size: .63rem; font-weight: 850; }
+    .ride-adjust-actions { display: grid; grid-template-columns: 1.5fr 1fr; gap: 8px; }
+    .ride-adjust-apply, .ride-adjust-cancel { min-height: 48px; border-radius: 10px; font-weight: 1000; cursor: pointer; }
+    .ride-adjust-apply { border: 0; background: #35f08a; color: #04130b; }
+    .ride-adjust-cancel { border: 1px solid #52687d; background: #1b2632; color: #dce7f0; }
+    .recovery-note { margin: 0; border: 1px solid #6d8e5e; border-radius: 9px; padding: 8px; background: #1c2b19; color: #cde7c3; font-size: .67rem; font-weight: 850; }
     .action-screen { background: #0d1015; }
     .action-screen.water .action-title { color: var(--hud-water); }
     .action-screen.fuel .action-title { color: var(--hud-fuel); }
@@ -538,7 +560,7 @@
       .ride-phase strong { font-size: .4rem; }
       .aero .ride-control-cluster { gap: 4px; }
       .aero .ride-control-cluster .camera-badge { display: none; }
-      .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { min-height: 46px; padding: 4px 6px; }
+      .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-utility-button, .aero .ride-pause-button { min-height: 46px; padding: 4px 6px; }
       .aero-dashboard, .immersive .aero-dashboard { grid-template-rows: 140px minmax(0, 1fr) auto; gap: 6px; }
       .aero-hero { padding: 8px 6px; border-radius: 17px; }
       .aero-interval { display: none; }
@@ -572,7 +594,7 @@
       .resolution-label { font-size: .48rem; }
       .resolution-action { min-height: 28px; padding: 3px 7px; font-size: .49rem; }
       .aero .ride-utility-controls { gap: 4px; }
-      .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { padding: 4px 6px; font-size: .53rem; }
+      .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-utility-button, .aero .ride-pause-button { padding: 4px 6px; font-size: .53rem; }
       .aero .pip-mini { min-width: 38px; }
       .aero .ride-pause-button { min-width: 58px; min-height: 42px; }
       .camera-learning-prompt { grid-template-columns: minmax(0, 1fr) repeat(2, 62px); gap: 5px; bottom: 68px; padding: 6px; }
@@ -582,6 +604,7 @@
       .camera-learning-answer { min-height: 43px; padding: 5px; font-size: .65rem; }
       .ride-pause-panel { margin-top: 12px; padding: 11px; }
       .ride-resume-action { min-height: 58px; }
+      .ride-adjust-fields { grid-template-columns: 1fr; }
     }
     @media (max-width: 340px) {
       .ride-phase-strip ol { grid-template-columns: 1fr; }
@@ -624,7 +647,7 @@
       .aero.active-ride { padding: 17px 6px 4px; }
       .ride-phase-header { margin-top: 15px; margin-bottom: 5px; }
       .ride-phase-strip ol { min-height: 39px; }
-      .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-pause-button { min-height: 39px; }
+      .aero .pip-mini, .aero .camera-auto-toggle, .aero .ride-utility-button, .aero .ride-pause-button { min-height: 39px; }
       .aero-dashboard, .immersive .aero-dashboard { grid-template-rows: 108px minmax(0, 1fr); gap: 5px; }
       .ride-plan-status { display: none; }
       .aero-title { font-size: .65rem; }
@@ -644,7 +667,7 @@
   <div id="hud-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <script type="module">
     import { CameraObserver } from "/src/camera-observer.js";
-    import { CAMERA_MANUAL_HOLD_MS, decideCameraTimerAction, shouldWaitForAeroAfterBreak } from "/src/camera-control.js";
+    import { CAMERA_MANUAL_HOLD_MS, cameraLearningAnswerForKey, decideCameraTimerAction, nextCameraAeroPosition, shouldWaitForAeroAfterBreak } from "/src/camera-control.js";
     import {
       ACTION_LABELS,
       ACTION_REASONS,
@@ -665,8 +688,8 @@
       snoozeReminderRecord,
       updateCompletedActionReason
     } from "/src/habit-learning.js";
-    import { loadHistory, loadSettings, resetLearningFor, saveRide, saveSettings } from "/src/history-store.js";
-    import { RIDE_PHASES, getLiveChallenge, getPersonalBest, getPlanStatus, getPositionTimes, getRidePhase } from "/src/ride-phases.js";
+    import { clearActiveRide, loadActiveRide, loadHistory, loadSettings, resetLearningFor, saveActiveRide, saveRide, saveSettings } from "/src/history-store.js";
+    import { RIDE_PHASES, getLiveAeroDurations, getLiveChallenge, getPersonalBest, getPlanStatus, getPositionTimes, getRidePhase } from "/src/ride-phases.js";
     import { PedallingTracker, SmartTrainerConnection } from "/src/trainer-connection.js";
     const nutritionPlan = [
       "Take 1 Gel + Big Drink of Water",
@@ -701,16 +724,22 @@
       ridePausedFromState: null,
       pausedActionRemainingMs: 0,
       rideExitConfirmation: null,
+      rideAdjustmentOpen: false,
+      rideAdjustmentError: "",
+      recoveryNotice: "",
       plannedRideSec: 90 * 60,
       aeroGoalSec: 60 * 60,
       baseIntervalSec: 10 * 60,
       progressionSec: 60,
       currentIntervalTargetSec: 10 * 60,
+      nextIntervalTargetSec: null,
       intervalNumber: 1,
       intervalAccumulatedMs: 0,
       intervalComplete: false,
       intervalRecorded: false,
+      positionAeroActive: false,
       aeroSegmentStartedAt: 0,
+      intervalSegmentStartedAt: 0,
       accumulatedAeroMs: 0,
       bestIntervalMs: 0,
       personalBestSec: 0,
@@ -767,12 +796,15 @@
     };
 
     let audioContext = null;
+    let screenWakeLock = null;
+    let lastActiveRideSaveAt = -Infinity;
     const shortcutDocuments = new WeakSet();
     const cameraObserver = new CameraObserver({
       video: document.getElementById("camera-video"),
       onUpdate: snapshot => {
         const previousStableState = model.cameraSnapshot.stableState;
         model.cameraSnapshot = snapshot;
+        syncPositionFromCamera(snapshot);
         const promptChanged = maybeOfferCameraLearningPrompt(previousStableState, snapshot);
         handleCameraControl(snapshot);
         if (promptChanged) render(); else updateCameraUi(activeDocument());
@@ -796,7 +828,12 @@
         model.trainerStatus = status.state;
         model.trainerMessage = status.message;
         if (status.deviceName) model.trainerDeviceName = status.deviceName;
-        if (model.state === "setup") render(); else updateTrainerUi(activeDocument());
+        if (status.state === "connected" && model.rideStartedAt) model.trainerRideEnabled = true;
+        if (status.state === "disconnected" && model.trainerRideEnabled && model.rideStartedAt) {
+          model.trainerSnapshot = pedallingTracker.pause(now());
+          persistActiveRide(true);
+        }
+        if (model.state === "setup") render(); else render();
       }
     });
 
@@ -825,14 +862,147 @@
       const end = model.ridePausedAt || now();
       return Math.max(0, end - model.rideStartedAt - model.accumulatedRidePauseMs);
     }
-    function liveAeroMs() {
-      if (model.state !== "aero" || !model.aeroSegmentStartedAt || model.intervalComplete) return 0;
-      const remaining = Math.max(0, model.currentIntervalTargetSec * 1000 - model.intervalAccumulatedMs);
-      return Math.min(now() - model.aeroSegmentStartedAt, remaining);
+    function liveAeroDurations() {
+      return getLiveAeroDurations({
+        nowMs: now(),
+        rideState: model.state,
+        positionAeroActive: model.positionAeroActive,
+        intervalActive: model.state === "aero",
+        aeroSegmentStartedAt: model.aeroSegmentStartedAt,
+        intervalSegmentStartedAt: model.intervalSegmentStartedAt,
+        intervalAccumulatedMs: model.intervalAccumulatedMs,
+        intervalTargetSec: model.currentIntervalTargetSec,
+        intervalFrozen: model.intervalComplete || model.rideTargetReached
+      });
     }
+    function liveAeroMs() { return liveAeroDurations().postureMs; }
+    function liveIntervalAeroMs() { return liveAeroDurations().intervalMs; }
     function totalAeroMs() { return model.accumulatedAeroMs + liveAeroMs(); }
-    function currentIntervalMs() { return model.intervalAccumulatedMs + liveAeroMs(); }
+    function currentIntervalMs() { return model.intervalAccumulatedMs + liveIntervalAeroMs(); }
     function intervalRemainingSec() { return Math.max(0, model.currentIntervalTargetSec - currentIntervalMs() / 1000); }
+
+    function startAeroPosition(timestamp = now(), source = "manual") {
+      if (!model.rideStartedAt || model.ridePausedAt || !["aero", "paused", "action"].includes(model.state) || model.positionAeroActive) return false;
+      model.positionAeroActive = true;
+      model.aeroSegmentStartedAt = timestamp;
+      model.events.push({ type: "aero-position-start", source, at: rideMs() / 1000 });
+      return true;
+    }
+
+    function pauseAeroPosition(timestamp = now(), source = "manual") {
+      if (!model.positionAeroActive) return false;
+      if (model.aeroSegmentStartedAt) model.accumulatedAeroMs += Math.max(0, timestamp - model.aeroSegmentStartedAt);
+      model.positionAeroActive = false;
+      model.aeroSegmentStartedAt = 0;
+      model.events.push({ type: "aero-position-stop", source, at: rideMs() / 1000 });
+      return true;
+    }
+
+    function syncPositionFromCamera(snapshot = model.cameraSnapshot) {
+      if (!model.cameraEnabled || !model.rideStartedAt || model.ridePausedAt || !["aero", "paused", "action"].includes(model.state)) return false;
+      const nextAero = nextCameraAeroPosition({ enabled: true, stableState: snapshot.stableState, currentlyAero: model.positionAeroActive });
+      if (nextAero === model.positionAeroActive) return false;
+      let changed = false;
+      if (nextAero) changed = startAeroPosition(now(), "camera");
+      else changed = pauseAeroPosition(now(), "camera");
+      if (changed) persistActiveRide(true);
+      return changed;
+    }
+
+    const ACTIVE_RIDE_STATES = new Set(["aero", "paused", "action", "ride-paused"]);
+
+    async function requestScreenWakeLock() {
+      if (!model.rideStartedAt || !ACTIVE_RIDE_STATES.has(model.state) || !navigator.wakeLock?.request || screenWakeLock) return;
+      try {
+        screenWakeLock = await navigator.wakeLock.request("screen");
+        screenWakeLock.addEventListener("release", () => { screenWakeLock = null; }, { once: true });
+      } catch (_) {}
+    }
+
+    async function releaseScreenWakeLock() {
+      const lock = screenWakeLock;
+      screenWakeLock = null;
+      try { await lock?.release(); } catch (_) {}
+    }
+
+    function buildActiveRideSnapshot() {
+      if (!model.rideStartedAt || !ACTIVE_RIDE_STATES.has(model.state)) return null;
+      const { pipWindow, notified, ...serializableModel } = model;
+      const actionRemainingMs = model.currentAction === "fuel" && !model.actionFinished
+        ? model.state === "ride-paused"
+          ? model.pausedActionRemainingMs
+          : Math.max(0, model.actionEndsAt - now())
+        : 0;
+      return {
+        version: 1,
+        savedAtIso: new Date().toISOString(),
+        rideStartedIso: model.rideStartedIso,
+        model: { ...structuredClone(serializableModel), notified: [...notified] },
+        timing: {
+          rideElapsedMs: rideMs(),
+          totalAeroMs: totalAeroMs(),
+          currentIntervalMs: currentIntervalMs(),
+          actionRemainingMs
+        }
+      };
+    }
+
+    function persistActiveRide(force = false) {
+      const timestamp = now();
+      if (!force && timestamp - lastActiveRideSaveAt < 5000) return;
+      const snapshot = buildActiveRideSnapshot();
+      if (!snapshot) return;
+      try {
+        saveActiveRide(snapshot);
+        lastActiveRideSaveAt = timestamp;
+      } catch (_) {}
+    }
+
+    function restoreInterruptedRide() {
+      const saved = loadActiveRide();
+      if (!saved) return false;
+      const restoredAt = now();
+      const savedState = saved.model.state === "ride-paused"
+        ? saved.model.ridePausedFromState
+        : saved.model.state;
+      const resumeState = ["aero", "paused", "action"].includes(savedState) ? savedState : "paused";
+      const elapsedMs = Math.max(0, Number(saved.timing.rideElapsedMs) || 0);
+      const aeroMs = Math.max(0, Number(saved.timing.totalAeroMs) || 0);
+      const intervalMs = Math.max(0, Number(saved.timing.currentIntervalMs) || 0);
+      Object.assign(model, saved.model, {
+        pipWindow: null,
+        state: "ride-paused",
+        rideStartedAt: restoredAt - elapsedMs,
+        ridePausedAt: restoredAt,
+        accumulatedRidePauseMs: 0,
+        ridePausedFromState: resumeState,
+        pausedActionRemainingMs: Math.max(0, Number(saved.timing.actionRemainingMs) || 0),
+        actionEndsAt: 0,
+        accumulatedAeroMs: aeroMs,
+        intervalAccumulatedMs: intervalMs,
+        positionAeroActive: false,
+        aeroSegmentStartedAt: 0,
+        intervalSegmentStartedAt: 0,
+        notified: new Set(Array.isArray(saved.model.notified) ? saved.model.notified : []),
+        cameraEnabled: false,
+        cameraAutoControl: false,
+        cameraPauseReason: "Camera needs recalibration after a reload.",
+        cameraLearningPrompt: null,
+        trainerStatus: "disconnected",
+        trainerMessage: "Ride recovered. Reconnect the trainer to continue live power and cadence.",
+        rideAdjustmentOpen: false,
+        rideAdjustmentError: "",
+        rideExitConfirmation: null,
+        recoveryNotice: "Ride recovered after the page closed or reloaded. Check the plan, reconnect the trainer if needed, then resume."
+      });
+      model.events ||= [];
+      model.events.push({ type: "ride-recovered", at: elapsedMs / 1000, recoveredAtIso: new Date().toISOString() });
+      model.trainerSnapshot = pedallingTracker.restore(model.trainerSnapshot, restoredAt);
+      document.body.classList.remove("camera-preview");
+      persistActiveRide(true);
+      requestScreenWakeLock();
+      return true;
+    }
     function aeroAdherencePercent() {
       const elapsed = rideMs();
       return elapsed > 0 ? Math.min(100, Math.round(totalAeroMs() / elapsed * 100)) : 0;
@@ -930,9 +1100,9 @@
       const detected = prompt.detectedState;
       const opposite = detected === "aero" ? "upright" : "aero";
       return `<div class="camera-learning-prompt" id="camera-learning-prompt" role="group" aria-label="Camera posture check">
-        <div class="camera-learning-copy"><strong>${detected.toUpperCase()}?</strong><span>Is the camera right? No teaches ${opposite}.</span></div>
-        <button class="camera-learning-answer yes" type="button" data-camera-learning-answer="yes">YES</button>
-        <button class="camera-learning-answer" type="button" data-camera-learning-answer="no">NO</button>
+        <div class="camera-learning-copy"><strong>${detected.toUpperCase()}?</strong><span>ENTER or ← = Yes · → = No. No teaches ${opposite}.</span></div>
+        <button class="camera-learning-answer yes" type="button" data-camera-learning-answer="yes" aria-keyshortcuts="Enter ArrowLeft ArrowUp">YES</button>
+        <button class="camera-learning-answer" type="button" data-camera-learning-answer="no" aria-keyshortcuts="ArrowRight ArrowDown">NO</button>
       </div>`;
     }
 
@@ -1121,7 +1291,17 @@
         ? `<button class="camera-auto-toggle${model.cameraAutoControl ? "" : " off"}" id="camera-auto-toggle" type="button">${model.cameraAutoControl ? "AUTO ON" : "AUTO OFF"}</button>`
         : "";
       const pip = "documentPictureInPicture" in window ? '<button class="pip-mini" id="pip-ride" type="button">PiP</button>' : "";
-      return `<div class="ride-control-cluster">${cameraBadge}<div class="ride-utility-controls">${autoToggle}${pip}<button class="ride-pause-button" id="pause-ride" type="button" aria-label="Pause the entire ride" aria-keyshortcuts="P">PAUSE</button></div></div>`;
+      const dashboardTarget = model.dashboardStyle === "immersive" ? "PRACTICAL" : "IMMERSIVE";
+      const reconnect = trainerReconnectMarkup({ compact: true });
+      return `<div class="ride-control-cluster">${cameraBadge}<div class="ride-utility-controls">${autoToggle}${reconnect}${pip}<button class="ride-utility-button" id="switch-dashboard" type="button" aria-label="Switch to ${dashboardTarget.toLowerCase()} dashboard">${dashboardTarget}</button><button class="ride-utility-button" id="adjust-ride" type="button">ADJUST</button><button class="ride-pause-button" id="pause-ride" type="button" aria-label="Pause the entire ride" aria-keyshortcuts="P">PAUSE</button></div></div>`;
+    }
+
+    function trainerReconnectMarkup({ compact = false } = {}) {
+      if (!model.trainerRideEnabled || trainer.connected || !trainer.supported) return "";
+      const reconnecting = ["connecting", "reconnecting"].includes(model.trainerStatus);
+      const label = reconnecting ? "RECONNECTING..." : compact ? "RECONNECT TRAINER" : "RECONNECT TRAINER DATA";
+      const className = compact ? "ride-utility-button trainer-reconnect-utility" : "trainer-reconnect-action";
+      return `<button class="${className}" data-reconnect-trainer type="button"${reconnecting ? " disabled" : ""}>${label}</button>`;
     }
 
     function trainerSparklinePoints(values = []) {
@@ -1150,7 +1330,7 @@
     function trainerMetricsMarkup() {
       if (!model.trainerRideEnabled && model.dashboardStyle !== "immersive") return "";
       const data = model.trainerSnapshot;
-      const disconnected = !model.trainerRideEnabled;
+      const disconnected = !model.trainerRideEnabled || !trainer.connected;
       return `<div class="trainer-metrics${data.isStopped ? " is-stopped" : ""}${disconnected ? " is-disconnected" : ""}" id="trainer-metrics" aria-label="Smart trainer measurements">
         <span class="trainer-metric-row"><em>Power</em><strong id="trainer-watts">${Number.isFinite(data.watts) ? `${Math.round(data.watts)} W` : "-- W"}</strong><svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline id="trainer-watts-spark" points="${trainerSparklinePoints(model.trainerSeries?.watts)}"/></svg></span>
         <span class="trainer-metric-row"><em>Cadence</em><strong id="trainer-cadence">${Number.isFinite(data.cadence) ? `${Math.round(data.cadence)} RPM` : "-- RPM"}</strong><svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline id="trainer-cadence-spark" points="${trainerSparklinePoints(model.trainerSeries?.cadence)}"/></svg></span>
@@ -1200,7 +1380,7 @@
             <p class="challenge-best" id="challenge-best">${personalBestMarkup()}</p>
             ${subtitle ? `<p class="aero-subtitle">${subtitle}</p>` : ""}
             <div class="hero-metrics" aria-label="Ride position times"><span>Overall <strong id="overall-time">${formatTime(positionTimes.overallMs / 1000)}</strong></span><span>Aero <strong id="total-aero">${formatTime(positionTimes.aeroMs / 1000)}</strong></span><span>Upright <strong id="upright-time">${formatTime(positionTimes.uprightMs / 1000)}</strong></span></div>${immersive ? "" : trainerMarkup}
-          </section>${immersive ? `<section class="immersive-trainer-panel" aria-label="Smart trainer data"><div class="immersive-trainer-head"><p class="immersive-trainer-title">Smart trainer data</p><span class="immersive-trainer-state${model.trainerRideEnabled ? "" : " offline"}">${model.trainerRideEnabled ? "Live" : "Not connected"}</span></div>${trainerMarkup}${model.trainerRideEnabled ? "" : '<p class="immersive-trainer-note">Power and cadence appear when a trainer is connected from the main menu.</p>'}</section>` : ""}<div class="immersive-road" aria-hidden="true"><span></span><span></span><span></span></div>${scheduleMarkup()}${planStatusMarkup()}
+          </section>${immersive ? `<section class="immersive-trainer-panel" aria-label="Smart trainer data"><div class="immersive-trainer-head"><p class="immersive-trainer-title">Smart trainer data</p><span class="immersive-trainer-state${trainer.connected ? "" : " offline"}">${trainer.connected ? "Live" : "Not connected"}</span></div>${trainerMarkup}${trainer.connected ? "" : `<p class="immersive-trainer-note">${model.trainerRideEnabled ? "Recorded stopped-pedalling totals are preserved. Reconnect to resume live power, cadence and accountability timing." : "Connect the trainer from the main menu before a ride to track power, cadence and stopped-pedalling time."}</p>${trainerReconnectMarkup()}`}</section>` : ""}<div class="immersive-road" aria-hidden="true"><span></span><span></span><span></span></div>${scheduleMarkup()}${planStatusMarkup()}
         </div>${cameraLearningPromptMarkup()}${actionFeedbackMarkup()}
       </section>`;
     }
@@ -1209,13 +1389,37 @@
       return aeroMarkup({ paused: true });
     }
 
+    function rideAdjustmentMarkup() {
+      const elapsedSec = rideMs() / 1000;
+      const remainingMinutes = Math.max(1, Math.ceil((model.plannedRideSec - elapsedSec) / 60));
+      const editableAeroTargetSec = model.intervalComplete
+        ? model.nextIntervalTargetSec || model.baseIntervalSec + model.intervalNumber * model.progressionSec
+        : model.currentIntervalTargetSec;
+      return `<form class="ride-adjust-form" id="ride-adjust-form">
+        <h2>Adjust this ride</h2><p>The whole ride stays frozen. Applying changes keeps completed records and reschedules only future reminders.</p>
+        <div class="ride-adjust-fields">
+          <label class="ride-adjust-field">Remaining ride (min)<input id="adjust-remaining" type="number" min="1" max="600" step="1" value="${remainingMinutes}"></label>
+          <label class="ride-adjust-field">${model.intervalComplete ? "Next" : "Current"} Aero target (min)<input id="adjust-aero-target" type="number" min="1" max="180" step="0.5" value="${Math.round(editableAeroTargetSec / 30) / 2}"></label>
+          <label class="ride-adjust-field">Water every (min)<input id="adjust-water" type="number" min="1" max="180" step="1" value="${Math.round(model.waterEverySec / 60)}"></label>
+          <label class="ride-adjust-field">Fuel every (min)<input id="adjust-fuel" type="number" min="1" max="180" step="1" value="${Math.round(model.fuelEverySec / 60)}"></label>
+          <label class="ride-adjust-field">Mobility every (min)<input id="adjust-stretch" type="number" min="1" max="180" step="1" value="${Math.round(model.stretchEverySec / 60)}"></label>
+        </div>
+        <p class="ride-adjust-error" role="alert">${model.rideAdjustmentError}</p>
+        <div class="ride-adjust-actions"><button class="ride-adjust-apply" type="submit">APPLY CHANGES</button><button class="ride-adjust-cancel" id="cancel-ride-adjust" type="button">CANCEL</button></div>
+      </form>`;
+    }
+
     function rideSessionPausedMarkup() {
       const confirmingReview = model.rideExitConfirmation === "review";
       const confirmingMenu = model.rideExitConfirmation === "menu";
       return `<section class="screen active-ride ride-session-paused" role="region" aria-label="Ride paused. Ride time, reminders and Aero time are stopped.">
         ${progressMarkup()}<p class="eyebrow">Ride Paused</p><p class="timer">${formatTime(rideMs() / 1000)}</p>
         <div class="ride-pause-panel">
+          ${model.recoveryNotice ? `<p class="recovery-note">${model.recoveryNotice}</p>` : ""}
           <p class="ride-pause-copy">Ride time, reminders and your Aero interval are frozen until you resume.</p>
+          ${trainerReconnectMarkup()}
+          ${model.rideAdjustmentOpen ? rideAdjustmentMarkup() : `<button class="ride-adjust-action" id="open-ride-adjust" type="button">ADJUST RIDE TIMERS</button>`}
+          <button class="ride-adjust-action" id="switch-dashboard-paused" type="button">USE ${model.dashboardStyle === "immersive" ? "PRACTICAL" : "IMMERSIVE"} UI</button>
           <button class="ride-resume-action" id="resume-ride" type="button" aria-keyshortcuts="P">RESUME RIDE</button>
           <div class="ride-exit-actions">
             <button class="ride-exit-action end${confirmingReview ? " confirm" : ""}" id="finish-ride" type="button">${confirmingReview ? "CONFIRM END" : "END &amp; REVIEW"}</button>
@@ -1357,6 +1561,13 @@
       doc.getElementById("aero-hero-action")?.addEventListener("click", event => { event.stopPropagation(); advance("manual"); });
       doc.getElementById("pause-ride")?.addEventListener("click", event => { event.stopPropagation(); pauseRide(); });
       doc.getElementById("resume-ride")?.addEventListener("click", event => { event.stopPropagation(); resumeRide(); });
+      doc.getElementById("adjust-ride")?.addEventListener("click", event => { event.stopPropagation(); openRideAdjustment(); });
+      doc.getElementById("open-ride-adjust")?.addEventListener("click", event => { event.stopPropagation(); openRideAdjustment(); });
+      doc.getElementById("cancel-ride-adjust")?.addEventListener("click", event => { event.stopPropagation(); model.rideAdjustmentOpen = false; model.rideAdjustmentError = ""; render(); });
+      doc.getElementById("ride-adjust-form")?.addEventListener("submit", event => { event.preventDefault(); event.stopPropagation(); applyRideAdjustment(doc); });
+      doc.getElementById("switch-dashboard")?.addEventListener("click", event => { event.stopPropagation(); switchDashboardStyle(); });
+      doc.getElementById("switch-dashboard-paused")?.addEventListener("click", event => { event.stopPropagation(); switchDashboardStyle(); });
+      doc.querySelectorAll("[data-reconnect-trainer]").forEach(button => button.addEventListener("click", async event => { event.stopPropagation(); await reconnectTrainer(); }));
       doc.getElementById("camera-auto-toggle")?.addEventListener("click", event => { event.stopPropagation(); toggleCameraAutoControl(); });
       doc.getElementById("connect-trainer")?.addEventListener("click", async event => { event.stopPropagation(); await connectTrainer(); });
       doc.getElementById("disconnect-trainer")?.addEventListener("click", event => { event.stopPropagation(); disconnectTrainer(); });
@@ -1420,6 +1631,12 @@
       if (shortcutDocuments.has(doc)) return;
       shortcutDocuments.add(doc);
       doc.addEventListener("keydown", event => {
+        const cameraAnswer = cameraLearningAnswerForKey(event.key);
+        if (cameraAnswer !== null && model.cameraLearningPrompt && now() < model.cameraLearningPrompt.expiresAt) {
+          event.preventDefault();
+          handleCameraLearningResponse(cameraAnswer);
+          return;
+        }
         const target = event.target;
         if (target?.closest?.("input, textarea, select, button")) return;
         if (!["aero", "paused", "ride-paused", "action"].includes(model.state)) return;
@@ -1570,6 +1787,7 @@
       const result = cameraObserver.applyLearningFeedback(learnedState);
       model.cameraLearningApplying = false;
       model.cameraSnapshot = cameraObserver.getSnapshot();
+      syncPositionFromCamera(model.cameraSnapshot);
       model.actionFeedback = {
         text: result.learned ? `Camera learned ${learnedState.toUpperCase()}` : "Hold the position a little longer next time",
         expiresAt: now() + 3000
@@ -1615,7 +1833,15 @@
         render();
       } else if (action === "resume") {
         model.cameraPauseReason = "";
-        startOrResumeAero("camera");
+        if (model.intervalComplete) {
+          model.state = "aero";
+          model.intervalSegmentStartedAt = 0;
+          startAeroPosition(now(), "camera");
+          model.events.push({ type: "camera-auto-position-resume", at: rideMs() / 1000, interval: model.intervalNumber });
+          render();
+        } else {
+          startOrResumeAero("camera");
+        }
       }
     }
 
@@ -1644,9 +1870,31 @@
     async function connectTrainer() {
       try {
         await trainer.connect();
+        if (model.rideStartedAt) {
+          model.trainerRideEnabled = true;
+          model.events.push({ type: "trainer-reconnected", at: rideMs() / 1000 });
+          persistActiveRide(true);
+          render();
+        }
       } catch (error) {
         model.trainerStatus = "error";
         model.trainerMessage = error?.message || "Trainer could not connect. Keep pedalling and try again.";
+        render();
+        announce(model.trainerMessage);
+      }
+    }
+
+    async function reconnectTrainer() {
+      try {
+        await trainer.reconnect();
+        model.trainerRideEnabled = true;
+        model.events.push({ type: "trainer-reconnected", at: rideMs() / 1000 });
+        persistActiveRide(true);
+        render();
+        announce("Trainer reconnected. Live trainer data resumed.");
+      } catch (error) {
+        model.trainerStatus = "error";
+        model.trainerMessage = error?.message || "Trainer could not reconnect. Keep pedalling and try again.";
         render();
         announce(model.trainerMessage);
       }
@@ -1720,12 +1968,15 @@
       Object.assign(model, {
         state: autoControl ? "paused" : "aero", rideStartedAt: startedAt, rideStartedIso: new Date().toISOString(),
         ridePausedAt: 0, accumulatedRidePauseMs: 0, ridePausedFromState: null, pausedActionRemainingMs: 0, rideExitConfirmation: null,
+        rideAdjustmentOpen: false, rideAdjustmentError: "", recoveryNotice: "",
         plannedRideSec: values.ride, aeroGoalSec: values.aeroGoal, baseIntervalSec: values.interval,
-        progressionSec: values.progression, currentIntervalTargetSec: values.interval,
+        progressionSec: values.progression, currentIntervalTargetSec: values.interval, nextIntervalTargetSec: null,
         fuelEverySec: values.fuelEvery, waterEverySec: values.waterEvery, stretchEverySec: values.stretchEvery,
         fuelDurationSec: values.fuelDuration,
         nextDue: { fuel: values.fuelEvery, water: values.waterEvery, stretch: values.stretchEvery },
-        accumulatedAeroMs: 0, intervalAccumulatedMs: 0, aeroSegmentStartedAt: autoControl ? 0 : startedAt,
+        accumulatedAeroMs: 0, intervalAccumulatedMs: 0, positionAeroActive: !cameraEnabled,
+        aeroSegmentStartedAt: cameraEnabled ? 0 : startedAt,
+        intervalSegmentStartedAt: autoControl ? 0 : startedAt,
         intervalNumber: 1, intervalComplete: false, intervalRecorded: false, bestIntervalMs: 0,
         personalBestSec: getPersonalBest(loadHistory()),
         intervals: [], events: [{ type: "ride-start", at: 0 }, { type: "ride-phase-start", phase: 1, name: RIDE_PHASES[0].name, at: 0 }, ...(autoControl ? [{ type: "camera-auto-enabled", at: 0 }] : [])], notified: new Set(),
@@ -1743,7 +1994,13 @@
       });
       pedallingTracker.reset(startedAt);
       document.body.classList.remove("camera-preview");
-      if (cameraEnabled) cameraObserver.beginSession();
+      if (cameraEnabled) {
+        cameraObserver.beginSession();
+        model.cameraSnapshot = cameraObserver.getSnapshot();
+        syncPositionFromCamera(model.cameraSnapshot);
+      }
+      persistActiveRide(true);
+      requestScreenWakeLock();
       render();
     }
 
@@ -1796,17 +2053,102 @@
 
     function randomMobility() { return mobilityPlan[Math.floor(Math.random() * mobilityPlan.length)]; }
 
+    function switchDashboardStyle() {
+      if (!model.rideStartedAt) return;
+      model.dashboardStyle = model.dashboardStyle === "immersive" ? "practical" : "immersive";
+      const settings = loadSettings();
+      settings.dashboardStyle = model.dashboardStyle;
+      saveSettings(settings);
+      model.events.push({ type: "dashboard-style-changed", style: model.dashboardStyle, at: rideMs() / 1000 });
+      persistActiveRide(true);
+      announce(`${model.dashboardStyle === "immersive" ? "Immersive" : "Practical"} dashboard active.`);
+      render();
+    }
+
+    function openRideAdjustment() {
+      if (["aero", "paused", "action"].includes(model.state)) pauseRide();
+      if (model.state !== "ride-paused") return;
+      model.rideAdjustmentOpen = true;
+      model.rideAdjustmentError = "";
+      model.rideExitConfirmation = null;
+      persistActiveRide(true);
+      render();
+    }
+
+    function applyRideAdjustment(doc) {
+      if (model.state !== "ride-paused") return;
+      const read = id => Number(doc.getElementById(id)?.value);
+      const values = {
+        remainingMinutes: read("adjust-remaining"),
+        aeroTargetMinutes: read("adjust-aero-target"),
+        waterMinutes: read("adjust-water"),
+        fuelMinutes: read("adjust-fuel"),
+        stretchMinutes: read("adjust-stretch")
+      };
+      if (Object.values(values).some(value => !Number.isFinite(value) || value <= 0)) {
+        model.rideAdjustmentError = "All timer values must be greater than zero.";
+        render();
+        return;
+      }
+      const targetSec = values.aeroTargetMinutes * 60;
+      const currentAeroSec = model.intervalAccumulatedMs / 1000;
+      if (!model.intervalComplete && targetSec + .01 < currentAeroSec) {
+        model.rideAdjustmentError = `Current Aero target cannot be shorter than ${formatTime(currentAeroSec)} already recorded.`;
+        render();
+        return;
+      }
+      const elapsedSec = rideMs() / 1000;
+      const before = {
+        plannedRideSec: model.plannedRideSec,
+        currentIntervalTargetSec: model.currentIntervalTargetSec,
+        nextIntervalTargetSec: model.nextIntervalTargetSec,
+        reminderIntervals: { water: model.waterEverySec, fuel: model.fuelEverySec, stretch: model.stretchEverySec }
+      };
+      model.plannedRideSec = elapsedSec + values.remainingMinutes * 60;
+      model.rideTargetReached = false;
+      if (model.intervalComplete) model.nextIntervalTargetSec = targetSec;
+      else model.currentIntervalTargetSec = targetSec;
+      for (const [type, seconds] of Object.entries({
+        water: values.waterMinutes * 60,
+        fuel: values.fuelMinutes * 60,
+        stretch: values.stretchMinutes * 60
+      })) {
+        const key = `${type}EverySec`;
+        if (model[key] !== seconds) {
+          model[key] = seconds;
+          model.nextDue[type] = elapsedSec + seconds;
+          model.intervalSources[type] = "athlete-entered";
+        }
+      }
+      const after = {
+        plannedRideSec: model.plannedRideSec,
+        currentIntervalTargetSec: model.currentIntervalTargetSec,
+        nextIntervalTargetSec: model.nextIntervalTargetSec,
+        reminderIntervals: { water: model.waterEverySec, fuel: model.fuelEverySec, stretch: model.stretchEverySec }
+      };
+      model.events.push({ type: "ride-plan-adjusted", at: elapsedSec, before, after });
+      model.rideAdjustmentOpen = false;
+      model.rideAdjustmentError = "";
+      persistActiveRide(true);
+      announce("Ride timers updated. The ride remains paused until you resume.");
+      render();
+    }
+
     function pauseAero() {
-      const live = liveAeroMs();
-      model.accumulatedAeroMs += live;
-      model.intervalAccumulatedMs += live;
-      model.aeroSegmentStartedAt = 0;
+      freezeIntervalClock();
+      if (!model.cameraEnabled) pauseAeroPosition(now(), "manual-control");
+    }
+
+    function freezeIntervalClock() {
+      model.intervalAccumulatedMs += liveIntervalAeroMs();
+      model.intervalSegmentStartedAt = 0;
     }
 
     function pauseRide() {
       if (!["aero", "paused", "action"].includes(model.state) || model.ridePausedAt) return;
       const pausedFrom = model.state;
-      if (pausedFrom === "aero") pauseAero();
+      if (pausedFrom === "aero") freezeIntervalClock();
+      pauseAeroPosition(now(), "ride-pause");
       model.pausedActionRemainingMs = pausedFrom === "action" && model.currentAction === "fuel" && !model.actionFinished
         ? Math.max(0, model.actionEndsAt - now())
         : 0;
@@ -1816,6 +2158,8 @@
       if (model.trainerRideEnabled) model.trainerSnapshot = pedallingTracker.pause(model.ridePausedAt);
       model.state = "ride-paused";
       model.events.push({ type: "ride-pause", at: rideMs() / 1000, from: pausedFrom });
+      persistActiveRide(true);
+      requestScreenWakeLock();
       announce("Ride paused. All ride timers are stopped.");
       render();
     }
@@ -1832,7 +2176,9 @@
         model.cameraPauseReason = "Ride resumed; waiting for Camera Aero.";
       }
       model.state = resumeState;
-      if (resumeState === "aero" && !model.intervalComplete && !model.rideTargetReached) model.aeroSegmentStartedAt = resumedAt;
+      if (resumeState === "aero" && !model.rideTargetReached) model.intervalSegmentStartedAt = model.intervalComplete ? 0 : resumedAt;
+      if (model.cameraEnabled) syncPositionFromCamera(model.cameraSnapshot);
+      else if (resumeState === "aero") startAeroPosition(resumedAt, "ride-resume");
       if (resumeState === "action" && model.currentAction === "fuel" && !model.actionFinished) {
         model.actionEndsAt = resumedAt + model.pausedActionRemainingMs;
       }
@@ -1840,13 +2186,18 @@
       model.ridePausedFromState = null;
       model.pausedActionRemainingMs = 0;
       model.rideExitConfirmation = null;
+      model.rideAdjustmentOpen = false;
+      model.rideAdjustmentError = "";
+      model.recoveryNotice = "";
+      persistActiveRide(true);
+      requestScreenWakeLock();
       announce("Ride resumed.");
       render();
     }
 
     function completeInterval() {
       if (model.intervalComplete) return;
-      pauseAero();
+      freezeIntervalClock();
       model.intervalComplete = true;
       model.bestIntervalMs = Math.max(model.bestIntervalMs, model.intervalAccumulatedMs);
       if (!model.intervalRecorded) {
@@ -1860,13 +2211,17 @@
     function startOrResumeAero(source = "manual") {
       if (model.intervalComplete) {
         model.intervalNumber += 1;
-        model.currentIntervalTargetSec = model.baseIntervalSec + (model.intervalNumber - 1) * model.progressionSec;
+        model.currentIntervalTargetSec = model.nextIntervalTargetSec || model.baseIntervalSec + (model.intervalNumber - 1) * model.progressionSec;
+        model.nextIntervalTargetSec = null;
         model.intervalAccumulatedMs = 0;
         model.intervalComplete = false;
         model.intervalRecorded = false;
       }
       model.state = "aero";
-      model.aeroSegmentStartedAt = now();
+      const resumedAt = now();
+      model.intervalSegmentStartedAt = resumedAt;
+      if (model.cameraEnabled) syncPositionFromCamera(model.cameraSnapshot);
+      else startAeroPosition(resumedAt, source);
       model.events.push({ type: source === "camera" ? "camera-auto-resume" : "aero-resume", at: rideMs() / 1000, interval: model.intervalNumber });
       render();
     }
@@ -2013,7 +2368,7 @@
       else if (shouldWaitForAeroAfterBreak({ enabled: model.cameraAutoControl, stableState: model.cameraSnapshot.stableState })) {
         model.cameraControlHoldUntil = 0;
         model.state = "paused";
-        model.aeroSegmentStartedAt = 0;
+        model.intervalSegmentStartedAt = 0;
         model.cameraPauseReason = "Break complete; waiting for Camera Aero.";
         model.events.push({ type: "camera-waiting-for-aero", at: rideMs() / 1000 });
         render();
@@ -2040,12 +2395,15 @@
         else { model.state = "paused"; model.events.push({ type: "aero-pause", at: rideMs() / 1000 }); render(); }
       } else if (model.state === "paused") {
         const due = getDueActions()[0];
-        if (due) startAction(due.type, true, due.id); else startOrResumeAero();
+        if (due) startAction(due.type, true, due.id);
+        else if (model.intervalComplete) startAction("stretch", false);
+        else startOrResumeAero();
       } else if (model.state === "action") completeActionAndContinue();
     }
 
     function finishRide({ returnToSetup = false } = {}) {
-      if (model.state === "aero") pauseAero();
+      if (model.state === "aero") freezeIntervalClock();
+      pauseAeroPosition(now(), "ride-finish");
       const rideSeconds = rideMs() / 1000;
       const endedIso = new Date().toISOString();
       if (model.intervalAccumulatedMs > 0 && !model.intervalRecorded) {
@@ -2104,9 +2462,11 @@
         rideSaved = false;
         model.historySaveError = "Ride review could not be saved locally. Keep this screen open and try again.";
       }
+      if (rideSaved) try { clearActiveRide(); } catch (_) {}
       model.state = "review";
       document.body.classList.remove("camera-preview");
       if (model.cameraEnabled) cameraObserver.stop();
+      releaseScreenWakeLock();
       closePictureInPicture();
       if (returnToSetup && rideSaved) {
         resetToSetup();
@@ -2137,9 +2497,12 @@
 
     function resetToSetup() {
       cameraObserver.stop();
+      try { clearActiveRide(); } catch (_) {}
+      releaseScreenWakeLock();
       closePictureInPicture();
       model.state = "setup"; model.rideStartedAt = 0; model.ridePausedAt = 0; model.accumulatedRidePauseMs = 0;
       model.ridePausedFromState = null; model.pausedActionRemainingMs = 0; model.rideExitConfirmation = null; model.summary = null; model.cameraEnabled = false;
+      model.rideAdjustmentOpen = false; model.rideAdjustmentError = ""; model.recoveryNotice = ""; model.nextIntervalTargetSec = null; model.positionAeroActive = false;
       model.reviewReasonEditorDismissed = false;
       model.cameraAutoControl = false; model.cameraAutoEverEnabled = false; model.cameraControlHoldUntil = 0; model.pendingRideValues = null;
       model.cameraLearningPrompt = null; model.cameraLearningLastAsked = { aero: -Infinity, upright: -Infinity }; model.cameraLearningApplying = false;
@@ -2262,7 +2625,12 @@
       if (cadenceSpark) cadenceSpark.setAttribute("points", trainerSparklinePoints(model.trainerSeries?.cadence));
       const metrics = doc.getElementById("trainer-metrics");
       metrics?.classList.toggle("is-stopped", Boolean(data.isStopped));
-      metrics?.classList.remove("is-disconnected");
+      metrics?.classList.toggle("is-disconnected", !trainer.connected);
+      const state = doc.querySelector(".immersive-trainer-state");
+      if (state) {
+        state.textContent = trainer.connected ? "Live" : "Not connected";
+        state.classList.toggle("offline", !trainer.connected);
+      }
     }
 
     function tick() {
@@ -2286,18 +2654,19 @@
         }
         if (model.cameraEnabled) cameraObserver.setSessionContext({
           rideSec: rideMs() / 1000,
-          manualAero: model.state === "aero" && model.aeroSegmentStartedAt > 0 && !model.intervalComplete && !model.rideTargetReached
+          manualAero: model.positionAeroActive && model.aeroSegmentStartedAt > 0 && !model.rideTargetReached
         });
         const doc = activeDocument();
         updateLiveText(doc);
         if (!model.rideTargetReached && rideMs() >= model.plannedRideSec * 1000) {
-          if (model.state === "aero") pauseAero();
+          if (model.state === "aero") freezeIntervalClock();
           model.rideTargetReached = true; beep(); render();
         } else if (model.state === "aero" && !model.intervalComplete && intervalRemainingSec() <= 0) {
           completeInterval();
         } else if (model.state === "action" && model.currentAction === "fuel" && !model.actionFinished && now() >= model.actionEndsAt) {
           model.actionFinished = true; beep(); render();
         }
+        persistActiveRide();
       }
       requestAnimationFrame(tick);
     }
@@ -2342,13 +2711,19 @@
           : null
       } : null,
       availableControls: model.state === "ride-paused"
-        ? ["Resume Ride", "End & Review", "Back to Main Menu"]
+        ? ["Adjust Ride Timers", "Switch Dashboard", "Resume Ride", "End & Review", "Back to Main Menu"]
         : ["aero", "paused", "action"].includes(model.state)
-          ? ["Pause", "Water", "Fuel", "Stretch"]
+          ? ["Switch Dashboard", "Adjust Ride", "Pause", "Water", "Fuel", "Stretch"]
           : []
     });
 
     document.addEventListener("click", handleScreenClick);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") requestScreenWakeLock();
+      persistActiveRide(true);
+    });
+    window.addEventListener("pagehide", () => persistActiveRide(true));
+    restoreInterruptedRide();
     render();
     requestAnimationFrame(tick);
   </script>

@@ -18,7 +18,19 @@ import {
   snoozeReminderRecord,
   updateCompletedActionReason
 } from "../src/habit-learning.js";
-import { HISTORY_KEY, SETTINGS_KEY, loadHistory, loadSettings, resetLearningFor, saveRide, saveSettings } from "../src/history-store.js";
+import {
+  ACTIVE_RIDE_KEY,
+  HISTORY_KEY,
+  SETTINGS_KEY,
+  clearActiveRide,
+  loadActiveRide,
+  loadHistory,
+  loadSettings,
+  resetLearningFor,
+  saveActiveRide,
+  saveRide,
+  saveSettings
+} from "../src/history-store.js";
 
 class MemoryStorage {
   constructor(initial = {}) { this.data = new Map(Object.entries(initial)); }
@@ -239,6 +251,26 @@ test("dashboard style persists and invalid values fall back to practical", () =>
   assert.equal(loadSettings(storage).dashboardStyle, "immersive");
   storage.setItem(SETTINGS_KEY, JSON.stringify({ dashboardStyle: "unknown" }));
   assert.equal(loadSettings(storage).dashboardStyle, "practical");
+});
+
+test("active ride recovery saves, loads and clears one canonical snapshot", () => {
+  const storage = new MemoryStorage();
+  const snapshot = {
+    version: 1,
+    rideStartedIso: "2026-07-18T00:00:00.000Z",
+    model: { state: "aero", dashboardStyle: "immersive" },
+    timing: { rideElapsedMs: 123000, totalAeroMs: 100000 }
+  };
+  saveActiveRide(snapshot, storage);
+  assert.deepEqual(loadActiveRide(storage), snapshot);
+  clearActiveRide(storage);
+  assert.equal(storage.getItem(ACTIVE_RIDE_KEY), null);
+  assert.equal(loadActiveRide(storage), null);
+});
+
+test("malformed active ride recovery fails safely", () => {
+  const storage = new MemoryStorage({ [ACTIVE_RIDE_KEY]: "{not-json" });
+  assert.equal(loadActiveRide(storage), null);
 });
 
 test("coaching observations only appear when statistics support them", () => {

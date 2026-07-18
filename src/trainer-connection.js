@@ -78,6 +78,26 @@ export class PedallingTracker {
     this.current = { watts: null, cadence: null };
   }
 
+  restore(snapshot = {}, startedAtMs = null) {
+    this.reset(startedAtMs);
+    this.stopCount = Math.max(0, Number(snapshot.stopCount) || 0);
+    this.completedStoppedMs = Math.max(0, Number(snapshot.stoppedMs) || 0);
+    this.longestStoppedMs = Math.max(0, Number(snapshot.longestStopMs) || 0);
+    this.current = {
+      watts: Number.isFinite(snapshot.watts) ? snapshot.watts : null,
+      cadence: Number.isFinite(snapshot.cadence) ? snapshot.cadence : null
+    };
+    if (Number.isFinite(snapshot.averageWatts)) {
+      this.powerTotal = snapshot.averageWatts;
+      this.powerSamples = 1;
+    }
+    if (Number.isFinite(snapshot.averageCadence)) {
+      this.cadenceTotal = snapshot.averageCadence;
+      this.cadenceSamples = 1;
+    }
+    return this.snapshot(startedAtMs ?? performance.now());
+  }
+
   update({ watts = null, cadence = null, timestampMs = performance.now() } = {}) {
     if (this.startedAtMs === null) this.startedAtMs = timestampMs;
     if (Number.isFinite(watts)) {
@@ -158,31 +178,60 @@ export class SmartTrainerConnection {
   async connect() {
     if (!this.supported) throw new Error("Bluetooth trainer connections require Chrome or Edge on a Bluetooth-capable device.");
     this.onStatus({ state: "connecting", message: "Wake the trainer by pedalling, then select Tacx Bushido Smart." });
-    this.device = await this.bluetooth.requestDevice({
+    const device = await this.bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: [CYCLING_POWER_SERVICE, CSC_SERVICE]
     });
-    this.device.addEventListener("gattserverdisconnected", this.boundDisconnect);
-    this.server = await this.device.gatt.connect();
-    const subscriptions = [];
-    for (const [serviceName, characteristicName, handler] of [
-      [CYCLING_POWER_SERVICE, CYCLING_POWER_MEASUREMENT, event => this.handlePower(event.target.value)],
-      [CSC_SERVICE, CSC_MEASUREMENT, event => this.handleCadence(event.target.value)]
-    ]) {
-      try {
-        const service = await this.server.getPrimaryService(serviceName);
-        const characteristic = await service.getCharacteristic(characteristicName);
-        characteristic.addEventListener("characteristicvaluechanged", handler);
-        await characteristic.startNotifications();
-        subscriptions.push(serviceName);
-      } catch (_) {}
+    return this.connectToDevice(device, { forgetOnFailure: true });
+  }
+
+  async reconnect() {
+    if (!this.supported) throw new Error("Bluetooth trainer connections require Chrome or Edge on a Bluetooth-capable device.");
+    if (!this.device) return this.connect();
+    const deviceName = this.device.name || "Tacx Bushido Smart";
+    this.onStatus({ state: "reconnecting", message: `Reconnecting ${deviceName}. Keep pedalling to wake it.`, deviceName });
+    return this.connectToDevice(this.device);
+  }
+
+  async connectToDevice(device, { forgetOnFailure = false } = {}) {
+    if (this.device && this.device !== device) {
+      this.device.removeEventListener("gattserverdisconnected", this.boundDisconnect);
     }
-    if (!subscriptions.length) {
-      this.disconnect();
-      throw new Error("The trainer connected, but did not expose power or cadence data. Keep pedalling and try again.");
+    this.device = device;
+    device.removeEventListener("gattserverdisconnected", this.boundDisconnect);
+    device.addEventListener("gattserverdisconnected", this.boundDisconnect);
+
+    try {
+      this.server = await device.gatt.connect();
+      const subscriptions = [];
+      for (const [serviceName, characteristicName, handler] of [
+        [CYCLING_POWER_SERVICE, CYCLING_POWER_MEASUREMENT, event => this.handlePower(event.target.value)],
+        [CSC_SERVICE, CSC_MEASUREMENT, event => this.handleCadence(event.target.value)]
+      ]) {
+        try {
+          const service = await this.server.getPrimaryService(serviceName);
+          const characteristic = await service.getCharacteristic(characteristicName);
+          characteristic.addEventListener("characteristicvaluechanged", handler);
+          await characteristic.startNotifications();
+          subscriptions.push(serviceName);
+        } catch (_) {}
+      }
+      if (!subscriptions.length) {
+        throw new Error("The trainer connected, but did not expose power or cadence data. Keep pedalling and try again.");
+      }
+      const deviceName = device.name || "Tacx Bushido Smart";
+      this.onStatus({ state: "connected", message: `${deviceName} connected`, deviceName });
+      return { deviceName, services: subscriptions };
+    } catch (error) {
+      if (device.gatt?.connected) device.gatt.disconnect();
+      this.server = null;
+      this.previousCrank = null;
+      if (forgetOnFailure) {
+        device.removeEventListener("gattserverdisconnected", this.boundDisconnect);
+        if (this.device === device) this.device = null;
+      }
+      throw error;
     }
-    this.onStatus({ state: "connected", message: `${this.device.name || "Tacx Bushido Smart"} connected`, deviceName: this.device.name || "Tacx Bushido Smart" });
-    return { deviceName: this.device.name || "Tacx Bushido Smart", services: subscriptions };
   }
 
   handlePower(value) {

@@ -46,6 +46,30 @@ export function getPositionTimes(rideElapsedMs = 0, aeroElapsedMs = 0) {
   return { overallMs, aeroMs, uprightMs: overallMs - aeroMs };
 }
 
+export function getLiveAeroDurations({
+  nowMs = 0,
+  rideState = "paused",
+  positionAeroActive = null,
+  intervalActive = null,
+  aeroSegmentStartedAt = 0,
+  intervalSegmentStartedAt = 0,
+  intervalAccumulatedMs = 0,
+  intervalTargetSec = 0,
+  intervalFrozen = false
+} = {}) {
+  const timestamp = Math.max(0, finite(nowMs));
+  const postureActive = positionAeroActive === null ? rideState === "aero" : Boolean(positionAeroActive);
+  const clockActive = intervalActive === null ? rideState === "aero" : Boolean(intervalActive);
+  const postureMs = postureActive && finite(aeroSegmentStartedAt) > 0
+    ? Math.max(0, timestamp - finite(aeroSegmentStartedAt))
+    : 0;
+  const intervalRemainingMs = Math.max(0, finite(intervalTargetSec) * 1000 - finite(intervalAccumulatedMs));
+  const intervalMs = clockActive && !intervalFrozen && finite(intervalSegmentStartedAt) > 0
+    ? Math.min(Math.max(0, timestamp - finite(intervalSegmentStartedAt)), intervalRemainingMs)
+    : 0;
+  return { postureMs, intervalMs };
+}
+
 export function getPlanStatus(reminders = [], completedActions = [], toleranceSec = 120) {
   const completed = reminders.filter(reminder => reminder?.status === "done" && Number.isFinite(Number(reminder.completedAtSec)));
   const onTime = completed.filter(reminder => Number(reminder.completedAtSec) - Number(reminder.originalDueAtSec ?? reminder.dueAtSec) <= toleranceSec).length;

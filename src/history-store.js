@@ -2,6 +2,7 @@ import { ACTION_TYPES, migrateHistory, migrateRideRecord } from "./habit-learnin
 
 export const HISTORY_KEY = "triHudHistory";
 export const SETTINGS_KEY = "triHudSettings";
+export const ACTIVE_RIDE_KEY = "triHudActiveRide";
 
 export function loadHistory(storage = localStorage) {
   let parsed = [];
@@ -34,6 +35,24 @@ export function loadSettings(storage = localStorage) {
 export function saveSettings(settings, storage = localStorage) {
   storage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   return settings;
+}
+
+export function loadActiveRide(storage = localStorage) {
+  try {
+    const parsed = JSON.parse(storage.getItem(ACTIVE_RIDE_KEY) || "null");
+    return parsed?.version === 1 && parsed.rideStartedIso && parsed.model && parsed.timing ? parsed : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function saveActiveRide(snapshot, storage = localStorage) {
+  storage.setItem(ACTIVE_RIDE_KEY, JSON.stringify(snapshot));
+  return snapshot;
+}
+
+export function clearActiveRide(storage = localStorage) {
+  storage.removeItem(ACTIVE_RIDE_KEY);
 }
 
 export function resetLearningFor(type, storage = localStorage) {
