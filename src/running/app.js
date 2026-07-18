@@ -168,7 +168,18 @@ function applyRunConfiguration({ placement, side } = {}) {
   writeStoredText(phonePlacementStorageKey, phonePlacement);
   writeStoredText(pocketSideStorageKey, pocketSide);
   showingCompletedReport = false;
+  if (reviewingCompletedReport) resetReadySession();
   resetSelectedMeasurement();
+}
+
+function resetReadySession() {
+  detector = new HipMotionCadenceDetector();
+  fusion = new RunSignalFusion();
+  coach = new RunRhythmCoach();
+  snapshot = coach.snapshot(0);
+  lastSessionElapsedMs = 0;
+  interruptions = [];
+  interruptionActive = null;
 }
 
 function setRunConfiguration({ placement, side } = {}) {
@@ -187,8 +198,8 @@ function setPhonePlacement(placement) {
 
 function toggleCompletedReport() {
   if (active || savedSession || !completedFormReport?.snapshot) return;
-  showingCompletedReport = !showingCompletedReport;
-  if (!showingCompletedReport) resetSelectedMeasurement();
+  if (showingCompletedReport) applyRunConfiguration();
+  else showingCompletedReport = true;
   render(true);
 }
 
@@ -243,24 +254,20 @@ function armSegmentReviewLabel(label, drift) {
 
 function renderFormLab() {
   const isReview = !active && showingCompletedReport && Boolean(completedFormReport?.snapshot);
+  const reportAvailable = !active && !savedSession && Boolean(completedFormReport?.snapshot);
   const displayPlacement = isReview ? completedReportPlacement() : phonePlacement;
   const displaySide = isReview ? (completedFormReport.pocketSide === "left" ? "left" : "right") : pocketSide;
   renderPhonePlacement({ placement: displayPlacement, side: displaySide });
-  if (!active && !isReview && els["primary-controls"].previousElementSibling !== els["form-lab"]) {
-    els["primary-controls"].before(els["form-lab"]);
-  } else if ((active || isReview) && displayPlacement === "hand" && els["form-lab"].nextElementSibling !== els["metric-grid"]) {
-    els["metric-grid"].before(els["form-lab"]);
-  } else if ((active || isReview) && displayPlacement === "hip" && els["metric-grid"].nextElementSibling !== els["form-lab"]) {
-    els["metric-grid"].after(els["form-lab"]);
-  }
   const displaySnapshot = isReview
     ? completedFormReport.snapshot
     : displayPlacement === "hand" ? armSnapshot : formSnapshot;
   const handMode = displayPlacement === "hand";
   els["form-lab"].dataset.mode = displayPlacement;
-  els["form-lab-title"].textContent = handMode ? "ARM SWING MONITOR" : "HIP MOTION LAB";
-  els["form-lab-note"].textContent = handMode ? "ONE HAND · PERSONAL BASELINE" : "MEASUREMENT ONLY · NO COACHING";
-  els["form-report-toggle"].hidden = active || Boolean(savedSession) || !completedFormReport?.snapshot;
+  els["form-lab"].classList.toggle("is-report-review", isReview);
+  els["form-lab"].classList.toggle("has-report-toggle", reportAvailable);
+  els["form-lab-title"].textContent = handMode ? "ARM SWING" : "HIP MOTION";
+  els["form-lab-note"].textContent = `${displaySide.toUpperCase()} ${handMode ? "HAND" : "HIP"} · ${isReview ? "REVIEW" : active ? "LIVE" : "SETUP"}`;
+  els["form-report-toggle"].hidden = !reportAvailable;
   els["form-report-toggle"].textContent = isReview ? "NEW RUN" : "VIEW LAST RUN";
   els["form-boundary"].hidden = !handMode;
   let formStatus;
@@ -783,6 +790,9 @@ function render(force = false) {
   els["install-app"].hidden = active || isInstalledApp();
   els["demo-session"].hidden = active || !demoEnabled;
   doc.body.dataset.session = active ? "active" : snapshot.status === "REVIEW" ? "review" : "ready";
+  doc.body.dataset.runPhase = active
+    ? fieldSession ? preflightConfirmed ? "live" : "checking" : "demo"
+    : "idle";
   els["voice-help"].textContent = active
     ? fieldSession && !preflightConfirmed
       ? phonePlacement === "hand"

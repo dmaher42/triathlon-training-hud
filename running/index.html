@@ -21,14 +21,38 @@
         <h1>Run Durability</h1>
         <p>Rhythm and continuity coach</p>
       </div>
-      <a class="hud-link" href="../" aria-label="Open the cycling HUD" title="Cycling HUD">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="17" r="3.5"></circle><circle cx="18" cy="17" r="3.5"></circle><path d="m6 17 4-8 3 8m-5-4h8l-3-6h3"></path></svg>
-      </a>
+
+      <details class="settings-menu">
+        <summary aria-label="Open running settings" title="Running settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.55 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.55a1.7 1.7 0 0 0-.34-1.87l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.45 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.1.38.3.72.6 1 .3.27.67.4 1.1.4h.1v4h-.1A1.7 1.7 0 0 0 19.4 15Z"></path></svg>
+        </summary>
+        <div class="settings-popover">
+          <header><strong>RUN SETTINGS</strong><span>Setup and system checks</span></header>
+          <span class="connection-pill muted" id="garmin-connection"><i></i> GARMIN OFFLINE</span>
+          <section class="preflight-panel" id="preflight-panel" aria-label="Detailed run readiness">
+            <span id="preflight-screen" data-state="waiting"><i></i>SCREEN</span>
+            <span id="preflight-pocket" data-state="waiting"><i></i>RUN LOCK</span>
+            <span id="preflight-battery" data-state="waiting"><i></i>BATTERY</span>
+            <span id="preflight-save" data-state="waiting"><i></i>SAVE CHECK</span>
+          </section>
+          <div class="pocket-side" role="group" aria-label="Phone side">
+            <span id="form-side-label">POCKET SIDE</span>
+            <button type="button" id="pocket-side-left" aria-pressed="false">LEFT HIP</button>
+            <button type="button" id="pocket-side-right" aria-pressed="true">RIGHT HIP</button>
+          </div>
+          <button class="install-button" id="install-app" type="button">INSTALL RUNNING APP</button>
+          <button class="settings-toggle" type="button" id="start-vibration"><strong>START VIBRATION: ON</strong><span>Tap to change</span></button>
+          <a class="settings-link" href="../">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="17" r="3.5"></circle><circle cx="18" cy="17" r="3.5"></circle><path d="m6 17 4-8 3 8m-5-4h8l-3-6h3"></path></svg>
+            OPEN CYCLING HUD
+          </a>
+        </div>
+      </details>
     </header>
 
     <section class="connection-strip" aria-label="Sensor connections">
-      <span class="connection-pill" id="phone-connection"><i></i> PHONE READY</span>
-      <span class="connection-pill muted" id="garmin-connection"><i></i> GARMIN OFFLINE</span>
+      <span class="readiness-tile" id="phone-connection"><i></i> PHONE READY</span>
+      <span class="readiness-tile" id="preflight-motion" data-state="waiting"><i></i>MOTION CHECK</span>
       <div class="voice-dock" id="voice-dock" aria-label="Voice control status">
         <button class="voice-toggle" id="voice-toggle" type="button" aria-label="Enable voice controls" aria-describedby="voice-subtitle" aria-pressed="false">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V7a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Z"></path><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-3 0h6"></path></svg>
@@ -47,31 +71,91 @@
     </section>
     <span class="connection-pill muted" id="screen-connection" hidden><i></i> SCREEN CHECK</span>
 
-    <section class="preflight-panel" id="preflight-panel" aria-label="Run readiness">
-      <span id="preflight-motion" data-state="waiting"><i></i>MOTION</span>
-      <span id="preflight-screen" data-state="waiting"><i></i>SCREEN</span>
-      <span id="preflight-pocket" data-state="waiting"><i></i>RUN LOCK</span>
-      <span id="preflight-battery" data-state="waiting"><i></i>BATTERY</span>
-      <span id="preflight-save" data-state="waiting"><i></i>SAVE CHECK</span>
+    <section class="status-card" id="status-card" data-tone="ready" aria-live="polite">
+      <div class="status-orb" aria-hidden="true">
+        <svg class="status-ready-icon" viewBox="0 0 64 64"><circle cx="32" cy="32" r="27"></circle><path d="m19 33 8 8 18-20"></path></svg>
+        <svg class="status-live-icon" viewBox="0 0 64 64"><circle cx="32" cy="32" r="27"></circle><path d="M13 34h8l4-10 6 21 6-29 6 24 4-6h5"></path></svg>
+      </div>
+      <div class="status-copy">
+        <p class="status-label">COACHING</p>
+        <div class="status-topline">
+          <strong class="status-value" id="status-value">READY</strong>
+          <span class="status-glyph" id="status-glyph" aria-hidden="true">&#10003;</span>
+        </div>
+        <p class="status-message" id="status-message">Ready for a steady opening run.</p>
+        <div class="baseline-track" id="baseline-track" role="progressbar" aria-label="Cadence baseline learning progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="baseline-progress" style="width:0%"></span>
+        </div>
+      </div>
     </section>
 
-    <section class="status-card" id="status-card" data-tone="ready" aria-live="polite">
-      <div class="status-topline">
-        <p class="status-label">COACHING</p>
-        <strong class="status-value" id="status-value">READY</strong>
-        <span class="status-glyph" id="status-glyph" aria-hidden="true">✓</span>
+    <section class="metric-grid" id="metric-grid" aria-label="Run coaching measurements">
+      <article class="metric-card cadence-card">
+        <header><span>CADENCE</span></header>
+        <strong class="metric-value" id="cadence-value">&mdash;</strong>
+        <footer><span>TARGET <b id="cadence-target">&mdash;</b></span><b id="cadence-delta">SETTLING</b></footer>
+      </article>
+      <article class="metric-card stability-card">
+        <header><span>RHYTHM STABILITY</span></header>
+        <div class="stability-reading"><strong id="stable-value">&mdash;</strong><span class="shield" aria-hidden="true">&#10003;</span></div>
+        <p id="stability-summary">Waiting for your opening rhythm</p>
+      </article>
+      <article class="metric-card runtime-card">
+        <header><span>RUN TIME</span></header>
+        <strong class="metric-value" id="session-time">0:00</strong>
+      </article>
+      <article class="metric-card walks-card">
+        <header><span>UNPLANNED WALKS</span></header>
+        <strong class="metric-value" id="walk-value">0</strong>
+      </article>
+    </section>
+
+    <section class="review-details" aria-label="Additional run details">
+      <header><span>RUN DETAILS</span><small id="summary-state">READY</small></header>
+      <div class="review-baseline">
+        <span>BASELINE <b id="baseline-value">&mdash;</b> steps/min</span>
+        <strong id="baseline-state">NOT STARTED</strong>
       </div>
-      <p class="status-message" id="status-message">Ready for a steady opening run.</p>
-      <div class="baseline-track" id="baseline-track" role="progressbar" aria-label="Cadence baseline learning progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-        <span id="baseline-progress" style="width:0%"></span>
+      <p id="baseline-summary">Starts with two minutes of natural running</p>
+      <div class="mini-progress"><span id="baseline-mini-progress" style="width:0%"></span></div>
+      <dl>
+        <div><dt>Stops</dt><dd id="stop-value">0</dd></div>
+        <div><dt>Signal interruptions</dt><dd id="interruption-value">0</dd></div>
+      </dl>
+    </section>
+
+    <section class="form-lab" id="form-lab" aria-label="Running motion measurement">
+      <header>
+        <span id="form-lab-title">HIP MOTION</span>
+        <span class="form-header-actions"><small id="form-lab-note">RIGHT HIP</small><button type="button" id="form-report-toggle" hidden>NEW RUN</button></span>
+      </header>
+      <div class="placement-mode" role="group" aria-label="Phone placement mode">
+        <span>PHONE PLACEMENT</span>
+        <button type="button" id="placement-hip" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v8c0 4-3 7-7 8-4-1-7-4-7-8V4Z"></path><path d="M9 9h6"></path></svg>
+          <strong>HIP POCKET</strong>
+        </button>
+        <button type="button" id="placement-hand" aria-pressed="false" aria-describedby="form-boundary">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="14" cy="4" r="2"></circle><path d="m12 7-2 5 4 2 2 6m-6-8-4 3m6-8 5 4 3-1M8 20l3-5"></path></svg>
+          <strong>HAND SWING</strong>
+        </button>
+      </div>
+      <div class="form-measures">
+        <span><b id="form-vertical">&mdash;</b><em id="form-label-vertical">BOUNCE</em></span>
+        <span><b id="form-horizontal">&mdash;</b><em id="form-label-horizontal">HORIZONTAL</em></span>
+        <span><b id="form-rotation">&mdash;</b><em id="form-label-rotation">ROTATION</em></span>
+        <span><b id="form-impact">&mdash;</b><em id="form-label-impact">IMPACT</em></span>
+      </div>
+      <footer><span id="form-status" aria-live="polite">Starts by learning your opening movement</span><b id="form-confidence">0% CONFIDENCE</b></footer>
+      <div class="form-progress" id="form-progress-track" role="progressbar" aria-labelledby="form-status" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="form-progress" style="width:0%"></span></div>
+      <p class="form-boundary" id="form-boundary" hidden>Measures the phone hand only. It cannot compare both arms or measure elbow position.</p>
+      <div class="form-segment-review" id="form-segment-review" hidden>
+        <span id="form-middle">MIDDLE &mdash;</span>
+        <span id="form-late">FINAL &mdash;</span>
       </div>
     </section>
 
     <section class="primary-controls" id="primary-controls">
-      <button class="install-button" id="install-app" type="button">INSTALL RUNNING APP</button>
-      <div class="pre-run-options">
-        <button type="button" id="start-vibration"><strong>START VIBRATION: ON</strong><span>Tap to change</span></button>
-      </div>
       <p class="hand-mode-note" id="hand-mode-note" hidden>Phone measures your selected hand. Garmin is needed for step cadence.</p>
       <button class="start-button" id="start-session" type="button">START RUN</button>
       <button class="resume-button" id="resume-session" type="button" hidden>RESUME SAVED RUN</button>
@@ -79,90 +163,40 @@
     </section>
 
     <section class="run-controls" id="run-controls" hidden aria-label="In-run controls">
-      <button type="button" id="planned-walk"><strong>PLANNED WALK</strong><span>Exclude this recovery</span></button>
-      <button type="button" id="resume-run"><strong>RESUME RUNNING</strong><span>End the planned walk</span></button>
-      <button type="button" id="speak-status"><strong>HEAR STATUS</strong><span>Speak the latest reading</span></button>
-      <button type="button" id="silence-coach"><strong>VOICE PROMPTS OFF</strong><span>Keep measuring silently</span></button>
-      <button class="pocket-lock-button" type="button" id="pocket-lock"><strong>POCKET LOCK</strong><span>Block accidental touches</span></button>
-    </section>
-
-    <section class="metric-grid" id="metric-grid" aria-label="Run coaching measurements">
-      <article class="metric-card cadence-card">
-        <header><span>CADENCE</span><small>CURRENT VS TARGET</small></header>
-        <div class="cadence-compare">
-          <strong id="cadence-value">&mdash;</strong>
-          <span>vs. <b id="cadence-target">&mdash;</b></span>
-        </div>
-        <footer><span>steps/min</span><b id="cadence-delta">SETTLING</b></footer>
-      </article>
-
-      <article class="metric-card baseline-card">
-        <header><span>BASELINE</span><small id="baseline-state">LEARNING</small></header>
-        <div class="baseline-reading"><strong id="baseline-value">&mdash;</strong><span>steps/min</span></div>
-        <p id="baseline-summary">Starts with two minutes of natural running</p>
-        <div class="mini-progress"><span id="baseline-mini-progress" style="width:0%"></span></div>
-      </article>
-
-      <article class="metric-card stability-card">
-        <header><span>RHYTHM STABILITY</span><small>PERSONAL BAND</small></header>
-        <div class="stability-reading"><strong id="stable-value">0%</strong><span class="shield" aria-hidden="true">✓</span></div>
-        <p id="stability-summary">Waiting for your opening rhythm</p>
-      </article>
-
-      <article class="metric-card summary-card">
-        <header><span>RUN SUMMARY</span><small id="summary-state">READY</small></header>
-        <dl>
-          <div><dt>Time</dt><dd id="session-time">0:00</dd></div>
-          <div><dt>Unplanned walks</dt><dd id="walk-value">0</dd></div>
-          <div><dt>Stops</dt><dd id="stop-value">0</dd></div>
-          <div><dt>Signal interruptions</dt><dd id="interruption-value">0</dd></div>
-        </dl>
-      </article>
-    </section>
-
-    <section class="form-lab" id="form-lab" aria-label="Running motion measurement">
-      <header>
-        <span id="form-lab-title">HIP MOTION LAB</span>
-        <span class="form-header-actions"><small id="form-lab-note">MEASUREMENT ONLY · NO COACHING</small><button type="button" id="form-report-toggle" hidden>NEW RUN</button></span>
-      </header>
-      <div class="placement-mode" role="group" aria-label="Phone placement mode">
-        <span>PHONE MODE</span>
-        <button type="button" id="placement-hip" aria-pressed="true">HIP POCKET</button>
-        <button type="button" id="placement-hand" aria-pressed="false" aria-describedby="form-boundary">HAND SWING</button>
-      </div>
-      <div class="pocket-side" role="group" aria-label="Phone side">
-        <span id="form-side-label">POCKET SIDE</span>
-        <button type="button" id="pocket-side-left" aria-pressed="false">LEFT HIP</button>
-        <button type="button" id="pocket-side-right" aria-pressed="true">RIGHT HIP</button>
-      </div>
-      <div class="form-measures">
-        <span><b id="form-vertical">—</b><em id="form-label-vertical">BOUNCE</em></span>
-        <span><b id="form-horizontal">—</b><em id="form-label-horizontal">HORIZONTAL</em></span>
-        <span><b id="form-rotation">—</b><em id="form-label-rotation">ROTATION</em></span>
-        <span><b id="form-impact">—</b><em id="form-label-impact">IMPACT</em></span>
-      </div>
-      <footer><span id="form-status" aria-live="polite">Starts by learning your opening movement</span><b id="form-confidence">0% CONFIDENCE</b></footer>
-      <div class="form-progress" id="form-progress-track" role="progressbar" aria-labelledby="form-status" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="form-progress" style="width:0%"></span></div>
-      <p class="form-boundary" id="form-boundary" hidden>Measures the phone hand only. It cannot compare both arms or measure elbow position.</p>
-      <div class="form-segment-review" id="form-segment-review" hidden>
-        <span id="form-middle">MIDDLE —</span>
-        <span id="form-late">FINAL —</span>
-      </div>
+      <button type="button" id="planned-walk">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4" r="2"></circle><path d="m11 7-2 5 3 2-2 6m2-6 4 2 2 4M9 12l-4 2"></path></svg>
+        <strong>PLANNED WALK</strong><span>Exclude this recovery</span>
+      </button>
+      <button type="button" id="resume-run">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M12 4l8 8-8 8"></path></svg>
+        <strong>RESUME RUNNING</strong><span>End the planned walk</span>
+      </button>
+      <button type="button" id="speak-status">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l2-5 3 10 3-14 3 12 2-3h2"></path></svg>
+        <strong>HEAR STATUS</strong><span>Speak the latest reading</span>
+      </button>
+      <button type="button" id="silence-coach">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm13 1 4 4m0-4-4 4"></path></svg>
+        <strong>VOICE PROMPTS OFF</strong><span>Keep measuring silently</span>
+      </button>
+      <button class="pocket-lock-button" type="button" id="pocket-lock">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+        <strong>POCKET LOCK</strong><span>Block accidental touches</span>
+      </button>
     </section>
 
     <button class="demo-button" id="demo-session" type="button" hidden>RUN 20-SECOND DESKTOP DEMO</button>
-
   </main>
 
   <section class="pocket-lock-screen" id="pocket-lock-screen" role="dialog" aria-modal="true" hidden aria-label="Run lock active">
-    <div class="pocket-lock-mark" aria-hidden="true">●</div>
+    <div class="pocket-lock-mark" aria-hidden="true">&#9679;</div>
     <p id="pocket-lock-label">POCKET LOCKED</p>
     <strong id="pocket-lock-status">RUN ACTIVE</strong>
     <div class="pocket-lock-readings">
       <span><b id="pocket-lock-time">0:00</b>TIME</span>
-      <span><b id="pocket-lock-cadence">—</b><i id="pocket-lock-metric-label">CADENCE</i></span>
+      <span><b id="pocket-lock-cadence">&mdash;</b><i id="pocket-lock-metric-label">CADENCE</i></span>
     </div>
-    <small class="pocket-lock-health" id="pocket-lock-health">MOTION LIVE · SCREEN PROTECTED</small>
+    <small class="pocket-lock-health" id="pocket-lock-health">MOTION LIVE &middot; SCREEN PROTECTED</small>
     <button type="button" id="pocket-unlock">PRESS AND HOLD TO UNLOCK</button>
     <small id="pocket-unlock-progress">Hold for 2 seconds</small>
   </section>
