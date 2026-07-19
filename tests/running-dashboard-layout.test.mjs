@@ -36,12 +36,22 @@ test("running dashboard uses a dimensional phone canvas and state compositions",
   assert.match(css, /linear-gradient\(145deg/);
 });
 
-test("saved motion reports remain visible and can return cleanly to Ready", () => {
+test("saved motion reports have one clear action that returns cleanly to Ready", () => {
+  assert.match(html, /id="start-session"[\s\S]*START RUN[\s\S]*id="view-last-run"[\s\S]*VIEW LAST RUN/);
   assert.match(app, /classList\.toggle\("is-report-review", isReview\)/);
-  assert.match(app, /classList\.toggle\("has-report-toggle", reportAvailable\)/);
-  assert.match(app, /if \(reviewingCompletedReport\) resetReadySession\(\)/);
+  assert.match(app, /viewLastRunAvailable = reportAvailable && !reviewScreen/);
+  assert.match(app, /if \(leavingReview\) \{[\s\S]*completedSaveState = "idle";[\s\S]*resetReadySession\(\);[\s\S]*\}/);
+  assert.match(app, /view-last-run"\]\.hidden = !viewLastRunAvailable/);
+  assert.match(app, /function viewCompletedReport\(\) \{[\s\S]*restoreCompletedReport\(\);[\s\S]*render\(true\);/);
+  assert.match(app, /view-last-run"\]\.addEventListener\("click", viewCompletedReport\)/);
+  assert.match(app, /start-session"\]\.textContent = reviewingRun \? "START ANOTHER RUN" : "START RUN"/);
+  assert.match(app, /function handlePrimaryStartAction\(\) \{[\s\S]*snapshot\.status === "REVIEW"[\s\S]*applyRunConfiguration\(\);[\s\S]*render\(true\);[\s\S]*startSession\(\);/);
+  assert.match(app, /start-session"\]\.addEventListener\("click", handlePrimaryStartAction\)/);
+  assert.match(app, /demo-session"\]\.hidden = [^;]*\|\| reviewingRun/);
+  assert.doesNotMatch(html, /id="form-report-toggle"|>NEW RUN</);
+  assert.doesNotMatch(app, /has-report-toggle|toggleCompletedReport/);
   assert.match(css, /\.form-lab\.is-report-review \.form-measures/);
-  assert.match(css, /\.form-lab\.has-report-toggle:not\(\.is-report-review\) > header/);
+  assert.match(css, /\.view-report-button \{[\s\S]*width:\s*100%[\s\S]*min-height:\s*56px/);
 });
 
 test("saved full-run reviews restore their metrics, duration and interruptions", () => {
@@ -77,4 +87,16 @@ test("touch finishing requires an explicit confirmation", () => {
   assert.doesNotMatch(app, /els\["stop-session"\]\.addEventListener\("click", finishSession\)/);
   assert.match(css, /\.finish-dialog::backdrop/);
   assert.match(css, /\.finish-dialog-actions button[\s\S]*min-height:\s*58px/);
+});
+
+test("failed completed-run saves remain visible, retryable and protected", () => {
+  assert.match(html, /id="save-result"[\s\S]*id="save-result-title"[\s\S]*id="save-result-message"[\s\S]*id="retry-save"/);
+  assert.match(app, /pendingCompletedRun = payload[\s\S]*writeStoredJson\(completedRunStorageKey, payload\)[\s\S]*completedSaveState = saved \? "saved" : "failed"/);
+  assert.match(app, /completedSaveState === "failed"[\s\S]*"SAVE FAILED"[\s\S]*"RUN SAVED"/);
+  assert.match(app, /start-session"\]\.hidden = active \|\| Boolean\(savedSession\) \|\| Boolean\(pendingCompletedRun\)/);
+  assert.match(app, /reportAvailable = !active && !savedSession && !pendingCompletedRun/);
+  assert.match(app, /if \(pendingCompletedRun\)[\s\S]*Tap Retry Save before starting another run/);
+  assert.match(app, /els\["retry-save"\]\.addEventListener\("click", retryCompletedRunSave\)/);
+  assert.match(css, /\.save-result\[data-state="failed"\]/);
+  assert.match(css, /#retry-save[\s\S]*min-height:\s*44px/);
 });

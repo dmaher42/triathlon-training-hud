@@ -89,6 +89,14 @@
       </div>
     </section>
 
+    <section class="save-result" id="save-result" data-state="saved" role="status" aria-live="polite" hidden>
+      <div>
+        <strong id="save-result-title">RUN SAVED</strong>
+        <span id="save-result-message">Complete review saved on this phone.</span>
+      </div>
+      <button type="button" id="retry-save" hidden>RETRY SAVE</button>
+    </section>
+
     <section class="metric-grid" id="metric-grid" aria-label="Run coaching measurements">
       <article class="metric-card cadence-card">
         <header><span>CADENCE</span></header>
@@ -130,7 +138,6 @@
         <span class="form-header-actions">
           <small id="form-lab-note">RIGHT HIP</small>
           <button type="button" id="placement-switch" aria-describedby="placement-switch-help" hidden>SWITCH TO HAND</button>
-          <button type="button" id="form-report-toggle" hidden>NEW RUN</button>
         </span>
       </header>
       <span class="visually-hidden" id="placement-switch-help">Changing phone position starts a new measurement segment. Run Lock must be unlocked first.</span>
@@ -164,6 +171,7 @@
     <section class="primary-controls" id="primary-controls">
       <p class="hand-mode-note" id="hand-mode-note" hidden>Phone measures your selected hand. Garmin is needed for step cadence.</p>
       <button class="start-button" id="start-session" type="button">START RUN</button>
+      <button class="view-report-button" id="view-last-run" type="button" hidden>VIEW LAST RUN</button>
       <button class="resume-button" id="resume-session" type="button" hidden>RESUME SAVED RUN</button>
       <button class="stop-button" id="stop-session" type="button" hidden>FINISH RUN</button>
     </section>

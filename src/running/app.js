@@ -14,6 +14,7 @@ import { planActivePlacementSwitch, runConfigurationLocked, selectRunConfigurati
 const doc = document;
 const els = Object.fromEntries([
   "run-shell", "finish-dialog", "finish-dialog-description", "finish-cancel", "finish-confirm",
+  "save-result", "save-result-title", "save-result-message", "retry-save",
   "status-card", "status-value", "status-message", "status-glyph",
   "baseline-progress", "baseline-mini-progress", "baseline-track",
   "cadence-value", "cadence-target", "cadence-delta", "baseline-value", "baseline-state",
@@ -27,7 +28,7 @@ const els = Object.fromEntries([
   "form-lab", "form-vertical", "form-horizontal", "form-rotation", "form-impact",
   "form-status", "form-confidence", "form-progress", "pocket-side-left", "pocket-side-right",
   "form-segment-review", "form-middle", "form-late", "placement-hip", "placement-hand",
-  "form-lab-title", "form-lab-note", "form-side-label", "form-boundary", "form-report-toggle", "placement-switch", "placement-switch-status", "hand-mode-note", "metric-grid", "form-progress-track",
+  "form-lab-title", "form-lab-note", "form-side-label", "form-boundary", "view-last-run", "placement-switch", "placement-switch-status", "hand-mode-note", "metric-grid", "form-progress-track",
   "form-label-vertical", "form-label-horizontal", "form-label-rotation", "form-label-impact",
   "pocket-lock-label", "pocket-lock-metric-label"
 ].map(id => [id, doc.getElementById(id)]));
@@ -88,6 +89,8 @@ let placementSwitchCount = Number.isFinite(Number(savedSession?.placementSwitchC
 let storageHealthy = null;
 let completedFormReport = parseCompletedRun(readStoredText(completedRunStorageKey));
 let showingCompletedReport = Boolean(completedFormReport?.completedAtEpochMs && completedFormReport?.snapshot);
+let completedSaveState = "idle";
+let pendingCompletedRun = null;
 if (savedSession && completedFormReport?.completedAtEpochMs >= savedSession.savedAtEpochMs) {
   savedSession = null;
   try { localStorage.removeItem(activeSessionStorageKey); } catch (_) {}
@@ -160,6 +163,7 @@ function renderStartVibration() {
 
 function applyRunConfiguration({ placement, side } = {}) {
   const reviewingCompletedReport = showingCompletedReport && Boolean(completedFormReport?.snapshot);
+  const leavingReview = snapshot.status === "REVIEW";
   const next = selectRunConfiguration({
     currentPlacement: phonePlacement,
     currentSide: pocketSide,
@@ -174,7 +178,10 @@ function applyRunConfiguration({ placement, side } = {}) {
   writeStoredText(phonePlacementStorageKey, phonePlacement);
   writeStoredText(pocketSideStorageKey, pocketSide);
   showingCompletedReport = false;
-  if (reviewingCompletedReport) resetReadySession();
+  if (leavingReview) {
+    completedSaveState = "idle";
+    resetReadySession();
+  }
   resetSelectedMeasurement();
 }
 
@@ -190,7 +197,7 @@ function resetReadySession() {
 }
 
 function setRunConfiguration({ placement, side } = {}) {
-  if (active || savedSession) return;
+  if (active || savedSession || pendingCompletedRun) return;
   applyRunConfiguration({ placement, side });
   render(true);
 }
@@ -270,11 +277,20 @@ function switchActivePlacement(requestedPlacement, { forceReply = false } = {}) 
   return true;
 }
 
-function toggleCompletedReport() {
-  if (active || savedSession || !completedFormReport?.snapshot) return;
-  if (showingCompletedReport) applyRunConfiguration();
-  else restoreCompletedReport();
+function viewCompletedReport() {
+  if (active || savedSession || pendingCompletedRun || !completedFormReport?.snapshot) return;
+  restoreCompletedReport();
   render(true);
+}
+
+function handlePrimaryStartAction() {
+  if (!active && snapshot.status === "REVIEW") {
+    if (pendingCompletedRun) return;
+    applyRunConfiguration();
+    render(true);
+    return;
+  }
+  startSession();
 }
 
 function resetSelectedMeasurement() {
@@ -304,7 +320,23 @@ function restoreCompletedReport() {
     interruptionActive = null;
   }
   showingCompletedReport = true;
+  completedSaveState = pendingCompletedRun ? "failed" : "saved";
   return true;
+}
+
+function renderCompletedSaveState() {
+  const visible = !active
+    && showingCompletedReport
+    && ["saved", "failed"].includes(completedSaveState);
+  els["save-result"].hidden = !visible;
+  if (!visible) return;
+  const failed = completedSaveState === "failed";
+  els["save-result"].dataset.state = failed ? "failed" : "saved";
+  els["save-result-title"].textContent = failed ? "SAVE FAILED" : "RUN SAVED";
+  els["save-result-message"].textContent = failed
+    ? "Your review is still on this screen. Keep it open and retry."
+    : "Complete review saved on this phone.";
+  els["retry-save"].hidden = !failed;
 }
 
 function renderPhonePlacement({ placement = phonePlacement, side = pocketSide } = {}) {
@@ -351,8 +383,10 @@ function armSegmentReviewLabel(label, drift) {
 }
 
 function renderFormLab() {
-  const isReview = !active && showingCompletedReport && Boolean(completedFormReport?.snapshot);
-  const reportAvailable = !active && !savedSession && Boolean(completedFormReport?.snapshot);
+  const reviewScreen = !active && snapshot.status === "REVIEW";
+  const isReview = reviewScreen && showingCompletedReport && Boolean(completedFormReport?.snapshot);
+  const reportAvailable = !active && !savedSession && !pendingCompletedRun && Boolean(completedFormReport?.snapshot);
+  const viewLastRunAvailable = reportAvailable && !reviewScreen;
   const displayPlacement = isReview ? completedReportPlacement() : phonePlacement;
   const displaySide = isReview ? (completedFormReport.pocketSide === "left" ? "left" : "right") : pocketSide;
   renderPhonePlacement({ placement: displayPlacement, side: displaySide });
@@ -362,11 +396,9 @@ function renderFormLab() {
   const handMode = displayPlacement === "hand";
   els["form-lab"].dataset.mode = displayPlacement;
   els["form-lab"].classList.toggle("is-report-review", isReview);
-  els["form-lab"].classList.toggle("has-report-toggle", reportAvailable);
   els["form-lab-title"].textContent = handMode ? "ARM SWING" : "HIP MOTION";
   els["form-lab-note"].textContent = `${displaySide.toUpperCase()} ${handMode ? "HAND" : "HIP"} · ${isReview ? "REVIEW" : active ? "LIVE" : "SETUP"}`;
-  els["form-report-toggle"].hidden = !reportAvailable;
-  els["form-report-toggle"].textContent = isReview ? "NEW RUN" : "VIEW LAST RUN";
+  els["view-last-run"].hidden = !viewLastRunAvailable;
   els["form-boundary"].hidden = !handMode;
   let formStatus;
 
@@ -897,14 +929,17 @@ function render(force = false) {
         ? phonePlacement === "hand" ? "ARM MOTION LIVE · SCREEN PROTECTED" : "MOTION LIVE · SCREEN PROTECTED"
         : phonePlacement === "hand" ? "HAND CHECK IN PROGRESS" : "POCKET CHECK IN PROGRESS";
   }
-  els["start-session"].hidden = active || Boolean(savedSession);
+  renderCompletedSaveState();
+  const reviewingRun = !active && snapshot.status === "REVIEW";
+  els["start-session"].hidden = active || Boolean(savedSession) || Boolean(pendingCompletedRun);
+  els["start-session"].textContent = reviewingRun ? "START ANOTHER RUN" : "START RUN";
   els["resume-session"].hidden = active || !savedSession;
   els["stop-session"].hidden = !active;
   els["run-controls"].hidden = !active;
   els["planned-walk"].hidden = !active || Boolean(snapshot.plannedBreakActive);
   els["resume-run"].hidden = !active || !snapshot.plannedBreakActive;
   els["install-app"].hidden = active || isInstalledApp();
-  els["demo-session"].hidden = active || !demoEnabled;
+  els["demo-session"].hidden = active || !demoEnabled || Boolean(pendingCompletedRun) || reviewingRun;
   doc.body.dataset.session = active ? "active" : snapshot.status === "REVIEW" ? "review" : "ready";
   doc.body.dataset.runPhase = active
     ? fieldSession ? preflightConfirmed ? "live" : "checking" : "demo"
@@ -1108,6 +1143,10 @@ function failPreflight(message, source = "motion") {
 }
 
 async function startSession() {
+  if (pendingCompletedRun) {
+    reply("Your completed run still needs to be saved. Tap Retry Save before starting another run.");
+    return;
+  }
   try {
     await requestMotionPermission();
     applyRunConfiguration();
@@ -1129,6 +1168,7 @@ async function startSession() {
     lastMotionAtMs = null;
     savedSession = null;
     showingCompletedReport = false;
+    completedSaveState = "idle";
     placementSwitchCount = 0;
     setPreflightItem("preflight-motion", "MOTION CHECK", "waiting");
     setPreflightItem("preflight-screen", "SCREEN CHECK", "waiting");
@@ -1257,6 +1297,26 @@ function confirmFinishSession() {
   finishSession();
 }
 
+function storeCompletedRun(payload) {
+  completedFormReport = payload;
+  showingCompletedReport = true;
+  pendingCompletedRun = payload;
+  const saved = writeStoredJson(completedRunStorageKey, payload);
+  completedSaveState = saved ? "saved" : "failed";
+  if (saved) pendingCompletedRun = null;
+  return saved;
+}
+
+function retryCompletedRunSave() {
+  if (!pendingCompletedRun) return;
+  const saved = storeCompletedRun(pendingCompletedRun);
+  if (saved) {
+    clearPersistedSession();
+    speak("Run saved on this phone.");
+  }
+  render(true);
+}
+
 function finishSession() {
   if (!active) return;
   closeFinishConfirmation({ restoreFocus: false });
@@ -1300,12 +1360,8 @@ function finishSession() {
       placementSwitchCount,
       interruptions
     });
-    completedSaved = writeStoredJson(completedRunStorageKey, completedPayload);
-    if (completedSaved) {
-      completedFormReport = completedPayload;
-      showingCompletedReport = true;
-    }
-  }
+    completedSaved = storeCompletedRun(completedPayload);
+  } else completedSaveState = "demo";
   active = false;
   fieldSession = false;
   preflightConfirmed = false;
@@ -1323,6 +1379,10 @@ function finishSession() {
 }
 
 function startDemo() {
+  if (pendingCompletedRun) {
+    reply("Your completed run still needs to be saved. Tap Retry Save before starting the demo.");
+    return;
+  }
   clearMotionTimeout();
   detector = new HipMotionCadenceDetector();
   fusion = new RunSignalFusion();
@@ -1341,6 +1401,8 @@ function startDemo() {
   fieldSession = false;
   motionSignalConfirmed = false;
   preflightConfirmed = false;
+  pendingCompletedRun = null;
+  completedSaveState = "demo";
   demoStartedAt = performance.now();
   sessionStartedAtMs = demoStartedAt;
   lastSessionElapsedMs = 0;
@@ -1472,11 +1534,12 @@ voiceController = BrowserVoiceController.fromWindow(window, {
   onTranscript: handleVoiceTranscript,
   onState: handleVoiceState
 });
-els["start-session"].addEventListener("click", startSession);
+els["start-session"].addEventListener("click", handlePrimaryStartAction);
 els["resume-session"].addEventListener("click", resumeSavedSession);
 els["stop-session"].addEventListener("click", requestFinishConfirmation);
 els["finish-cancel"].addEventListener("click", cancelFinishConfirmation);
 els["finish-confirm"].addEventListener("click", confirmFinishSession);
+els["retry-save"].addEventListener("click", retryCompletedRunSave);
 els["finish-dialog"].addEventListener("cancel", event => {
   event.preventDefault();
   cancelFinishConfirmation();
@@ -1493,7 +1556,7 @@ els["start-vibration"].addEventListener("click", toggleStartVibration);
 els["placement-hip"].addEventListener("click", () => setPhonePlacement("hip"));
 els["placement-hand"].addEventListener("click", () => setPhonePlacement("hand"));
 els["placement-switch"].addEventListener("click", () => setPhonePlacement(phonePlacement === "hand" ? "hip" : "hand"));
-els["form-report-toggle"].addEventListener("click", toggleCompletedReport);
+els["view-last-run"].addEventListener("click", viewCompletedReport);
 els["pocket-side-left"].addEventListener("click", () => setPocketSide("left"));
 els["pocket-side-right"].addEventListener("click", () => setPocketSide("right"));
 els["voice-toggle"].addEventListener("click", toggleVoiceControls);
