@@ -1,4 +1,5 @@
 export const RUN_SESSION_VERSION = 1;
+export const COMPLETED_RUN_VERSION = 3;
 export const DEFAULT_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 const finite = value => {
@@ -70,6 +71,62 @@ export function parsePersistedSession(raw, { nowEpochMs = Date.now(), maxAgeMs =
       savedAtEpochMs,
       phonePlacement: value.phonePlacement === "hand" ? "hand" : "hip",
       pocketSide: value.pocketSide === "left" ? "left" : "right",
+      interruptions: Array.isArray(value.interruptions) ? value.interruptions.slice(0, 100) : []
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+export function makeCompletedRun({
+  completedAtEpochMs = Date.now(),
+  elapsedMs = 0,
+  runSnapshot,
+  motionSnapshot,
+  phonePlacement = "hip",
+  pocketSide = "right",
+  placementSwitchCount = 0,
+  interruptions = []
+}) {
+  return {
+    version: COMPLETED_RUN_VERSION,
+    completedAtEpochMs: finite(completedAtEpochMs),
+    elapsedMs: Math.max(0, finite(elapsedMs) ?? 0),
+    runSnapshot: runSnapshot && typeof runSnapshot === "object"
+      ? { ...runSnapshot, events: [] }
+      : null,
+    snapshot: motionSnapshot && typeof motionSnapshot === "object" ? motionSnapshot : null,
+    phonePlacement: phonePlacement === "hand" ? "hand" : "hip",
+    pocketSide: pocketSide === "left" ? "left" : "right",
+    placementSwitchCount: Math.max(0, Math.floor(finite(placementSwitchCount) ?? 0)),
+    interruptions: Array.isArray(interruptions) ? interruptions.slice(0, 100) : []
+  };
+}
+
+export function parseCompletedRun(raw) {
+  try {
+    const value = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (!value || ![1, 2, COMPLETED_RUN_VERSION].includes(value.version)) return null;
+    const completedAtEpochMs = finite(value.completedAtEpochMs);
+    if (completedAtEpochMs === null || !value.snapshot || typeof value.snapshot !== "object") return null;
+
+    const phonePlacement = value.version >= 2 && value.phonePlacement === "hand" ? "hand" : "hip";
+    const base = {
+      ...value,
+      completedAtEpochMs,
+      phonePlacement,
+      pocketSide: value.pocketSide === "left" ? "left" : "right",
+      placementSwitchCount: Math.max(0, Math.floor(finite(value.placementSwitchCount) ?? 0))
+    };
+
+    if (value.version < COMPLETED_RUN_VERSION) return base;
+    if (!value.runSnapshot || typeof value.runSnapshot !== "object") return null;
+    const elapsedMs = finite(value.elapsedMs);
+    if (elapsedMs === null || elapsedMs < 0) return null;
+    return {
+      ...base,
+      elapsedMs,
+      runSnapshot: { ...value.runSnapshot, events: [] },
       interruptions: Array.isArray(value.interruptions) ? value.interruptions.slice(0, 100) : []
     };
   } catch (_) {

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   closeInterruption, createInterruption, interruptionSummary,
-  makePersistedSession, parsePersistedSession
+  makeCompletedRun, makePersistedSession, parseCompletedRun, parsePersistedSession
 } from "../src/running/session-resilience.js";
 import { RunRhythmCoach } from "../src/running/rhythm-engine.js";
 
@@ -62,4 +62,62 @@ test("restores rhythm-coach progress onto a new monotonic clock", () => {
   assert.equal(restored.runningMs, before.runningMs);
   assert.equal(restored.timestampMs, 500);
   assert.equal(restoredCoach.update({ timestampMs: 1_500, cadenceSpm: 170, movementState: "running" }).runningMs, before.runningMs + 1_000);
+});
+
+test("persists and restores a complete finished-run review", () => {
+  const first = closeInterruption(createInterruption({ reason: "hidden", startedAtEpochMs: 2_000 }), 3_000);
+  const completed = makeCompletedRun({
+    completedAtEpochMs: 20_000,
+    elapsedMs: 18_000,
+    runSnapshot: {
+      status: "REVIEW",
+      message: "Run complete.",
+      cadenceSpm: 170,
+      baselineCadenceSpm: 168,
+      stablePercent: 82,
+      unplannedWalks: 1,
+      stopCount: 2,
+      events: [{ type: "old-event" }]
+    },
+    motionSnapshot: { version: 2, baselineReady: true, confidencePercent: 91 },
+    phonePlacement: "hand",
+    pocketSide: "left",
+    placementSwitchCount: 2,
+    interruptions: [first]
+  });
+  const restored = parseCompletedRun(JSON.stringify(completed));
+
+  assert.equal(restored.version, 3);
+  assert.equal(restored.elapsedMs, 18_000);
+  assert.equal(restored.runSnapshot.status, "REVIEW");
+  assert.equal(restored.runSnapshot.stablePercent, 82);
+  assert.equal(restored.runSnapshot.unplannedWalks, 1);
+  assert.deepEqual(restored.runSnapshot.events, []);
+  assert.equal(restored.snapshot.confidencePercent, 91);
+  assert.equal(restored.phonePlacement, "hand");
+  assert.equal(restored.pocketSide, "left");
+  assert.equal(restored.placementSwitchCount, 2);
+  assert.deepEqual(interruptionSummary(restored.interruptions, 20_000), { count: 1, totalMs: 1_000 });
+});
+
+test("keeps legacy motion reports readable without inventing a full review", () => {
+  const legacy = parseCompletedRun({
+    version: 2,
+    completedAtEpochMs: 20_000,
+    phonePlacement: "hand",
+    pocketSide: "right",
+    snapshot: { version: 2, baselineReady: true }
+  });
+  assert.equal(legacy.phonePlacement, "hand");
+  assert.equal(legacy.runSnapshot, undefined);
+  assert.equal(legacy.snapshot.baselineReady, true);
+});
+
+test("rejects incomplete version-three finished runs", () => {
+  assert.equal(parseCompletedRun({
+    version: 3,
+    completedAtEpochMs: 20_000,
+    elapsedMs: 18_000,
+    snapshot: { version: 2 }
+  }), null);
 });

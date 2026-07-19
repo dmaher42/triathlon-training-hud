@@ -44,6 +44,15 @@ test("saved motion reports remain visible and can return cleanly to Ready", () =
   assert.match(css, /\.form-lab\.has-report-toggle:not\(\.is-report-review\) > header/);
 });
 
+test("saved full-run reviews restore their metrics, duration and interruptions", () => {
+  assert.match(app, /parseCompletedRun\(readStoredText\(completedRunStorageKey\)\)/);
+  assert.match(app, /runSnapshot: snapshot[\s\S]*motionSnapshot:[\s\S]*interruptions/);
+  assert.match(app, /snapshot = \{ \.\.\.completedFormReport\.runSnapshot, status: "REVIEW", events: \[\] \}/);
+  assert.match(app, /lastSessionElapsedMs = completedFormReport\.elapsedMs/);
+  assert.match(app, /interruptions = completedFormReport\.interruptions/);
+  assert.match(app, /else restoreCompletedReport\(\);[\s\S]*render\(true\)/);
+});
+
 test("the compact active voice control remains a full mobile touch target", () => {
   assert.match(css, /body\[data-session="active"\][\s\S]*\.voice-dock[\s\S]*min-height:\s*44px/);
   assert.match(css, /body\[data-session="active"\] \.voice-toggle \{ min-height:\s*44px/);
@@ -56,4 +65,16 @@ test("active runs expose one large contextual placement switch", () => {
   assert.match(app, /planActivePlacementSwitch\(/);
   assert.match(app, /fusion\.updatePhone\(\{ timestampMs: now, cadenceSpm: null/);
   assert.match(app, /formState: formAnalyzer\.exportState\(\)[\s\S]*armState: armAnalyzer\.exportState\(\)/);
+});
+
+test("touch finishing requires an explicit confirmation", () => {
+  assert.match(html, /<dialog[^>]*id="finish-dialog"[^>]*aria-labelledby="finish-dialog-title"/);
+  assert.match(html, /id="finish-cancel"[\s\S]*KEEP RUNNING/);
+  assert.match(html, /id="finish-confirm"[\s\S]*FINISH RUN/);
+  assert.match(app, /els\["stop-session"\]\.addEventListener\("click", requestFinishConfirmation\)/);
+  assert.match(app, /els\["finish-cancel"\]\.addEventListener\("click", cancelFinishConfirmation\)/);
+  assert.match(app, /els\["finish-confirm"\]\.addEventListener\("click", confirmFinishSession\)/);
+  assert.doesNotMatch(app, /els\["stop-session"\]\.addEventListener\("click", finishSession\)/);
+  assert.match(css, /\.finish-dialog::backdrop/);
+  assert.match(css, /\.finish-dialog-actions button[\s\S]*min-height:\s*58px/);
 });

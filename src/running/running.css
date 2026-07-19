@@ -649,6 +649,30 @@ body[data-session="ready"] .form-lab.has-report-toggle:not(.is-report-review) #f
 #pocket-unlock-progress { margin-top: 9px; color: #70859a; font-size: .64rem; }
 body.pocket-locked { overflow: hidden; overscroll-behavior: none; touch-action: none; }
 
+/* Finishing is deliberately two-step so a tired or wet-handed runner cannot end a run with one stray tap. */
+body.finish-confirming { overflow: hidden; }
+.finish-dialog {
+  width: min(400px, calc(100vw - 32px));
+  max-width: none;
+  border: 1px solid rgba(255, 120, 137, .38);
+  border-radius: 22px;
+  padding: 0;
+  background: linear-gradient(145deg, rgba(13, 28, 43, .995), rgba(4, 11, 20, .998));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .06), 0 24px 70px rgba(0, 0, 0, .72), 0 0 26px rgba(255, 80, 104, .08);
+  color: var(--text);
+}
+.finish-dialog::backdrop { background: rgba(1, 6, 12, .78); backdrop-filter: blur(5px); }
+.finish-dialog-panel { padding: 24px 22px 22px; }
+.finish-dialog-kicker { color: #ff8595; font-size: .68rem; font-weight: 900; letter-spacing: .11em; }
+.finish-dialog h2 { margin: 8px 0 0; color: #f5f8fb; font-size: clamp(1.55rem, 7vw, 1.9rem); line-height: 1.05; letter-spacing: -.035em; }
+.finish-dialog p { margin: 12px 0 0; color: #adbdcc; font-size: .9rem; line-height: 1.45; }
+.finish-dialog-actions { display: grid; gap: 10px; margin-top: 22px; }
+.finish-dialog-actions button { width: 100%; min-height: 58px; border-radius: 14px; font-size: .78rem; font-weight: 900; letter-spacing: .055em; cursor: pointer; }
+#finish-cancel { border: 1px solid rgba(var(--cyan-rgb), .34); background: rgba(var(--cyan-rgb), .055); color: var(--cyan); }
+#finish-confirm { border: 1px solid rgba(255, 116, 134, .48); background: linear-gradient(145deg, rgba(124, 28, 45, .82), rgba(65, 15, 28, .92)); color: #ffe9ed; box-shadow: inset 0 1px rgba(255, 255, 255, .06), 0 0 18px rgba(255, 70, 96, .08); }
+#finish-cancel:focus-visible,
+#finish-confirm:focus-visible { outline: 3px solid rgba(var(--cyan-rgb), .72); outline-offset: 3px; }
+
 .demo-button { width: 100%; margin-top: 10px; border: 0; padding: 10px; background: transparent; color: var(--muted-low); font-size: .68rem; font-weight: 850; letter-spacing: .06em; text-decoration: underline; cursor: pointer; }
 .visually-hidden { position: absolute !important; top: 0 !important; left: 0 !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(1px, 1px, 1px, 1px) !important; clip-path: inset(50%) !important; white-space: nowrap !important; }
 

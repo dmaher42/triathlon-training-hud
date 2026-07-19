@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="../src/running/running.css">
 </head>
 <body>
-  <main class="run-shell">
+  <main class="run-shell" id="run-shell">
     <header class="app-header">
       <div class="app-title">
         <h1>Run Durability</h1>
@@ -193,6 +193,18 @@
 
     <button class="demo-button" id="demo-session" type="button" hidden>RUN 20-SECOND DESKTOP DEMO</button>
   </main>
+
+  <dialog class="finish-dialog" id="finish-dialog" aria-modal="true" aria-labelledby="finish-dialog-title" aria-describedby="finish-dialog-description">
+    <div class="finish-dialog-panel">
+      <span class="finish-dialog-kicker">END CURRENT RUN</span>
+      <h2 id="finish-dialog-title">Finish this run?</h2>
+      <p id="finish-dialog-description">The coach will stop measuring and open your completed-run review.</p>
+      <div class="finish-dialog-actions">
+        <button type="button" id="finish-cancel">KEEP RUNNING</button>
+        <button type="button" id="finish-confirm">FINISH RUN</button>
+      </div>
+    </div>
+  </dialog>
 
   <section class="pocket-lock-screen" id="pocket-lock-screen" role="dialog" aria-modal="true" hidden aria-label="Run lock active">
     <div class="pocket-lock-mark" aria-hidden="true">&#9679;</div>

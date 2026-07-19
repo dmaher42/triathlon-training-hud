@@ -7,12 +7,13 @@ import { HipFormAnalyzer } from "./hip-form-analyzer.js";
 import { ArmSwingAnalyzer } from "./arm-swing-analyzer.js";
 import {
   closeInterruption, createInterruption, interruptionSummary,
-  makePersistedSession, parsePersistedSession
+  makeCompletedRun, makePersistedSession, parseCompletedRun, parsePersistedSession
 } from "./session-resilience.js";
 import { planActivePlacementSwitch, runConfigurationLocked, selectRunConfiguration } from "./run-configuration.js";
 
 const doc = document;
 const els = Object.fromEntries([
+  "run-shell", "finish-dialog", "finish-dialog-description", "finish-cancel", "finish-confirm",
   "status-card", "status-value", "status-message", "status-glyph",
   "baseline-progress", "baseline-mini-progress", "baseline-track",
   "cadence-value", "cadence-target", "cadence-delta", "baseline-value", "baseline-state",
@@ -56,12 +57,14 @@ let motionSignalTimeout = null;
 let voiceController = null;
 let voiceResumeTimer = null;
 let pendingFinishUntil = -Infinity;
+let finishReturnFocus = null;
 const voicePromptsStorageKey = "run-durability-voice-prompts-v1";
 let voicePromptsEnabled = readStoredText(voicePromptsStorageKey) !== "off";
 const startVibrationStorageKey = "run-durability-start-vibration-v1";
 let startVibrationEnabled = readStoredText(startVibrationStorageKey) !== "off";
 const activeSessionStorageKey = "run-durability-active-session-v1";
-const completedFormStorageKey = "run-durability-completed-form-v1";
+// Keep the legacy storage key so existing last-motion reports upgrade in place.
+const completedRunStorageKey = "run-durability-completed-form-v1";
 let pocketLocked = false;
 let pocketUnlockTimer = null;
 let lockReturnFocus = null;
@@ -83,7 +86,7 @@ let placementSwitchCount = Number.isFinite(Number(savedSession?.placementSwitchC
   ? Math.max(0, Math.floor(Number(savedSession.placementSwitchCount)))
   : 0;
 let storageHealthy = null;
-let completedFormReport = readStoredJson(completedFormStorageKey);
+let completedFormReport = parseCompletedRun(readStoredText(completedRunStorageKey));
 let showingCompletedReport = Boolean(completedFormReport?.completedAtEpochMs && completedFormReport?.snapshot);
 if (savedSession && completedFormReport?.completedAtEpochMs >= savedSession.savedAtEpochMs) {
   savedSession = null;
@@ -270,7 +273,7 @@ function switchActivePlacement(requestedPlacement, { forceReply = false } = {}) 
 function toggleCompletedReport() {
   if (active || savedSession || !completedFormReport?.snapshot) return;
   if (showingCompletedReport) applyRunConfiguration();
-  else showingCompletedReport = true;
+  else restoreCompletedReport();
   render(true);
 }
 
@@ -285,7 +288,23 @@ function resetSelectedMeasurement() {
 }
 
 function completedReportPlacement(report = completedFormReport) {
-  return report?.version === 2 && report?.phonePlacement === "hand" ? "hand" : "hip";
+  return report?.phonePlacement === "hand" ? "hand" : "hip";
+}
+
+function restoreCompletedReport() {
+  if (!completedFormReport?.snapshot) return false;
+  phonePlacement = completedReportPlacement();
+  pocketSide = completedFormReport.pocketSide === "left" ? "left" : "right";
+  if (phonePlacement === "hand") armSnapshot = completedFormReport.snapshot;
+  else formSnapshot = completedFormReport.snapshot;
+  if (completedFormReport.runSnapshot) {
+    snapshot = { ...completedFormReport.runSnapshot, status: "REVIEW", events: [] };
+    lastSessionElapsedMs = completedFormReport.elapsedMs;
+    interruptions = completedFormReport.interruptions;
+    interruptionActive = null;
+  }
+  showingCompletedReport = true;
+  return true;
 }
 
 function renderPhonePlacement({ placement = phonePlacement, side = pocketSide } = {}) {
@@ -460,15 +479,6 @@ function writeStoredText(key, value) {
   } catch (_) {
     setSaveHealth(false);
     return false;
-  }
-}
-
-function readStoredJson(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch (_) {
-    return null;
   }
 }
 
@@ -1074,6 +1084,7 @@ function onDeviceMotion(event) {
 }
 
 function failPreflight(message, source = "motion") {
+  closeFinishConfirmation({ restoreFocus: false });
   clearMotionTimeout();
   active = false;
   fieldSession = false;
@@ -1215,8 +1226,40 @@ async function resumeSavedSession() {
   }
 }
 
+function closeFinishConfirmation({ restoreFocus = true } = {}) {
+  if (els["finish-dialog"].open) els["finish-dialog"].close();
+  doc.body.classList.remove("finish-confirming");
+  const returnFocus = finishReturnFocus;
+  finishReturnFocus = null;
+  if (restoreFocus && active && returnFocus?.isConnected) {
+    requestAnimationFrame(() => returnFocus.focus());
+  }
+}
+
+function requestFinishConfirmation() {
+  if (!active || els["finish-dialog"].open) return;
+  finishReturnFocus = doc.activeElement;
+  const elapsedMs = sessionStartedAtMs === null
+    ? lastSessionElapsedMs
+    : Math.max(0, snapshot.timestampMs - sessionStartedAtMs);
+  els["finish-dialog-description"].textContent = `${formatMinutes(elapsedMs)} recorded. The coach will stop measuring and open your review.`;
+  doc.body.classList.add("finish-confirming");
+  els["finish-dialog"].showModal();
+  els["finish-cancel"].focus();
+}
+
+function cancelFinishConfirmation() {
+  closeFinishConfirmation();
+}
+
+function confirmFinishSession() {
+  closeFinishConfirmation({ restoreFocus: false });
+  finishSession();
+}
+
 function finishSession() {
   if (!active) return;
+  closeFinishConfirmation({ restoreFocus: false });
   setPocketLock(false);
   pendingFinishUntil = -Infinity;
   clearMotionTimeout();
@@ -1232,17 +1275,32 @@ function finishSession() {
       : Number.isFinite(armSnapshot.armCycleRpm) && Number.isFinite(armSnapshot.regularityPercent)
         ? ` Arm swing finished at ${Math.round(armSnapshot.armCycleRpm)} cycles per minute with ${armSnapshot.regularityPercent} percent regularity.${Number.isFinite(armSnapshot.rangeChangePercent) ? ` Range was ${Math.abs(armSnapshot.rangeChangePercent)} percent ${armSnapshot.rangeChangePercent >= 0 ? "larger" : "smaller"} than the opening pattern.` : ""}`
         : " Arm swing data was insufficient for a final rhythm score.";
+  const interruptionNote = interruptionData.count
+    ? ` Recording was interrupted ${interruptionData.count} ${interruptionData.count === 1 ? "time" : "times"} for about ${formatMinutes(interruptionData.totalMs)}.`
+    : " Recording remained continuous.";
+  const rhythmSummary = Number.isFinite(snapshot.baselineCadenceSpm)
+    ? `${snapshot.stablePercent} percent of measured running cadence was inside your rhythm band. Longest steady block ${formatMinutes(snapshot.longestStableBlockMs)}.`
+    : phonePlacement === "hand"
+      ? "Step-cadence efficiency was not scored because no completed Garmin cadence baseline was available."
+      : "The step-cadence baseline was not completed, so rhythm-band time was not scored.";
+  const switchNote = placementSwitchCount > 0
+    ? ` Motion measurements report the final ${phonePlacement === "hand" ? "hand-swing" : "hip-pocket"} segment after ${placementSwitchCount} position ${placementSwitchCount === 1 ? "switch" : "switches"}; earlier position segments are excluded from this report.`
+    : "";
+  const summary = `Field test complete. ${rhythmSummary} ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}.${interruptionNote}${armFinishNote}${switchNote}`;
+  snapshot = { ...snapshot, status: "REVIEW", message: summary, events: [] };
   let completedSaved = !fieldSession;
   if (fieldSession) {
-    const completedPayload = {
-      version: 2,
+    const completedPayload = makeCompletedRun({
       completedAtEpochMs: Date.now(),
+      elapsedMs: lastSessionElapsedMs,
+      runSnapshot: snapshot,
+      motionSnapshot: phonePlacement === "hand" ? armSnapshot : formSnapshot,
       phonePlacement,
       pocketSide,
       placementSwitchCount,
-      snapshot: phonePlacement === "hand" ? armSnapshot : formSnapshot
-    };
-    completedSaved = writeStoredJson(completedFormStorageKey, completedPayload);
+      interruptions
+    });
+    completedSaved = writeStoredJson(completedRunStorageKey, completedPayload);
     if (completedSaved) {
       completedFormReport = completedPayload;
       showingCompletedReport = true;
@@ -1259,19 +1317,6 @@ function finishSession() {
   stopResilienceMonitor();
   if (completedSaved) clearPersistedSession();
   releaseWakeLock();
-  const interruptionNote = interruptionData.count
-    ? ` Recording was interrupted ${interruptionData.count} ${interruptionData.count === 1 ? "time" : "times"} for about ${formatMinutes(interruptionData.totalMs)}.`
-    : " Recording remained continuous.";
-  const rhythmSummary = Number.isFinite(snapshot.baselineCadenceSpm)
-    ? `${snapshot.stablePercent} percent of measured running cadence was inside your rhythm band. Longest steady block ${formatMinutes(snapshot.longestStableBlockMs)}.`
-    : phonePlacement === "hand"
-      ? "Step-cadence efficiency was not scored because no completed Garmin cadence baseline was available."
-      : "The step-cadence baseline was not completed, so rhythm-band time was not scored.";
-  const switchNote = placementSwitchCount > 0
-    ? ` Motion measurements report the final ${phonePlacement === "hand" ? "hand-swing" : "hip-pocket"} segment after ${placementSwitchCount} position ${placementSwitchCount === 1 ? "switch" : "switches"}; earlier position segments are excluded from this report.`
-    : "";
-  const summary = `Field test complete. ${rhythmSummary} ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}.${interruptionNote}${armFinishNote}${switchNote}`;
-  snapshot = { ...snapshot, status: "REVIEW", message: summary, events: [] };
   setConnection("phone-connection", "PHONE READY");
   speak(summary);
   render(true);
@@ -1429,7 +1474,16 @@ voiceController = BrowserVoiceController.fromWindow(window, {
 });
 els["start-session"].addEventListener("click", startSession);
 els["resume-session"].addEventListener("click", resumeSavedSession);
-els["stop-session"].addEventListener("click", finishSession);
+els["stop-session"].addEventListener("click", requestFinishConfirmation);
+els["finish-cancel"].addEventListener("click", cancelFinishConfirmation);
+els["finish-confirm"].addEventListener("click", confirmFinishSession);
+els["finish-dialog"].addEventListener("cancel", event => {
+  event.preventDefault();
+  cancelFinishConfirmation();
+});
+els["finish-dialog"].addEventListener("click", event => {
+  if (event.target === els["finish-dialog"]) cancelFinishConfirmation();
+});
 els["demo-session"].addEventListener("click", startDemo);
 els["planned-walk"].addEventListener("click", () => handleSnapshot(coach.markPlannedBreak(performance.now())));
 els["resume-run"].addEventListener("click", resumeRunning);
@@ -1484,11 +1538,5 @@ initialiseBatteryCheck();
 initialiseStorageCheck();
 if (savedSession) {
   snapshot = { ...snapshot, status: "SAVED RUN", message: "A previous run can be resumed without losing its recorded summary.", events: [] };
-} else if ([1, 2].includes(completedFormReport?.version) && completedFormReport.snapshot) {
-  phonePlacement = completedReportPlacement();
-  pocketSide = completedFormReport.pocketSide === "left" ? "left" : "right";
-  if (phonePlacement === "hand") armSnapshot = completedFormReport.snapshot;
-  else formSnapshot = completedFormReport.snapshot;
-  showingCompletedReport = true;
-}
+} else restoreCompletedReport();
 render(true);
