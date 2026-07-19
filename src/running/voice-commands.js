@@ -11,6 +11,8 @@ export const VOICE_INTENTS = Object.freeze({
   STATUS: "status",
   PLANNED_WALK: "planned-walk",
   RESUME: "resume",
+  SWITCH_HIP: "switch-hip",
+  SWITCH_HAND: "switch-hand",
   QUIET: "quiet",
   PROMPTS_ON: "prompts-on",
   FINISH_REQUEST: "finish-request",
@@ -51,6 +53,12 @@ export function parseVoiceCommand(transcript, { awaitingFinishConfirmation = fal
   }
   if (matches(text, [/^resume(\s+running)?$/, /^back\s+to\s+running$/, /^end\s+(the\s+)?walk$/, /^continue(\s+run|\s+running)?$/])) {
     return { intent: VOICE_INTENTS.RESUME, transcript: text };
+  }
+  if (matches(text, [/^switch\s+to\s+(hip(\s+pocket)?|pocket)(\s+mode)?$/, /^(use|select)\s+(the\s+)?hip\s+pocket$/, /^hip\s+pocket\s+mode$/])) {
+    return { intent: VOICE_INTENTS.SWITCH_HIP, transcript: text };
+  }
+  if (matches(text, [/^switch\s+to\s+(hand|arm)(\s+swing)?(\s+mode)?$/, /^(use|select)\s+(the\s+)?hand\s+swing$/, /^(hand|arm)\s+swing\s+mode$/])) {
+    return { intent: VOICE_INTENTS.SWITCH_HAND, transcript: text };
   }
   if (matches(text, [/^(turn\s+)?(voice\s+)?prompts\s+on$/, /^automatic\s+coaching\s+on$/])) {
     return { intent: VOICE_INTENTS.PROMPTS_ON, transcript: text };

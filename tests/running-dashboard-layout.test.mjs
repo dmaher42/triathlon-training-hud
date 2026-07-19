@@ -48,3 +48,12 @@ test("the compact active voice control remains a full mobile touch target", () =
   assert.match(css, /body\[data-session="active"\][\s\S]*\.voice-dock[\s\S]*min-height:\s*44px/);
   assert.match(css, /body\[data-session="active"\] \.voice-toggle \{ min-height:\s*44px/);
 });
+
+test("active runs expose one large contextual placement switch", () => {
+  assert.match(html, /id="placement-switch"[\s\S]*SWITCH TO HAND/);
+  assert.match(html, /id="placement-switch-help"[\s\S]*new measurement segment/);
+  assert.match(css, /#placement-switch[\s\S]*min-width:\s*138px[\s\S]*min-height:\s*44px/);
+  assert.match(app, /planActivePlacementSwitch\(/);
+  assert.match(app, /fusion\.updatePhone\(\{ timestampMs: now, cadenceSpm: null/);
+  assert.match(app, /formState: formAnalyzer\.exportState\(\)[\s\S]*armState: armAnalyzer\.exportState\(\)/);
+});

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { runConfigurationLocked, selectRunConfiguration } from "../src/running/run-configuration.js";
+import {
+  planActivePlacementSwitch,
+  runConfigurationLocked,
+  selectRunConfiguration
+} from "../src/running/run-configuration.js";
 
 test("completed-report controls prepare a matching new run", () => {
   assert.equal(runConfigurationLocked({ reviewingCompletedReport: true }), false);
@@ -61,4 +65,33 @@ test("ordinary selections preserve the dimension that was not changed", () => {
     placement: "hip",
     side: "left"
   });
+});
+
+test("active placement changes are allowed only after Run Lock is released", () => {
+  assert.deepEqual(planActivePlacementSwitch({
+    active: true,
+    currentPlacement: "hip",
+    requestedPlacement: "hand"
+  }), {
+    changed: true,
+    placement: "hand",
+    blockedReason: null
+  });
+
+  assert.equal(planActivePlacementSwitch({
+    active: true,
+    pocketLocked: true,
+    currentPlacement: "hip",
+    requestedPlacement: "hand"
+  }).blockedReason, "locked");
+  assert.equal(planActivePlacementSwitch({
+    active: false,
+    currentPlacement: "hip",
+    requestedPlacement: "hand"
+  }).blockedReason, "inactive");
+  assert.equal(planActivePlacementSwitch({
+    active: true,
+    currentPlacement: "hand",
+    requestedPlacement: "hand"
+  }).blockedReason, "same-placement");
 });

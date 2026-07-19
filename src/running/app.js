@@ -9,7 +9,7 @@ import {
   closeInterruption, createInterruption, interruptionSummary,
   makePersistedSession, parsePersistedSession
 } from "./session-resilience.js";
-import { runConfigurationLocked, selectRunConfiguration } from "./run-configuration.js";
+import { planActivePlacementSwitch, runConfigurationLocked, selectRunConfiguration } from "./run-configuration.js";
 
 const doc = document;
 const els = Object.fromEntries([
@@ -26,7 +26,7 @@ const els = Object.fromEntries([
   "form-lab", "form-vertical", "form-horizontal", "form-rotation", "form-impact",
   "form-status", "form-confidence", "form-progress", "pocket-side-left", "pocket-side-right",
   "form-segment-review", "form-middle", "form-late", "placement-hip", "placement-hand",
-  "form-lab-title", "form-lab-note", "form-side-label", "form-boundary", "form-report-toggle", "hand-mode-note", "metric-grid", "form-progress-track",
+  "form-lab-title", "form-lab-note", "form-side-label", "form-boundary", "form-report-toggle", "placement-switch", "placement-switch-status", "hand-mode-note", "metric-grid", "form-progress-track",
   "form-label-vertical", "form-label-horizontal", "form-label-rotation", "form-label-impact",
   "pocket-lock-label", "pocket-lock-metric-label"
 ].map(id => [id, doc.getElementById(id)]));
@@ -79,6 +79,9 @@ const pocketSideStorageKey = "run-durability-pocket-side-v1";
 let pocketSide = readStoredText(pocketSideStorageKey) === "left" ? "left" : "right";
 const phonePlacementStorageKey = "run-durability-phone-placement-v1";
 let phonePlacement = readStoredText(phonePlacementStorageKey) === "hand" ? "hand" : "hip";
+let placementSwitchCount = Number.isFinite(Number(savedSession?.placementSwitchCount))
+  ? Math.max(0, Math.floor(Number(savedSession.placementSwitchCount)))
+  : 0;
 let storageHealthy = null;
 let completedFormReport = readStoredJson(completedFormStorageKey);
 let showingCompletedReport = Boolean(completedFormReport?.completedAtEpochMs && completedFormReport?.snapshot);
@@ -180,6 +183,7 @@ function resetReadySession() {
   lastSessionElapsedMs = 0;
   interruptions = [];
   interruptionActive = null;
+  placementSwitchCount = 0;
 }
 
 function setRunConfiguration({ placement, side } = {}) {
@@ -193,7 +197,74 @@ function setPocketSide(side) {
 }
 
 function setPhonePlacement(placement) {
+  if (active) return switchActivePlacement(placement);
   setRunConfiguration({ placement });
+  return true;
+}
+
+function placementName(placement) {
+  return placement === "hand" ? "Hand swing" : "Hip pocket";
+}
+
+function switchActivePlacement(requestedPlacement, { forceReply = false } = {}) {
+  const transition = planActivePlacementSwitch({
+    active,
+    pocketLocked,
+    currentPlacement: phonePlacement,
+    requestedPlacement
+  });
+
+  if (!transition.changed) {
+    if (forceReply) {
+      if (transition.blockedReason === "inactive") reply("Start the run before switching phone position.");
+      else if (transition.blockedReason === "locked") reply(`Unlock ${phonePlacement === "hand" ? "Run Lock" : "Pocket Lock"} before switching phone position.`);
+      else reply(`${placementName(phonePlacement)} measurement is already active.`);
+    }
+    return false;
+  }
+
+  const now = performance.now();
+  if (phonePlacement === "hand") armSnapshot = armAnalyzer.snapshot(now, { force: true });
+  else formSnapshot = formAnalyzer.snapshot(now, { force: true });
+
+  phonePlacement = transition.placement;
+  writeStoredText(phonePlacementStorageKey, phonePlacement);
+  if (phonePlacement === "hand") {
+    armAnalyzer = new ArmSwingAnalyzer();
+    armSnapshot = armAnalyzer.start(now);
+  } else {
+    detector = new HipMotionCadenceDetector();
+    formAnalyzer = new HipFormAnalyzer();
+    formSnapshot = formAnalyzer.start(now);
+  }
+
+  fusion.updatePhone({ timestampMs: now, cadenceSpm: null, movementState: "unknown", motionIntensity: null });
+  placementSwitchCount += 1;
+
+  if (fieldSession) {
+    motionSignalConfirmed = false;
+    preflightConfirmed = false;
+    preflightAnnounced = true;
+    lastMotionAtMs = now;
+    clearMotionTimeout();
+    setConnection("phone-connection", "MOVE PHONE TO CONFIRM", "warning");
+    setPreflightItem("preflight-motion", phonePlacement === "hand" ? "HAND MOTION CHECK" : "HIP MOTION CHECK", "waiting");
+    setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK ARMING" : "POCKET LOCK ARMING", "waiting");
+    motionSignalTimeout = setTimeout(() => {
+      if (!active || !fieldSession || motionSignalConfirmed) return;
+      setConnection("phone-connection", phonePlacement === "hand" ? "NO HAND MOTION YET" : "NO HIP MOTION YET", "warning");
+      setPreflightItem("preflight-motion", "MOTION STILL WAITING", "warning");
+      render(true);
+    }, 6_000);
+  }
+
+  persistActiveSession(true);
+  render(true);
+  const message = `${placementName(phonePlacement)} selected. New measurement segment started.`;
+  els["placement-switch-status"].textContent = message;
+  if (forceReply) reply(message);
+  else speak(message);
+  return true;
 }
 
 function toggleCompletedReport() {
@@ -233,6 +304,14 @@ function renderPhonePlacement({ placement = phonePlacement, side = pocketSide } 
   els["pocket-lock"].querySelector("strong").textContent = placement === "hand" ? "RUN LOCK" : "POCKET LOCK";
   els["pocket-lock-screen"].setAttribute("aria-label", placement === "hand" ? "Run lock active" : "Pocket lock active");
   els["hand-mode-note"].hidden = placement !== "hand";
+  const switchDestination = placement === "hand" ? "hip" : "hand";
+  els["placement-switch"].hidden = !active;
+  els["placement-switch"].disabled = !active || pocketLocked;
+  els["placement-switch"].dataset.destination = switchDestination;
+  els["placement-switch"].textContent = switchDestination === "hand" ? "SWITCH TO HAND" : "SWITCH TO HIP";
+  els["placement-switch"].setAttribute("aria-label", switchDestination === "hand"
+    ? "Switch phone measurement to hand swing"
+    : "Switch phone measurement to hip pocket");
   doc.body.dataset.phonePlacement = placement;
 }
 
@@ -292,8 +371,13 @@ function renderFormLab() {
     els["form-label-horizontal"].textContent = "CYCLE REGULARITY";
     els["form-label-rotation"].textContent = displaySnapshot.capabilities?.signalSource === "acceleration" ? "MOTION SIZE" : "RANGE";
     els["form-label-impact"].textContent = "GARMIN MATCH";
-    const reviewStatus = !displaySnapshot.baselineReady
-      ? `Saved ${displaySide} hand run · insufficient arm baseline`
+    const switchedPlacement = isReview && Number(completedFormReport?.placementSwitchCount) > 0;
+    const reviewStatus = switchedPlacement
+      ? displaySnapshot.baselineReady
+        ? `Saved ${displaySide} hand final segment · earlier positions excluded`
+        : `Saved ${displaySide} hand final segment · insufficient arm baseline`
+      : !displaySnapshot.baselineReady
+        ? `Saved ${displaySide} hand run · insufficient arm baseline`
       : displaySnapshot.segments?.late
         ? `Saved ${displaySide} hand report · opening, middle and final retained`
         : displaySnapshot.segments?.middle
@@ -324,8 +408,13 @@ function renderFormLab() {
     els["form-label-horizontal"].textContent = "HORIZONTAL";
     els["form-label-rotation"].textContent = "ROTATION";
     els["form-label-impact"].textContent = "IMPACT";
-    const reviewStatus = !displaySnapshot.baselineReady
-      ? `Saved ${displaySide} hip run · insufficient data for comparison`
+    const switchedPlacement = isReview && Number(completedFormReport?.placementSwitchCount) > 0;
+    const reviewStatus = switchedPlacement
+      ? displaySnapshot.baselineReady
+        ? `Saved ${displaySide} hip final segment · earlier positions excluded`
+        : `Saved ${displaySide} hip final segment · insufficient comparison data`
+      : !displaySnapshot.baselineReady
+        ? `Saved ${displaySide} hip run · insufficient data for comparison`
       : displaySnapshot.segments?.late
         ? `Saved ${displaySide} hip report · opening, middle and final retained`
         : displaySnapshot.segments?.middle
@@ -431,15 +520,18 @@ function persistActiveSession(force = false) {
   const now = performance.now();
   if (!force && now - lastPersistAttemptAtMs < 5_000) return;
   lastPersistAttemptAtMs = now;
-  const payload = makePersistedSession({
-    startedAtEpochMs: sessionStartedAtEpochMs,
-    coachState: coach.exportState(),
-    formState: phonePlacement === "hip" ? formAnalyzer.exportState() : null,
-    armState: phonePlacement === "hand" ? armAnalyzer.exportState() : null,
-    phonePlacement,
-    pocketSide,
-    interruptions
-  });
+  const payload = {
+    ...makePersistedSession({
+      startedAtEpochMs: sessionStartedAtEpochMs,
+      coachState: coach.exportState(),
+      formState: formAnalyzer.exportState(),
+      armState: armAnalyzer.exportState(),
+      phonePlacement,
+      pocketSide,
+      interruptions
+    }),
+    placementSwitchCount
+  };
   writeStoredJson(activeSessionStorageKey, payload);
 }
 
@@ -483,7 +575,7 @@ function stopResilienceMonitor() {
 function glyphFor(status) {
   if (["FADING", "WALKING"].includes(status)) return "↘";
   if (["STOPPED", "PLANNED STOP", "SENSOR ERROR"].includes(status)) return "■";
-  if (["PREFLIGHT", "CALIBRATING", "RESET"].includes(status)) return "••";
+  if (["PREFLIGHT", "CALIBRATING", "RESET", "HAND CHECK", "POCKET CHECK"].includes(status)) return "••";
   if (status === "PLANNED WALK") return "Ⅱ";
   return "✓";
 }
@@ -651,6 +743,12 @@ async function executeRunIntent(intent) {
       else if (!snapshot.plannedBreakActive) reply("There is no planned walk to end.");
       else handleSnapshot(coach.resumePlannedBreak(performance.now()));
       break;
+    case VOICE_INTENTS.SWITCH_HIP:
+      switchActivePlacement("hip", { forceReply: true });
+      break;
+    case VOICE_INTENTS.SWITCH_HAND:
+      switchActivePlacement("hand", { forceReply: true });
+      break;
     case VOICE_INTENTS.QUIET:
       setVoicePrompts(false);
       break;
@@ -673,7 +771,7 @@ async function executeRunIntent(intent) {
       reply("Finish cancelled. Keep running.");
       break;
     case VOICE_INTENTS.HELP:
-      reply("You can say start run, coach status, arm status, planned walk, resume running, prompts off, prompts on, finish run, or stop listening.");
+      reply("You can say start run, coach status, planned walk, resume running, switch to hand, switch to hip, prompts off, prompts on, finish run, or stop listening.");
       break;
     case VOICE_INTENTS.VOICE_OFF:
       voiceController?.disable();
@@ -702,11 +800,19 @@ function render(force = false) {
   const fusedState = fusion.snapshot(now);
   const renderedPlacement = !active && showingCompletedReport ? completedReportPlacement() : phonePlacement;
   const handWithoutGarmin = renderedPlacement === "hand" && fusedState.cadenceSource !== "garmin";
-  const showArmStatus = active && handWithoutGarmin && snapshot.status === "CALIBRATING";
-  const displayStatus = showArmStatus
+  const checkingNewPlacement = active && fieldSession && !motionSignalConfirmed;
+  const preserveCoachStatus = ["PLANNED WALK", "PLANNED STOP", "WALKING", "STOPPED", "SENSOR ERROR"].includes(snapshot.status);
+  const showArmStatus = active && handWithoutGarmin && !checkingNewPlacement && !preserveCoachStatus;
+  const displayStatus = checkingNewPlacement
+    ? renderedPlacement === "hand" ? "HAND CHECK" : "POCKET CHECK"
+    : showArmStatus
     ? armSnapshot.capabilities?.signalSource ? "ARM LIVE" : "ARM CHECK"
     : snapshot.status;
-  const displayMessage = showArmStatus
+  const displayMessage = checkingNewPlacement
+    ? renderedPlacement === "hand"
+      ? "Move the phone with your selected hand to start a fresh arm-swing segment."
+      : "Move the phone at your hip to start a fresh hip-motion segment."
+    : showArmStatus
     ? armSnapshot.capabilities?.signalSource
       ? `Monitoring ${pocketSide}-hand swing. Garmin is needed for step cadence.`
       : "Move your selected hand naturally while the phone confirms arm motion."
@@ -1012,6 +1118,7 @@ async function startSession() {
     lastMotionAtMs = null;
     savedSession = null;
     showingCompletedReport = false;
+    placementSwitchCount = 0;
     setPreflightItem("preflight-motion", "MOTION CHECK", "waiting");
     setPreflightItem("preflight-screen", "SCREEN CHECK", "waiting");
     setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK ARMING" : "POCKET ARMING", "waiting");
@@ -1081,6 +1188,9 @@ async function resumeSavedSession() {
     lastMotionAtMs = null;
     savedSession = null;
     showingCompletedReport = false;
+    placementSwitchCount = Number.isFinite(Number(restored.placementSwitchCount))
+      ? Math.max(0, Math.floor(Number(restored.placementSwitchCount)))
+      : 0;
     if (!interruptionActive) {
       interruptions.push(createInterruption({ reason: "app-restarted", startedAtEpochMs: restored.savedAtEpochMs }));
       interruptionActive = interruptions.at(-1);
@@ -1129,6 +1239,7 @@ function finishSession() {
       completedAtEpochMs: Date.now(),
       phonePlacement,
       pocketSide,
+      placementSwitchCount,
       snapshot: phonePlacement === "hand" ? armSnapshot : formSnapshot
     };
     completedSaved = writeStoredJson(completedFormStorageKey, completedPayload);
@@ -1156,7 +1267,10 @@ function finishSession() {
     : phonePlacement === "hand"
       ? "Step-cadence efficiency was not scored because no completed Garmin cadence baseline was available."
       : "The step-cadence baseline was not completed, so rhythm-band time was not scored.";
-  const summary = `Field test complete. ${rhythmSummary} ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}.${interruptionNote}${armFinishNote}`;
+  const switchNote = placementSwitchCount > 0
+    ? ` Motion measurements report the final ${phonePlacement === "hand" ? "hand-swing" : "hip-pocket"} segment after ${placementSwitchCount} position ${placementSwitchCount === 1 ? "switch" : "switches"}; earlier position segments are excluded from this report.`
+    : "";
+  const summary = `Field test complete. ${rhythmSummary} ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}.${interruptionNote}${armFinishNote}${switchNote}`;
   snapshot = { ...snapshot, status: "REVIEW", message: summary, events: [] };
   setConnection("phone-connection", "PHONE READY");
   speak(summary);
@@ -1185,6 +1299,7 @@ function startDemo() {
   demoStartedAt = performance.now();
   sessionStartedAtMs = demoStartedAt;
   lastSessionElapsedMs = 0;
+  placementSwitchCount = 0;
   handleSnapshot(coach.start(demoStartedAt));
   formSnapshot = formAnalyzer.start(demoStartedAt);
   armSnapshot = armAnalyzer.start(demoStartedAt);
@@ -1265,6 +1380,7 @@ async function installRunningApp() {
 
 async function setPocketLock(locked, { announce = true } = {}) {
   pocketLocked = Boolean(locked && active);
+  els["placement-switch"].disabled = !active || pocketLocked;
   if (pocketLocked) lockReturnFocus = els["pocket-lock"];
   els["pocket-lock-screen"].hidden = !pocketLocked;
   doc.querySelector(".run-shell").inert = pocketLocked;
@@ -1322,6 +1438,7 @@ els["silence-coach"].addEventListener("click", toggleVoicePrompts);
 els["start-vibration"].addEventListener("click", toggleStartVibration);
 els["placement-hip"].addEventListener("click", () => setPhonePlacement("hip"));
 els["placement-hand"].addEventListener("click", () => setPhonePlacement("hand"));
+els["placement-switch"].addEventListener("click", () => setPhonePlacement(phonePlacement === "hand" ? "hip" : "hand"));
 els["form-report-toggle"].addEventListener("click", toggleCompletedReport);
 els["pocket-side-left"].addEventListener("click", () => setPocketSide("left"));
 els["pocket-side-right"].addEventListener("click", () => setPocketSide("right"));

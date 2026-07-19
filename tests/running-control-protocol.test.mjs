@@ -34,6 +34,8 @@ test("rejects unknown or dangerous watch commands", () => {
 test("shares all safe coach commands and creates a bounded acknowledgement", () => {
   assert.ok(RUN_CONTROL_COMMANDS.includes("finish-request"));
   assert.ok(RUN_CONTROL_COMMANDS.includes("finish-confirm"));
+  assert.ok(RUN_CONTROL_COMMANDS.includes("switch-hip"));
+  assert.ok(RUN_CONTROL_COMMANDS.includes("switch-hand"));
   const message = normaliseRunControlMessage({
     type: "run-control", version: 1, command: "status", requestId: "abc"
   });

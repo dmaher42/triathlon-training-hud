@@ -17,10 +17,13 @@ test("persists and validates a recent active run", () => {
     pocketSide: "left",
     interruptions: []
   });
+  payload.placementSwitchCount = 2;
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).startedAtEpochMs, 1_000);
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).pocketSide, "left");
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).phonePlacement, "hand");
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).armState.version, 1);
+  assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).formState.version, 1);
+  assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).placementSwitchCount, 2);
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 50_000, maxAgeMs: 20_000 }), null);
 });
 

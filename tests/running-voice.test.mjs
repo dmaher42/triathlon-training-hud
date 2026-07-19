@@ -10,6 +10,8 @@ const commandCases = [
   ["how am I doing", VOICE_INTENTS.STATUS],
   ["mark a planned walk", VOICE_INTENTS.PLANNED_WALK],
   ["back to running", VOICE_INTENTS.RESUME],
+  ["switch to hip pocket", VOICE_INTENTS.SWITCH_HIP],
+  ["hand swing mode", VOICE_INTENTS.SWITCH_HAND],
   ["quiet for ten minutes", VOICE_INTENTS.QUIET],
   ["voice prompts off", VOICE_INTENTS.QUIET],
   ["voice prompts on", VOICE_INTENTS.PROMPTS_ON],

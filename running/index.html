@@ -127,8 +127,14 @@
     <section class="form-lab" id="form-lab" aria-label="Running motion measurement">
       <header>
         <span id="form-lab-title">HIP MOTION</span>
-        <span class="form-header-actions"><small id="form-lab-note">RIGHT HIP</small><button type="button" id="form-report-toggle" hidden>NEW RUN</button></span>
+        <span class="form-header-actions">
+          <small id="form-lab-note">RIGHT HIP</small>
+          <button type="button" id="placement-switch" aria-describedby="placement-switch-help" hidden>SWITCH TO HAND</button>
+          <button type="button" id="form-report-toggle" hidden>NEW RUN</button>
+        </span>
       </header>
+      <span class="visually-hidden" id="placement-switch-help">Changing phone position starts a new measurement segment. Run Lock must be unlocked first.</span>
+      <span class="visually-hidden" id="placement-switch-status" role="status" aria-live="polite"></span>
       <div class="placement-mode" role="group" aria-label="Phone placement mode">
         <span>PHONE PLACEMENT</span>
         <button type="button" id="placement-hip" aria-pressed="true">
