@@ -15,7 +15,10 @@ test("persists and validates a recent active run", () => {
     armState: { version: 1 },
     phonePlacement: "hand",
     pocketSide: "left",
-    interruptions: []
+    interruptions: [],
+    techniqueState: { version: 1, windowMs: 300_000 },
+    terrain: "rolling",
+    comparisonWindowMs: 300_000
   });
   payload.placementSwitchCount = 2;
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).startedAtEpochMs, 1_000);
@@ -24,6 +27,9 @@ test("persists and validates a recent active run", () => {
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).armState.version, 1);
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).formState.version, 1);
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).placementSwitchCount, 2);
+  assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).terrain, "rolling");
+  assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).comparisonWindowMs, 300_000);
+  assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).techniqueState.version, 1);
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 50_000, maxAgeMs: 20_000 }), null);
 });
 
@@ -83,11 +89,15 @@ test("persists and restores a complete finished-run review", () => {
     phonePlacement: "hand",
     pocketSide: "left",
     placementSwitchCount: 2,
-    interruptions: [first]
+    interruptions: [first],
+    techniqueComparisons: [{ id: "technique-1", status: "complete" }],
+    terrainSegments: [{ id: 1, terrain: "flat", startMs: 0, endMs: null }],
+    comparisonWindowMs: 300_000,
+    retrospectiveComparison: { available: true, quality: "high" }
   });
   const restored = parseCompletedRun(JSON.stringify(completed));
 
-  assert.equal(restored.version, 3);
+  assert.equal(restored.version, 4);
   assert.equal(restored.elapsedMs, 18_000);
   assert.equal(restored.runSnapshot.status, "REVIEW");
   assert.equal(restored.runSnapshot.stablePercent, 82);
@@ -97,6 +107,10 @@ test("persists and restores a complete finished-run review", () => {
   assert.equal(restored.phonePlacement, "hand");
   assert.equal(restored.pocketSide, "left");
   assert.equal(restored.placementSwitchCount, 2);
+  assert.equal(restored.techniqueComparisons[0].id, "technique-1");
+  assert.equal(restored.terrainSegments[0].terrain, "flat");
+  assert.equal(restored.comparisonWindowMs, 300_000);
+  assert.equal(restored.retrospectiveComparison.quality, "high");
   assert.deepEqual(interruptionSummary(restored.interruptions, 20_000), { count: 1, totalMs: 1_000 });
 });
 

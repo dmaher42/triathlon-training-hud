@@ -40,8 +40,30 @@
             <button type="button" id="pocket-side-left" aria-pressed="false">LEFT HIP</button>
             <button type="button" id="pocket-side-right" aria-pressed="true">RIGHT HIP</button>
           </div>
+          <section class="technique-settings" aria-label="Technique comparison setup">
+            <header><strong>TECHNIQUE LAP</strong><span>Compare the previous block with the next block</span></header>
+            <span class="settings-label">STARTING TERRAIN</span>
+            <div class="terrain-options" role="group" aria-label="Starting terrain">
+              <button type="button" data-terrain-option="unlabelled" aria-pressed="true">UNLABELLED</button>
+              <button type="button" data-terrain-option="flat" aria-pressed="false">FLAT</button>
+              <button type="button" data-terrain-option="uphill" aria-pressed="false">UPHILL</button>
+              <button type="button" data-terrain-option="downhill" aria-pressed="false">DOWNHILL</button>
+              <button type="button" data-terrain-option="rolling" aria-pressed="false">ROLLING</button>
+              <button type="button" data-terrain-option="trail" aria-pressed="false">TRAIL / UNEVEN</button>
+              <button type="button" data-terrain-option="treadmill" aria-pressed="false">TREADMILL</button>
+            </div>
+            <span class="settings-label">COMPARE WINDOW</span>
+            <div class="window-options" role="group" aria-label="Technique comparison window">
+              <button type="button" data-window-minutes="1" aria-pressed="false">1 MIN</button>
+              <button type="button" data-window-minutes="3" aria-pressed="false">3 MIN</button>
+              <button type="button" data-window-minutes="5" aria-pressed="true">5 MIN</button>
+              <button type="button" data-window-minutes="10" aria-pressed="false">10 MIN</button>
+            </div>
+            <p id="run-context-summary">UNLABELLED &middot; 5-MIN COMPARE</p>
+          </section>
           <button class="install-button" id="install-app" type="button">INSTALL RUNNING APP</button>
           <button class="settings-toggle" type="button" id="start-vibration"><strong>START VIBRATION: ON</strong><span>Tap to change</span></button>
+          <button class="settings-toggle" type="button" id="silence-coach"><strong>VOICE PROMPTS OFF</strong><span>Keep measuring silently</span></button>
           <a class="settings-link" href="../">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="17" r="3.5"></circle><circle cx="18" cy="17" r="3.5"></circle><path d="m6 17 4-8 3 8m-5-4h8l-3-6h3"></path></svg>
             OPEN CYCLING HUD
@@ -64,7 +86,7 @@
         <details class="voice-command-details" hidden>
           <summary>COMMANDS</summary>
           <div class="voice-command-list" aria-label="Available voice commands">
-            <span>START RUN</span><span>COACH STATUS</span><span>ARM STATUS</span><span>PLANNED WALK</span><span>RESUME RUNNING</span><span>PROMPTS OFF</span><span>PROMPTS ON</span><span>FINISH RUN</span>
+            <span>START RUN</span><span>COACH STATUS</span><span>MARK CHANGE</span><span>TECHNIQUE STATUS</span><span>TERRAIN UPHILL</span><span>PLANNED WALK</span><span>RESUME RUNNING</span><span>PROMPTS OFF</span><span>FINISH RUN</span>
           </div>
         </details>
       </div>
@@ -86,6 +108,7 @@
         <div class="baseline-track" id="baseline-track" role="progressbar" aria-label="Cadence baseline learning progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
           <span id="baseline-progress" style="width:0%"></span>
         </div>
+        <button class="terrain-chip" id="terrain-chip" type="button" aria-haspopup="dialog">UNLABELLED &middot; 5 MIN</button>
       </div>
     </section>
 
@@ -118,6 +141,12 @@
       </article>
     </section>
 
+    <section class="technique-panel" id="technique-panel" aria-live="polite" hidden>
+      <header><span>TECHNIQUE LAP</span><small id="technique-confidence">READY</small></header>
+      <strong id="technique-panel-title">BUILDING HISTORY</strong>
+      <p id="technique-panel-message">Run naturally before marking a change.</p>
+    </section>
+
     <section class="review-details" aria-label="Additional run details">
       <header><span>RUN DETAILS</span><small id="summary-state">READY</small></header>
       <div class="review-baseline">
@@ -130,6 +159,15 @@
         <div><dt>Stops</dt><dd id="stop-value">0</dd></div>
         <div><dt>Signal interruptions</dt><dd id="interruption-value">0</dd></div>
       </dl>
+    </section>
+
+    <section class="technique-report" id="technique-report" aria-label="Technique comparisons" hidden>
+      <header><span>TECHNIQUE COMPARISONS</span><small id="technique-report-count">0 MARKED</small></header>
+      <div id="technique-report-list"></div>
+      <article class="technique-retrospective" id="technique-retrospective" hidden>
+        <header><strong id="technique-retrospective-title">LAST 5 / PREVIOUS 5</strong><small id="technique-retrospective-confidence">LOW</small></header>
+        <div id="technique-retrospective-content"></div>
+      </article>
     </section>
 
     <section class="form-lab" id="form-lab" aria-label="Running motion measurement">
@@ -177,6 +215,10 @@
     </section>
 
     <section class="run-controls" id="run-controls" hidden aria-label="In-run controls">
+      <button type="button" id="mark-change">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16M6 5h11l-2 4 2 4H6"></path></svg>
+        <strong id="mark-change-label">MARK CHANGE</strong><span id="mark-change-detail">Previous 5 vs next 5</span>
+      </button>
       <button type="button" id="planned-walk">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4" r="2"></circle><path d="m11 7-2 5 3 2-2 6m2-6 4 2 2 4M9 12l-4 2"></path></svg>
         <strong>PLANNED WALK</strong><span>Exclude this recovery</span>
@@ -188,10 +230,6 @@
       <button type="button" id="speak-status">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l2-5 3 10 3-14 3 12 2-3h2"></path></svg>
         <strong>HEAR STATUS</strong><span>Speak the latest reading</span>
-      </button>
-      <button type="button" id="silence-coach">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm13 1 4 4m0-4-4 4"></path></svg>
-        <strong>VOICE PROMPTS OFF</strong><span>Keep measuring silently</span>
       </button>
       <button class="pocket-lock-button" type="button" id="pocket-lock">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
@@ -214,15 +252,27 @@
     </div>
   </dialog>
 
-  <section class="pocket-lock-screen" id="pocket-lock-screen" role="dialog" aria-modal="true" hidden aria-label="Run lock active">
+  <dialog class="terrain-dialog" id="terrain-dialog" aria-modal="true" aria-labelledby="terrain-dialog-title">
+    <div class="terrain-dialog-panel">
+      <span class="terrain-dialog-kicker">RUN CONTEXT</span>
+      <h2 id="terrain-dialog-title">Change terrain</h2>
+      <p>Labels the measurements from this point. It does not alter or “correct” the readings.</p>
+      <div class="terrain-dialog-options" role="group" aria-label="Current terrain">
+        <button type="button" data-terrain-option="unlabelled">UNLABELLED</button>
+        <button type="button" data-terrain-option="flat">FLAT</button>
+        <button type="button" data-terrain-option="uphill">UPHILL</button>
+        <button type="button" data-terrain-option="downhill">DOWNHILL</button>
+        <button type="button" data-terrain-option="rolling">ROLLING</button>
+        <button type="button" data-terrain-option="trail">TRAIL / UNEVEN</button>
+        <button type="button" data-terrain-option="treadmill">TREADMILL</button>
+      </div>
+      <button class="terrain-dialog-close" id="terrain-dialog-close" type="button">CLOSE</button>
+    </div>
+  </dialog>
+
+  <section class="pocket-lock-screen" id="pocket-lock-screen" role="dialog" aria-modal="true" hidden aria-label="Run controls locked; live dashboard remains visible">
     <div class="pocket-lock-mark" aria-hidden="true">&#9679;</div>
     <p id="pocket-lock-label">POCKET LOCKED</p>
-    <strong id="pocket-lock-status">RUN ACTIVE</strong>
-    <div class="pocket-lock-readings">
-      <span><b id="pocket-lock-time">0:00</b>TIME</span>
-      <span><b id="pocket-lock-cadence">&mdash;</b><i id="pocket-lock-metric-label">CADENCE</i></span>
-    </div>
-    <small class="pocket-lock-health" id="pocket-lock-health">MOTION LIVE &middot; SCREEN PROTECTED</small>
     <button type="button" id="pocket-unlock">PRESS AND HOLD TO UNLOCK</button>
     <small id="pocket-unlock-progress">Hold for 2 seconds</small>
   </section>

@@ -90,6 +90,34 @@ const addSwing = (stats, { intervalMs, rangeValue, direction }) => {
   }
 };
 
+const mergeStats = (target, source) => {
+  for (const key of Object.keys(target)) target[key] += finite(source?.[key]) ?? 0;
+  return target;
+};
+
+const COMPARISON_BUCKET_MS = 1_000;
+const MINIMUM_COMPARISON_HISTORY_MS = 20 * 60_000;
+const STATS_KEYS = Object.freeze(Object.keys(emptyStats()));
+
+const encodeBucket = bucket => [
+  bucket.atMs,
+  ...STATS_KEYS.map(key => finite(bucket.stats?.[key]) ?? 0)
+];
+
+const decodeBucket = value => {
+  if (Array.isArray(value)) {
+    const atMs = finite(value[0]);
+    if (atMs === null) return null;
+    const stats = emptyStats();
+    STATS_KEYS.forEach((key, index) => {
+      stats[key] = finite(value[index + 1]) ?? 0;
+    });
+    return { atMs, stats };
+  }
+  const atMs = finite(value?.atMs);
+  return atMs === null ? null : { atMs, stats: normalizedStats(value.stats) };
+};
+
 const vectorFrom = (value, keys) => {
   if (!value) return null;
   const vector = keys.map(key => finite(value[key]));
@@ -105,6 +133,7 @@ export const DEFAULT_ARM_SWING_CONFIG = Object.freeze({
   recentWindowMs: 30_000,
   cadenceWindowMs: 8_000,
   maximumRecentSwings: 120,
+  comparisonHistoryMs: MINIMUM_COMPARISON_HISTORY_MS,
   minimumHalfSwingMs: 250,
   maximumHalfSwingMs: 600,
   stoppedAfterMs: 2_500,
@@ -164,6 +193,7 @@ export class ArmSwingAnalyzer {
     this.signalIntensity = 0;
     this.liveSwings = [];
     this.recentMeasurements = [];
+    this.comparisonBuckets = [];
     this.segmentStats = { opening: emptyStats(), middle: emptyStats(), late: emptyStats() };
     this.latestCadenceSpm = null;
     this.latestCadenceSource = "none";
@@ -377,6 +407,7 @@ export class ArmSwingAnalyzer {
         addSwing(this.segmentStats[segment], detectedSwing);
         this.recordedSwings += 1;
         this.recentMeasurements.push(detectedSwing);
+        this.addComparisonSwing(detectedSwing);
       }
     }
     this.lastMovementState = recordingAllowed ? movementState : "unknown";
@@ -388,6 +419,53 @@ export class ArmSwingAnalyzer {
     this.latestCadenceSpm = cadenceSource === "garmin" ? cadence : null;
     this.latestCadenceSource = cadenceSource === "garmin" && cadence !== null ? "garmin" : "none";
     return this.liveSnapshot(now, halfSwingDetected, movementState, equivalentCadenceSpm);
+  }
+
+  addComparisonSwing(swing) {
+    const bucketAtMs = Math.floor(swing.atMs / COMPARISON_BUCKET_MS) * COMPARISON_BUCKET_MS;
+    let bucket = this.comparisonBuckets.at(-1);
+    if (!bucket || bucket.atMs !== bucketAtMs) {
+      bucket = { atMs: bucketAtMs, stats: emptyStats() };
+      this.comparisonBuckets.push(bucket);
+    }
+    addSwing(bucket.stats, swing);
+    const comparisonHistoryMs = Math.max(
+      MINIMUM_COMPARISON_HISTORY_MS,
+      finite(this.config.comparisonHistoryMs) ?? MINIMUM_COMPARISON_HISTORY_MS
+    );
+    const comparisonOldest = swing.atMs - comparisonHistoryMs;
+    while (this.comparisonBuckets.length && this.comparisonBuckets[0].atMs < comparisonOldest) {
+      this.comparisonBuckets.shift();
+    }
+  }
+
+  windowMetrics(startMs, endMs) {
+    const start = finite(startMs);
+    const end = finite(endMs);
+    if (start === null || end === null || end <= start) {
+      throw new TypeError("Arm swing window requires numeric startMs and endMs with endMs after startMs.");
+    }
+    if (start % COMPARISON_BUCKET_MS !== 0 || end % COMPARISON_BUCKET_MS !== 0) {
+      throw new RangeError("Arm swing comparison windows must use exact one-second boundaries.");
+    }
+    const buckets = this.comparisonBuckets.filter(bucket => bucket.atMs >= start && bucket.atMs < end);
+    const stats = buckets.reduce((total, bucket) => mergeStats(total, bucket.stats), emptyStats());
+    const metrics = this.metricsFromStats(stats);
+    const expectedBucketCount = Math.ceil((end - start) / COMPARISON_BUCKET_MS);
+    const observedBucketCount = buckets.length;
+    const coverageRatio = round(expectedBucketCount ? observedBucketCount / expectedBucketCount : 0, 3);
+    return {
+      startMs: start,
+      endMs: end,
+      durationMs: end - start,
+      bucketSizeMs: COMPARISON_BUCKET_MS,
+      sampleCount: metrics?.swingCount ?? 0,
+      observedBucketCount,
+      expectedBucketCount,
+      coverageRatio,
+      coveragePercent: Math.round(coverageRatio * 100),
+      metrics
+    };
   }
 
   currentEquivalentCadence() {
@@ -527,10 +605,11 @@ export class ArmSwingAnalyzer {
 
   exportState() {
     return {
-      version: 2,
+      version: 3,
       config: this.config,
       state: {
         startedAtMs: this.startedAtMs,
+        lastSampleAtMs: this.lastSampleAtMs,
         totalSamples: this.totalSamples,
         usableSamples: this.usableSamples,
         runningSamples: this.runningSamples,
@@ -546,16 +625,20 @@ export class ArmSwingAnalyzer {
         dominantAxis: this.dominantAxis,
         axisSwitchCount: this.axisSwitchCount,
         rangeBaselineValid: this.rangeBaselineValid,
-        segmentStats: this.segmentStats
+        segmentStats: this.segmentStats,
+        comparisonBuckets: this.comparisonBuckets.map(encodeBucket)
       }
     };
   }
 
   restoreState(payload, timestampMs = 0) {
-    if (!payload || ![1, 2].includes(payload.version) || !payload.state) throw new TypeError("Unsupported arm swing state.");
+    if (!payload || ![1, 2, 3].includes(payload.version) || !payload.state) throw new TypeError("Unsupported arm swing state.");
     this.config = { ...DEFAULT_ARM_SWING_CONFIG, ...(payload.config || {}) };
     this.reset();
     const now = finite(timestampMs) ?? 0;
+    const previousNow = finite(payload.state.lastSampleAtMs) ?? now;
+    const shift = now - previousNow;
+    const bucketShift = Math.floor(shift / COMPARISON_BUCKET_MS) * COMPARISON_BUCKET_MS;
     Object.assign(this, payload.state);
     this.startedAtMs = now;
     this.lastSampleAtMs = now;
@@ -590,6 +673,18 @@ export class ArmSwingAnalyzer {
     this.lastCrossingAtMs = null;
     this.lastSwingAtMs = null;
     this.rangeAccumulator = 0;
+    this.comparisonBuckets = (payload.version === 3 ? payload.state.comparisonBuckets || [] : [])
+      .map(decodeBucket)
+      .filter(Boolean)
+      .map(bucket => ({ ...bucket, atMs: bucket.atMs + bucketShift }));
+    const comparisonHistoryMs = Math.max(
+      MINIMUM_COMPARISON_HISTORY_MS,
+      finite(this.config.comparisonHistoryMs) ?? MINIMUM_COMPARISON_HISTORY_MS
+    );
+    const comparisonOldest = now - comparisonHistoryMs;
+    while (this.comparisonBuckets.length && this.comparisonBuckets[0].atMs < comparisonOldest) {
+      this.comparisonBuckets.shift();
+    }
     this.cachedSnapshot = null;
     return this.snapshot(now, { force: true });
   }

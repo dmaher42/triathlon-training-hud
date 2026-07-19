@@ -12,6 +12,10 @@ const commandCases = [
   ["back to running", VOICE_INTENTS.RESUME],
   ["switch to hip pocket", VOICE_INTENTS.SWITCH_HIP],
   ["hand swing mode", VOICE_INTENTS.SWITCH_HAND],
+  ["mark change", VOICE_INTENTS.MARK_CHANGE],
+  ["start technique comparison", VOICE_INTENTS.MARK_CHANGE],
+  ["technique status", VOICE_INTENTS.TECHNIQUE_STATUS],
+  ["cancel comparison", VOICE_INTENTS.CANCEL_COMPARISON],
   ["quiet for ten minutes", VOICE_INTENTS.QUIET],
   ["voice prompts off", VOICE_INTENTS.QUIET],
   ["voice prompts on", VOICE_INTENTS.PROMPTS_ON],
@@ -25,6 +29,54 @@ for (const [phrase, intent] of commandCases) {
     assert.equal(parseVoiceCommand(phrase).intent, intent);
   });
 }
+
+const comparisonCases = [
+  ["compare last one", VOICE_INTENTS.COMPARE_RECENT, 1],
+  ["compare the last 3 minutes", VOICE_INTENTS.COMPARE_RECENT, 3],
+  ["compare last five", VOICE_INTENTS.COMPARE_RECENT, 5],
+  ["compare 10 minutes", VOICE_INTENTS.COMPARE_RECENT, 10],
+  ["show previous 1 minute", VOICE_INTENTS.SHOW_PREVIOUS, 1],
+  ["review the previous three", VOICE_INTENTS.SHOW_PREVIOUS, 3],
+  ["show me the previous five minutes", VOICE_INTENTS.SHOW_PREVIOUS, 5],
+  ["previous ten", VOICE_INTENTS.SHOW_PREVIOUS, 10]
+];
+
+for (const [phrase, intent, windowMinutes] of comparisonCases) {
+  test(`normalises the comparison window: ${phrase}`, () => {
+    assert.deepEqual(parseVoiceCommand(phrase), {
+      intent,
+      transcript: phrase,
+      windowMinutes
+    });
+  });
+}
+
+const terrainCases = [
+  ["set terrain to unlabelled", "unlabelled"],
+  ["clear terrain", "unlabelled"],
+  ["terrain flat", "flat"],
+  ["change terrain to up hill", "uphill"],
+  ["downhill terrain", "downhill"],
+  ["terrain rolling hills", "rolling"],
+  ["terrain uneven", "trail"],
+  ["trail terrain", "trail"],
+  ["switch the terrain to treadmill", "treadmill"]
+];
+
+for (const [phrase, terrain] of terrainCases) {
+  test(`normalises the terrain command: ${phrase}`, () => {
+    assert.deepEqual(parseVoiceCommand(phrase), {
+      intent: VOICE_INTENTS.SET_TERRAIN,
+      transcript: phrase,
+      terrain
+    });
+  });
+}
+
+test("does not accept unsupported comparison windows or terrain labels", () => {
+  assert.equal(parseVoiceCommand("compare last two").intent, VOICE_INTENTS.UNKNOWN);
+  assert.equal(parseVoiceCommand("terrain mountain").intent, VOICE_INTENTS.UNKNOWN);
+});
 
 test("requires an explicit confirmation before finishing", () => {
   assert.equal(parseVoiceCommand("confirm finish").intent, VOICE_INTENTS.UNKNOWN);

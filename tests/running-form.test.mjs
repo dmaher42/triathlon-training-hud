@@ -118,6 +118,89 @@ test("marks rotation unavailable instead of treating missing gyro data as zero",
   assert.equal(result.drift.rotationPercent, null);
 });
 
+test("queries exact half-open hip comparison windows without changing the rolling view", () => {
+  const analyzer = new HipFormAnalyzer({
+    rollingWindowMs: 2_000,
+    minimumSampleIntervalMs: 90,
+    summaryIntervalMs: 0
+  });
+  analyzer.start(0);
+  for (let at = 0; at < 5_000; at += 100) sample(analyzer, at);
+
+  const exact = analyzer.windowMetrics(1_000, 2_000);
+  const wider = analyzer.windowMetrics(0, 5_000);
+  const visibleRecent = analyzer.snapshot(5_000, { force: true }).recent;
+  assert.equal(exact.sampleCount, 10);
+  assert.equal(exact.observedBucketCount, 1);
+  assert.equal(exact.expectedBucketCount, 1);
+  assert.equal(exact.coverageRatio, 1);
+  assert.equal(wider.sampleCount, 50);
+  assert.ok(visibleRecent.sampleCount < wider.sampleCount);
+  assert.equal(analyzer.windowMetrics(2_000, 3_000).sampleCount, 10);
+  assert.throws(() => analyzer.windowMetrics(1_100, 2_100), /one-second boundaries/);
+});
+
+test("retains complete 1, 3, 5, and 10 minute hip windows", () => {
+  const analyzer = new HipFormAnalyzer({ minimumSampleIntervalMs: 90, summaryIntervalMs: 0 });
+  analyzer.start(0);
+  for (let at = 0; at < 10 * 60_000; at += 100) sample(analyzer, at);
+  for (const minutes of [1, 3, 5, 10]) {
+    const durationMs = minutes * 60_000;
+    const result = analyzer.windowMetrics(10 * 60_000 - durationMs, 10 * 60_000);
+    assert.equal(result.durationMs, durationMs);
+    assert.equal(result.expectedBucketCount, minutes * 60);
+    assert.equal(result.observedBucketCount, minutes * 60);
+    assert.equal(result.sampleCount, minutes * 600);
+    assert.equal(result.coverageRatio, 1);
+  }
+});
+
+test("excludes non-running hip samples from comparison windows", () => {
+  const analyzer = new HipFormAnalyzer({ minimumSampleIntervalMs: 90, summaryIntervalMs: 0 });
+  analyzer.start(0);
+  for (let at = 0; at < 1_000; at += 100) sample(analyzer, at, { running: false });
+  for (let at = 1_000; at < 2_000; at += 100) sample(analyzer, at);
+  assert.equal(analyzer.windowMetrics(0, 1_000).sampleCount, 0);
+  assert.equal(analyzer.windowMetrics(0, 1_000).coverageRatio, 0);
+  assert.equal(analyzer.windowMetrics(1_000, 2_000).sampleCount, 10);
+});
+
+test("restores compact hip comparison windows at the resumed clock", () => {
+  const analyzer = new HipFormAnalyzer({ minimumSampleIntervalMs: 90, summaryIntervalMs: 0 });
+  analyzer.start(0);
+  for (let at = 0; at < 5_000; at += 100) sample(analyzer, at);
+  const before = analyzer.windowMetrics(0, 5_000);
+  const exported = analyzer.exportState();
+  assert.ok(Array.isArray(exported.state.comparisonBuckets[0]));
+  assert.equal("recentBuckets" in exported.state, false);
+
+  const restored = new HipFormAnalyzer();
+  restored.restoreState(exported, 50_000);
+  const after = restored.windowMetrics(45_000, 50_000);
+  assert.equal(after.sampleCount, before.sampleCount);
+  assert.deepEqual(after.metrics, before.metrics);
+});
+
+test("restores the previous hip state format", () => {
+  const analyzer = new HipFormAnalyzer({ minimumSampleIntervalMs: 90, summaryIntervalMs: 0 });
+  analyzer.start(0);
+  for (let at = 0; at < 2_000; at += 100) sample(analyzer, at);
+  const current = analyzer.exportState();
+  const legacy = {
+    ...current,
+    version: 2,
+    state: {
+      ...current.state,
+      recentBuckets: analyzer.recentBuckets.map(bucket => ({ atMs: bucket.atMs, stats: { ...bucket.stats } }))
+    }
+  };
+  delete legacy.state.comparisonBuckets;
+  const restored = new HipFormAnalyzer();
+  const result = restored.restoreState(legacy, 10_000);
+  assert.equal(result.opening.sampleCount, 20);
+  assert.equal(restored.windowMetrics(8_000, 10_000).sampleCount, 20);
+});
+
 test("keeps a simulated hour bounded and fast enough for pocket operation", () => {
   const analyzer = new HipFormAnalyzer();
   analyzer.start(0);
@@ -128,6 +211,10 @@ test("keeps a simulated hour bounded and fast enough for pocket operation", () =
   assert.ok(computeMs < 5_000, `simulated hour took ${Math.round(computeMs)}ms`);
   assert.ok(stateBytes < 150_000, `saved state grew to ${stateBytes} bytes`);
   assert.ok(analyzer.recentBuckets.length <= 302);
+  assert.ok(analyzer.comparisonBuckets.length <= 1_201);
+  const lastTwentyMinutes = analyzer.windowMetrics(40 * 60_000, 60 * 60_000);
+  assert.equal(lastTwentyMinutes.expectedBucketCount, 1_200);
+  assert.equal(lastTwentyMinutes.observedBucketCount, 1_200);
 });
 
 test("throttles visible summaries while allowing a forced final snapshot", () => {

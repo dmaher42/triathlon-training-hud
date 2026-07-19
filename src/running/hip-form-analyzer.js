@@ -33,6 +33,29 @@ const mergeStats = (target, source) => {
   return target;
 };
 
+const COMPARISON_BUCKET_MS = 1_000;
+const MINIMUM_COMPARISON_HISTORY_MS = 20 * 60_000;
+const STATS_KEYS = Object.freeze(Object.keys(emptyStats()));
+
+const encodeBucket = bucket => [
+  bucket.atMs,
+  ...STATS_KEYS.map(key => finite(bucket.stats?.[key]) ?? 0)
+];
+
+const decodeBucket = value => {
+  if (Array.isArray(value)) {
+    const atMs = finite(value[0]);
+    if (atMs === null) return null;
+    const stats = emptyStats();
+    STATS_KEYS.forEach((key, index) => {
+      stats[key] = finite(value[index + 1]) ?? 0;
+    });
+    return { atMs, stats };
+  }
+  const atMs = finite(value?.atMs);
+  return atMs === null ? null : { atMs, stats: { ...emptyStats(), ...(value.stats || {}) } };
+};
+
 export const DEFAULT_FORM_CONFIG = Object.freeze({
   openingDurationMs: 10 * 60_000,
   middleEndMs: 40 * 60_000,
@@ -42,6 +65,7 @@ export const DEFAULT_FORM_CONFIG = Object.freeze({
   minimumSampleIntervalMs: 90,
   maximumRunningIntervalMs: 250,
   summaryIntervalMs: 1_000,
+  comparisonHistoryMs: MINIMUM_COMPARISON_HISTORY_MS,
   orientationDotThreshold: 0.8,
   orientationMismatchRatio: 0.05
 });
@@ -66,6 +90,7 @@ export class HipFormAnalyzer {
     this.orientationMismatchCount = 0;
     this.segmentStats = { opening: emptyStats(), middle: emptyStats(), late: emptyStats() };
     this.recentBuckets = [];
+    this.comparisonBuckets = [];
     this.lastSnapshotAtMs = -Infinity;
     this.cachedSnapshot = null;
   }
@@ -131,15 +156,55 @@ export class HipFormAnalyzer {
   }
 
   addRecentMeasurement(timestampMs, measurement) {
-    const bucketAtMs = Math.floor(timestampMs / 1_000) * 1_000;
+    const bucketAtMs = Math.floor(timestampMs / COMPARISON_BUCKET_MS) * COMPARISON_BUCKET_MS;
     let bucket = this.recentBuckets.at(-1);
     if (!bucket || bucket.atMs !== bucketAtMs) {
       bucket = { atMs: bucketAtMs, stats: emptyStats() };
       this.recentBuckets.push(bucket);
+      this.comparisonBuckets.push(bucket);
     }
     addMeasurement(bucket.stats, measurement);
     const oldest = timestampMs - this.config.rollingWindowMs;
-    while (this.recentBuckets.length && this.recentBuckets[0].atMs + 1_000 < oldest) this.recentBuckets.shift();
+    while (this.recentBuckets.length && this.recentBuckets[0].atMs + COMPARISON_BUCKET_MS < oldest) {
+      this.recentBuckets.shift();
+    }
+    const comparisonHistoryMs = Math.max(
+      MINIMUM_COMPARISON_HISTORY_MS,
+      finite(this.config.comparisonHistoryMs) ?? MINIMUM_COMPARISON_HISTORY_MS
+    );
+    const comparisonOldest = timestampMs - comparisonHistoryMs;
+    while (this.comparisonBuckets.length && this.comparisonBuckets[0].atMs < comparisonOldest) {
+      this.comparisonBuckets.shift();
+    }
+  }
+
+  windowMetrics(startMs, endMs) {
+    const start = finite(startMs);
+    const end = finite(endMs);
+    if (start === null || end === null || end <= start) {
+      throw new TypeError("Hip form window requires numeric startMs and endMs with endMs after startMs.");
+    }
+    if (start % COMPARISON_BUCKET_MS !== 0 || end % COMPARISON_BUCKET_MS !== 0) {
+      throw new RangeError("Hip form comparison windows must use exact one-second boundaries.");
+    }
+    const buckets = this.comparisonBuckets.filter(bucket => bucket.atMs >= start && bucket.atMs < end);
+    const stats = buckets.reduce((total, bucket) => mergeStats(total, bucket.stats), emptyStats());
+    const metrics = this.metricsFromStats(stats);
+    const expectedBucketCount = Math.ceil((end - start) / COMPARISON_BUCKET_MS);
+    const observedBucketCount = buckets.length;
+    const coverageRatio = round(expectedBucketCount ? observedBucketCount / expectedBucketCount : 0, 3);
+    return {
+      startMs: start,
+      endMs: end,
+      durationMs: end - start,
+      bucketSizeMs: COMPARISON_BUCKET_MS,
+      sampleCount: metrics?.sampleCount ?? 0,
+      observedBucketCount,
+      expectedBucketCount,
+      coverageRatio,
+      coveragePercent: Math.round(coverageRatio * 100),
+      metrics
+    };
   }
 
   trackOrientation(unitGravity) {
@@ -182,7 +247,7 @@ export class HipFormAnalyzer {
 
   exportState() {
     return {
-      version: 2,
+      version: 3,
       config: this.config,
       state: {
         startedAtMs: this.startedAtMs,
@@ -197,24 +262,41 @@ export class HipFormAnalyzer {
         orientationSamples: this.orientationSamples,
         orientationMismatchCount: this.orientationMismatchCount,
         segmentStats: this.segmentStats,
-        recentBuckets: this.recentBuckets
+        comparisonBuckets: this.comparisonBuckets.map(encodeBucket)
       }
     };
   }
 
   restoreState(payload, timestampMs = 0) {
-    if (!payload || payload.version !== 2 || !payload.state) throw new TypeError("Unsupported hip form state.");
+    if (!payload || ![2, 3].includes(payload.version) || !payload.state) throw new TypeError("Unsupported hip form state.");
     this.config = { ...DEFAULT_FORM_CONFIG, ...(payload.config || {}) };
     this.reset();
     const now = finite(timestampMs) ?? 0;
     const previousNow = finite(payload.state.lastSampleAtMs) ?? now;
     const shift = now - previousNow;
+    const bucketShift = Math.floor(shift / COMPARISON_BUCKET_MS) * COMPARISON_BUCKET_MS;
     Object.assign(this, payload.state);
     this.startedAtMs = finite(payload.state.startedAtMs) === null ? now : payload.state.startedAtMs + shift;
     this.lastSampleAtMs = now;
     this.lastMovementState = "unknown";
     this.segmentStats = payload.state.segmentStats || { opening: emptyStats(), middle: emptyStats(), late: emptyStats() };
-    this.recentBuckets = (payload.state.recentBuckets || []).map(bucket => ({ ...bucket, atMs: bucket.atMs + shift }));
+    const storedBuckets = payload.version === 3
+      ? payload.state.comparisonBuckets || []
+      : payload.state.recentBuckets || [];
+    this.comparisonBuckets = storedBuckets
+      .map(decodeBucket)
+      .filter(Boolean)
+      .map(bucket => ({ ...bucket, atMs: bucket.atMs + bucketShift }));
+    const comparisonHistoryMs = Math.max(
+      MINIMUM_COMPARISON_HISTORY_MS,
+      finite(this.config.comparisonHistoryMs) ?? MINIMUM_COMPARISON_HISTORY_MS
+    );
+    const comparisonOldest = now - comparisonHistoryMs;
+    while (this.comparisonBuckets.length && this.comparisonBuckets[0].atMs < comparisonOldest) {
+      this.comparisonBuckets.shift();
+    }
+    const recentOldest = now - this.config.rollingWindowMs;
+    this.recentBuckets = this.comparisonBuckets.filter(bucket => bucket.atMs + COMPARISON_BUCKET_MS >= recentOldest);
     this.cachedSnapshot = null;
     return this.snapshot(now, { force: true });
   }

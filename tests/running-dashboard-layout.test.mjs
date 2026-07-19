@@ -68,6 +68,37 @@ test("the compact active voice control remains a full mobile touch target", () =
   assert.match(css, /body\[data-session="active"\] \.voice-toggle \{ min-height:\s*44px/);
 });
 
+test("Technique Lap keeps four primary in-run actions and moves prompt settings out of the dashboard", () => {
+  const runControls = html.match(/<section class="run-controls"[\s\S]*?<\/section>/)?.[0] || "";
+  assert.match(runControls, /id="mark-change"[\s\S]*id="planned-walk"[\s\S]*id="resume-run"[\s\S]*id="speak-status"[\s\S]*id="pocket-lock"/);
+  assert.doesNotMatch(runControls, /id="silence-coach"/);
+  assert.match(html, /class="settings-toggle"[^>]*id="silence-coach"/);
+  assert.match(css, /body\[data-session="active"\] \.run-controls:not\(\[hidden\]\)[\s\S]*position:\s*sticky/);
+  assert.match(app, /mark-change"\]\.addEventListener\("click"[\s\S]*VOICE_INTENTS\.MARK_CHANGE/);
+});
+
+test("Run Lock keeps the live dashboard visible behind its touch shield", () => {
+  assert.match(html, /id="pocket-lock-screen"[^>]*live dashboard remains visible/);
+  assert.match(app, /querySelector\("\.run-shell"\)\.inert = pocketLocked/);
+  assert.match(css, /\.pocket-lock-screen \{[\s\S]*justify-content:\s*flex-end[\s\S]*background:\s*linear-gradient\([\s\S]*transparent/);
+  assert.doesNotMatch(css, /\.pocket-lock-screen\s*\{[^}]*background:\s*#000/);
+  assert.doesNotMatch(html, /pocket-lock-(?:status|time|cadence|metric-label|readings|health|technique)/);
+  assert.doesNotMatch(app, /pocket-lock-(?:status|time|cadence|metric-label|health|technique)|storageHealthy/);
+  assert.match(app, /active; live dashboard remains visible/);
+  assert.match(css, /#pocket-unlock \{[^}]*min-height:\s*58px/);
+});
+
+test("terrain, fixed comparison windows and completed reports use the canonical running flow", () => {
+  assert.match(html, /data-terrain-option="unlabelled"[\s\S]*data-terrain-option="treadmill"/);
+  assert.match(html, /data-window-minutes="1"[\s\S]*data-window-minutes="3"[\s\S]*data-window-minutes="5"[\s\S]*data-window-minutes="10"/);
+  assert.match(html, /id="terrain-chip"[\s\S]*id="technique-panel"[\s\S]*id="technique-report"/);
+  assert.match(app, /new TechniqueLapEngine\(\{ windowMs: comparisonWindowMs, initialTerrain: currentTerrain \}\)/);
+  assert.match(app, /techniqueState: techniqueEngine\.exportState\(\)/);
+  assert.match(app, /techniqueComparisons: techniqueEngine\.getCompletedComparisons\(\)[\s\S]*terrainSegments: techniqueEngine\.getTerrainSegments\(\)/);
+  assert.match(app, /retrospectiveComparison: latestRetrospectiveComparison/);
+  assert.match(app, /TechniqueLapEngine\.restore\(restored\.techniqueState/);
+});
+
 test("active runs expose one large contextual placement switch", () => {
   assert.match(html, /id="placement-switch"[\s\S]*SWITCH TO HAND/);
   assert.match(html, /id="placement-switch-help"[\s\S]*new measurement segment/);

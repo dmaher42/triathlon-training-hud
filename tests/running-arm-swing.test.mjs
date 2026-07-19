@@ -292,6 +292,95 @@ test("missing motion vectors remain unavailable instead of becoming zero", () =>
   assert.equal(result.totalSamples, 0);
 });
 
+test("queries exact half-open arm-swing comparison windows", () => {
+  const analyzer = new ArmSwingAnalyzer(quickConfig);
+  analyzer.start(0);
+  analyzer.addComparisonSwing({ atMs: 1_000, intervalMs: 350, rangeValue: 20, direction: 1 });
+  analyzer.addComparisonSwing({ atMs: 1_500, intervalMs: 350, rangeValue: 22, direction: -1 });
+  analyzer.addComparisonSwing({ atMs: 2_000, intervalMs: 350, rangeValue: 24, direction: 1 });
+
+  const result = analyzer.windowMetrics(1_000, 2_000);
+  assert.equal(result.sampleCount, 2);
+  assert.equal(result.observedBucketCount, 1);
+  assert.equal(result.expectedBucketCount, 1);
+  assert.equal(result.coverageRatio, 1);
+  assert.equal(result.metrics.rangeMean, 21);
+  assert.equal(analyzer.windowMetrics(2_000, 3_000).sampleCount, 1);
+  assert.throws(() => analyzer.windowMetrics(1_100, 2_100), /one-second boundaries/);
+});
+
+test("retains complete 1, 3, 5, and 10 minute arm-swing windows", () => {
+  const analyzer = new ArmSwingAnalyzer(quickConfig);
+  analyzer.start(0);
+  for (let at = 350; at < 10 * 60_000; at += 1_000) {
+    const direction = Math.floor(at / 1_000) % 2 ? 1 : -1;
+    analyzer.addComparisonSwing({ atMs: at, intervalMs: 350, rangeValue: 20, direction });
+  }
+  for (const minutes of [1, 3, 5, 10]) {
+    const durationMs = minutes * 60_000;
+    const result = analyzer.windowMetrics(10 * 60_000 - durationMs, 10 * 60_000);
+    assert.equal(result.durationMs, durationMs);
+    assert.equal(result.sampleCount, minutes * 60);
+    assert.equal(result.observedBucketCount, minutes * 60);
+    assert.equal(result.expectedBucketCount, minutes * 60);
+    assert.equal(result.coverageRatio, 1);
+  }
+});
+
+test("comparison history does not widen the normal recent arm-swing metrics", () => {
+  const analyzer = new ArmSwingAnalyzer({ ...quickConfig, recentWindowMs: 2_000 });
+  analyzer.start(0);
+  feedGyro(analyzer, { durationMs: 10_000, periodMs: 700 });
+  const recent = analyzer.snapshot(10_000, { force: true }).recent;
+  const comparison = analyzer.windowMetrics(0, 10_000);
+  assert.ok(recent.swingCount < comparison.sampleCount);
+  assert.ok(analyzer.recentMeasurements.every(swing => swing.atMs >= 8_000));
+});
+
+test("planned pauses and non-running hand rhythm do not enter comparison windows", () => {
+  const walking = new ArmSwingAnalyzer(quickConfig);
+  walking.start(0);
+  feedGyro(walking, { durationMs: 5_000, periodMs: 1_200 });
+  assert.equal(walking.windowMetrics(0, 6_000).sampleCount, 0);
+
+  const paused = new ArmSwingAnalyzer(quickConfig);
+  paused.start(0);
+  feedGyro(paused, { durationMs: 5_000, recordingAllowed: false });
+  assert.equal(paused.windowMetrics(0, 6_000).sampleCount, 0);
+});
+
+test("restores compact arm-swing comparison windows without raw swings", () => {
+  const analyzer = new ArmSwingAnalyzer(quickConfig);
+  analyzer.start(0);
+  feedGyro(analyzer, { durationMs: 8_000 });
+  const before = analyzer.windowMetrics(0, 8_000);
+  const exported = analyzer.exportState();
+  assert.ok(Array.isArray(exported.state.comparisonBuckets[0]));
+  assert.equal("recentMeasurements" in exported.state, false);
+  assert.equal("liveSwings" in exported.state, false);
+
+  const restored = new ArmSwingAnalyzer();
+  restored.restoreState(exported, 50_000);
+  const after = restored.windowMetrics(42_000, 50_000);
+  assert.equal(after.sampleCount, before.sampleCount);
+  assert.deepEqual(after.metrics, before.metrics);
+});
+
+test("restores the previous arm-swing state format", () => {
+  const analyzer = new ArmSwingAnalyzer(quickConfig);
+  analyzer.start(0);
+  feedGyro(analyzer, { durationMs: 8_000 });
+  const legacy = analyzer.exportState();
+  legacy.version = 2;
+  delete legacy.state.lastSampleAtMs;
+  delete legacy.state.comparisonBuckets;
+
+  const restored = new ArmSwingAnalyzer();
+  const result = restored.restoreState(legacy, 50_000);
+  assert.ok(result.opening.swingCount > 0);
+  assert.equal(restored.windowMetrics(49_000, 50_000).sampleCount, 0);
+});
+
 test("keeps a simulated hour bounded and fast enough for hand-held operation", () => {
   const analyzer = new ArmSwingAnalyzer();
   analyzer.start(0);
@@ -300,7 +389,11 @@ test("keeps a simulated hour bounded and fast enough for hand-held operation", (
   const computeMs = performance.now() - started;
   const stateBytes = Buffer.byteLength(JSON.stringify(analyzer.exportState()));
   assert.ok(computeMs < 5_000, `simulated hour took ${Math.round(computeMs)}ms`);
-  assert.ok(stateBytes < 30_000, `saved state grew to ${stateBytes} bytes`);
+  assert.ok(stateBytes < 150_000, `saved state grew to ${stateBytes} bytes`);
   assert.ok(analyzer.recentMeasurements.length <= 120);
   assert.ok(analyzer.liveSwings.length <= 40);
+  assert.ok(analyzer.comparisonBuckets.length <= 1_201);
+  const lastTwentyMinutes = analyzer.windowMetrics(40 * 60_000, 60 * 60_000);
+  assert.equal(lastTwentyMinutes.expectedBucketCount, 1_200);
+  assert.equal(lastTwentyMinutes.observedBucketCount, 1_200);
 });

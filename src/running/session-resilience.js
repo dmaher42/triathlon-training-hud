@@ -1,5 +1,5 @@
-export const RUN_SESSION_VERSION = 1;
-export const COMPLETED_RUN_VERSION = 3;
+export const RUN_SESSION_VERSION = 2;
+export const COMPLETED_RUN_VERSION = 4;
 export const DEFAULT_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 const finite = value => {
@@ -40,7 +40,10 @@ export function makePersistedSession({
   armState = null,
   phonePlacement = "hip",
   pocketSide = "right",
-  interruptions = []
+  interruptions = [],
+  techniqueState = null,
+  terrain = "unlabelled",
+  comparisonWindowMs = 5 * 60_000
 }) {
   return {
     version: RUN_SESSION_VERSION,
@@ -52,14 +55,17 @@ export function makePersistedSession({
     armState,
     phonePlacement: phonePlacement === "hand" ? "hand" : "hip",
     pocketSide: pocketSide === "left" ? "left" : "right",
-    interruptions
+    interruptions,
+    techniqueState: techniqueState && typeof techniqueState === "object" ? techniqueState : null,
+    terrain: String(terrain || "unlabelled").slice(0, 24),
+    comparisonWindowMs: Math.max(60_000, finite(comparisonWindowMs) ?? 5 * 60_000)
   };
 }
 
 export function parsePersistedSession(raw, { nowEpochMs = Date.now(), maxAgeMs = DEFAULT_SESSION_MAX_AGE_MS } = {}) {
   try {
     const value = typeof raw === "string" ? JSON.parse(raw) : raw;
-    if (!value || value.version !== RUN_SESSION_VERSION || value.active !== true) return null;
+    if (!value || ![1, RUN_SESSION_VERSION].includes(value.version) || value.active !== true) return null;
     const startedAtEpochMs = finite(value.startedAtEpochMs);
     const savedAtEpochMs = finite(value.savedAtEpochMs);
     if (startedAtEpochMs === null || savedAtEpochMs === null) return null;
@@ -71,7 +77,10 @@ export function parsePersistedSession(raw, { nowEpochMs = Date.now(), maxAgeMs =
       savedAtEpochMs,
       phonePlacement: value.phonePlacement === "hand" ? "hand" : "hip",
       pocketSide: value.pocketSide === "left" ? "left" : "right",
-      interruptions: Array.isArray(value.interruptions) ? value.interruptions.slice(0, 100) : []
+      interruptions: Array.isArray(value.interruptions) ? value.interruptions.slice(0, 100) : [],
+      techniqueState: value.techniqueState && typeof value.techniqueState === "object" ? value.techniqueState : null,
+      terrain: String(value.terrain || "unlabelled").slice(0, 24),
+      comparisonWindowMs: Math.max(60_000, finite(value.comparisonWindowMs) ?? 5 * 60_000)
     };
   } catch (_) {
     return null;
@@ -86,7 +95,11 @@ export function makeCompletedRun({
   phonePlacement = "hip",
   pocketSide = "right",
   placementSwitchCount = 0,
-  interruptions = []
+  interruptions = [],
+  techniqueComparisons = [],
+  terrainSegments = [],
+  comparisonWindowMs = 5 * 60_000,
+  retrospectiveComparison = null
 }) {
   return {
     version: COMPLETED_RUN_VERSION,
@@ -99,14 +112,20 @@ export function makeCompletedRun({
     phonePlacement: phonePlacement === "hand" ? "hand" : "hip",
     pocketSide: pocketSide === "left" ? "left" : "right",
     placementSwitchCount: Math.max(0, Math.floor(finite(placementSwitchCount) ?? 0)),
-    interruptions: Array.isArray(interruptions) ? interruptions.slice(0, 100) : []
+    interruptions: Array.isArray(interruptions) ? interruptions.slice(0, 100) : [],
+    techniqueComparisons: Array.isArray(techniqueComparisons) ? techniqueComparisons.slice(0, 50) : [],
+    terrainSegments: Array.isArray(terrainSegments) ? terrainSegments.slice(0, 200) : [],
+    comparisonWindowMs: Math.max(60_000, finite(comparisonWindowMs) ?? 5 * 60_000),
+    retrospectiveComparison: retrospectiveComparison && typeof retrospectiveComparison === "object"
+      ? retrospectiveComparison
+      : null
   };
 }
 
 export function parseCompletedRun(raw) {
   try {
     const value = typeof raw === "string" ? JSON.parse(raw) : raw;
-    if (!value || ![1, 2, COMPLETED_RUN_VERSION].includes(value.version)) return null;
+    if (!value || ![1, 2, 3, COMPLETED_RUN_VERSION].includes(value.version)) return null;
     const completedAtEpochMs = finite(value.completedAtEpochMs);
     if (completedAtEpochMs === null || !value.snapshot || typeof value.snapshot !== "object") return null;
 
@@ -119,7 +138,7 @@ export function parseCompletedRun(raw) {
       placementSwitchCount: Math.max(0, Math.floor(finite(value.placementSwitchCount) ?? 0))
     };
 
-    if (value.version < COMPLETED_RUN_VERSION) return base;
+    if (value.version < 3) return base;
     if (!value.runSnapshot || typeof value.runSnapshot !== "object") return null;
     const elapsedMs = finite(value.elapsedMs);
     if (elapsedMs === null || elapsedMs < 0) return null;
@@ -127,7 +146,13 @@ export function parseCompletedRun(raw) {
       ...base,
       elapsedMs,
       runSnapshot: { ...value.runSnapshot, events: [] },
-      interruptions: Array.isArray(value.interruptions) ? value.interruptions.slice(0, 100) : []
+      interruptions: Array.isArray(value.interruptions) ? value.interruptions.slice(0, 100) : [],
+      techniqueComparisons: Array.isArray(value.techniqueComparisons) ? value.techniqueComparisons.slice(0, 50) : [],
+      terrainSegments: Array.isArray(value.terrainSegments) ? value.terrainSegments.slice(0, 200) : [],
+      comparisonWindowMs: Math.max(60_000, finite(value.comparisonWindowMs) ?? 5 * 60_000),
+      retrospectiveComparison: value.retrospectiveComparison && typeof value.retrospectiveComparison === "object"
+        ? value.retrospectiveComparison
+        : null
     };
   } catch (_) {
     return null;

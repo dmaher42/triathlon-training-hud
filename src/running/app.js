@@ -2,9 +2,12 @@ import { HipMotionCadenceDetector } from "./motion-cadence.js";
 import { RunRhythmCoach } from "./rhythm-engine.js";
 import { RunSignalFusion } from "./signal-fusion.js";
 import { BrowserVoiceController, VOICE_INTENTS, parseVoiceCommand } from "./voice-commands.js";
-import { createRunControlAck, normaliseRunControlMessage } from "./control-protocol.js";
+import { createRunControlAck, normaliseRunControlAction, normaliseRunControlMessage } from "./control-protocol.js";
 import { HipFormAnalyzer } from "./hip-form-analyzer.js";
 import { ArmSwingAnalyzer } from "./arm-swing-analyzer.js";
+import {
+  DEFAULT_TECHNIQUE_WINDOW_MS, RUN_TERRAINS, TECHNIQUE_WINDOW_OPTIONS_MS, TechniqueLapEngine
+} from "./technique-lap-engine.js";
 import {
   closeInterruption, createInterruption, interruptionSummary,
   makeCompletedRun, makePersistedSession, parseCompletedRun, parsePersistedSession
@@ -16,21 +19,25 @@ const els = Object.fromEntries([
   "run-shell", "finish-dialog", "finish-dialog-description", "finish-cancel", "finish-confirm",
   "save-result", "save-result-title", "save-result-message", "retry-save",
   "status-card", "status-value", "status-message", "status-glyph",
+  "terrain-chip", "run-context-summary",
   "baseline-progress", "baseline-mini-progress", "baseline-track",
   "cadence-value", "cadence-target", "cadence-delta", "baseline-value", "baseline-state",
   "baseline-summary", "stable-value", "stability-summary", "summary-state", "session-time", "walk-value", "stop-value", "interruption-value",
   "phone-connection", "garmin-connection", "screen-connection", "install-app", "start-session", "stop-session", "primary-controls", "run-controls",
-  "planned-walk", "resume-run", "speak-status", "silence-coach", "start-vibration", "demo-session", "voice-status",
+  "mark-change", "mark-change-label", "mark-change-detail", "planned-walk", "resume-run", "speak-status", "silence-coach", "start-vibration", "demo-session", "voice-status",
   "voice-dock", "voice-help", "voice-mode", "voice-subtitle", "voice-toggle", "voice-prompts-toggle",
-  "pocket-lock", "pocket-lock-screen", "pocket-lock-status", "pocket-lock-time", "pocket-lock-cadence",
-  "pocket-unlock", "pocket-unlock-progress", "pocket-lock-health", "resume-session",
+  "pocket-lock", "pocket-lock-screen", "pocket-unlock", "pocket-unlock-progress", "resume-session",
   "preflight-panel", "preflight-motion", "preflight-screen", "preflight-pocket", "preflight-battery", "preflight-save",
   "form-lab", "form-vertical", "form-horizontal", "form-rotation", "form-impact",
   "form-status", "form-confidence", "form-progress", "pocket-side-left", "pocket-side-right",
   "form-segment-review", "form-middle", "form-late", "placement-hip", "placement-hand",
   "form-lab-title", "form-lab-note", "form-side-label", "form-boundary", "view-last-run", "placement-switch", "placement-switch-status", "hand-mode-note", "metric-grid", "form-progress-track",
   "form-label-vertical", "form-label-horizontal", "form-label-rotation", "form-label-impact",
-  "pocket-lock-label", "pocket-lock-metric-label"
+  "pocket-lock-label"
+  , "technique-panel", "technique-confidence", "technique-panel-title", "technique-panel-message",
+  "technique-report", "technique-report-count", "technique-report-list", "technique-retrospective",
+  "technique-retrospective-title", "technique-retrospective-confidence", "technique-retrospective-content",
+  "terrain-dialog", "terrain-dialog-close"
 ].map(id => [id, doc.getElementById(id)]));
 
 let detector = new HipMotionCadenceDetector();
@@ -86,11 +93,30 @@ let phonePlacement = readStoredText(phonePlacementStorageKey) === "hand" ? "hand
 let placementSwitchCount = Number.isFinite(Number(savedSession?.placementSwitchCount))
   ? Math.max(0, Math.floor(Number(savedSession.placementSwitchCount)))
   : 0;
-let storageHealthy = null;
 let completedFormReport = parseCompletedRun(readStoredText(completedRunStorageKey));
 let showingCompletedReport = Boolean(completedFormReport?.completedAtEpochMs && completedFormReport?.snapshot);
 let completedSaveState = "idle";
 let pendingCompletedRun = null;
+const terrainStorageKey = "run-durability-terrain-v1";
+const comparisonWindowStorageKey = "run-durability-technique-window-v1";
+const storedTerrain = readStoredText(terrainStorageKey);
+const storedComparisonWindowMs = Number(readStoredText(comparisonWindowStorageKey));
+let currentTerrain = RUN_TERRAINS.includes(savedSession?.terrain)
+  ? savedSession.terrain
+  : RUN_TERRAINS.includes(storedTerrain) ? storedTerrain : "unlabelled";
+let comparisonWindowMs = TECHNIQUE_WINDOW_OPTIONS_MS.includes(savedSession?.comparisonWindowMs)
+  ? savedSession.comparisonWindowMs
+  : TECHNIQUE_WINDOW_OPTIONS_MS.includes(storedComparisonWindowMs)
+    ? storedComparisonWindowMs
+    : DEFAULT_TECHNIQUE_WINDOW_MS;
+let techniqueEngine = new TechniqueLapEngine({ windowMs: comparisonWindowMs, initialTerrain: currentTerrain });
+let techniqueSnapshot = techniqueEngine.snapshot(0);
+let latestRetrospectiveComparison = null;
+let lastTechniqueExperimentCount = 0;
+let techniqueDemoScale = 1;
+let techniqueDemoOffsetMs = 0;
+let demoPreviousComparisonWindowMs = null;
+let lastTechniqueRecordedElapsedMs = -Infinity;
 if (savedSession && completedFormReport?.completedAtEpochMs >= savedSession.savedAtEpochMs) {
   savedSession = null;
   try { localStorage.removeItem(activeSessionStorageKey); } catch (_) {}
@@ -113,6 +139,142 @@ function formatMinutes(milliseconds) {
   const minutes = Math.floor(milliseconds / 60_000);
   const seconds = Math.floor(milliseconds % 60_000 / 1_000);
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+const TERRAIN_LABELS = Object.freeze({
+  unlabelled: "Unlabelled",
+  flat: "Flat",
+  uphill: "Uphill",
+  downhill: "Downhill",
+  rolling: "Rolling",
+  trail: "Trail / uneven",
+  treadmill: "Treadmill"
+});
+
+const TECHNIQUE_METRIC_LABELS = Object.freeze({
+  cadenceSpm: "Cadence",
+  rhythmStabilityPercent: "Rhythm stability",
+  hipVerticalIndex: "Bounce index",
+  hipHorizontalIndex: "Horizontal index",
+  hipRotationIndex: "Rotation index",
+  hipImpactVariationIndex: "Impact variation",
+  armCycleRpm: "Arm cycles",
+  armRegularityPercent: "Arm regularity",
+  armRangeIndex: "Swing range"
+});
+
+function terrainLabel(terrain = currentTerrain) {
+  return TERRAIN_LABELS[terrain] || TERRAIN_LABELS.unlabelled;
+}
+
+function techniqueWindowMinutes(windowMs = comparisonWindowMs) {
+  return Math.round(windowMs / 60_000);
+}
+
+function runElapsedAt(now = performance.now()) {
+  if (sessionStartedAtMs === null) return techniqueSnapshot?.elapsedMs || 0;
+  return Math.max(0, now - sessionStartedAtMs);
+}
+
+function techniqueElapsedAt(now = performance.now()) {
+  const displayElapsedMs = runElapsedAt(now);
+  const scaled = techniqueDemoOffsetMs + displayElapsedMs * techniqueDemoScale;
+  return Math.max(0, Math.floor(scaled / 1_000) * 1_000);
+}
+
+function currentMotionTechniqueMetrics(now = performance.now()) {
+  const bucketStartMs = Math.floor(now / 1_000) * 1_000;
+  const bucketEndMs = bucketStartMs + 1_000;
+  try {
+    const result = phonePlacement === "hand"
+      ? armAnalyzer.windowMetrics(bucketStartMs, bucketEndMs)
+      : formAnalyzer.windowMetrics(bucketStartMs, bucketEndMs);
+    const metrics = result.metrics || {};
+    if (phonePlacement === "hand") {
+      return {
+        armCycleRpm: metrics.armCycleRpm,
+        armRegularityPercent: metrics.regularityPercent,
+        armRangeIndex: metrics.rangeMean
+      };
+    }
+    return {
+      hipVerticalIndex: metrics.verticalRms,
+      hipHorizontalIndex: metrics.horizontalRms,
+      hipRotationIndex: metrics.rotationRms,
+      hipImpactVariationIndex: metrics.impactVariation
+    };
+  } catch (_) {
+    return {};
+  }
+}
+
+function techniqueChangePhrase(change, label) {
+  if (!change || !Number.isFinite(change.absolute)) return null;
+  const magnitude = Math.abs(change.absolute);
+  const rounded = label === "Cadence" ? Math.round(magnitude) : Math.round(magnitude * 10) / 10;
+  const unit = change.unit === "percentage-points" ? " points" : label === "Cadence" ? " steps per minute" : "";
+  return `${label} ${rounded}${unit} ${change.direction}`;
+}
+
+function techniqueCompletionSentence(comparison) {
+  if (!comparison || comparison.status !== "complete") return "Technique comparison saved with incomplete coverage.";
+  const preferred = ["cadenceSpm", "rhythmStabilityPercent", phonePlacement === "hand" ? "armRegularityPercent" : "hipVerticalIndex"];
+  const phrases = preferred
+    .map(key => techniqueChangePhrase(comparison.changes?.[key], TECHNIQUE_METRIC_LABELS[key]))
+    .filter(Boolean)
+    .slice(0, 2);
+  const result = phrases.length ? phrases.join(". ") : "There was not enough comparable running data for a clear change.";
+  const warning = comparison.quality === "high" ? "" : " Context or coverage changed, so treat this as an observation, not proof of improvement.";
+  return `Comparison ready. ${result}.${warning}`;
+}
+
+function detectTechniqueExperimentChange({ announce = true } = {}) {
+  const experiments = techniqueEngine.getCompletedComparisons();
+  if (experiments.length <= lastTechniqueExperimentCount) return null;
+  const latest = experiments.at(-1);
+  lastTechniqueExperimentCount = experiments.length;
+  if (announce && latest?.status === "complete") {
+    navigator.vibrate?.([90, 90, 90]);
+    speak(techniqueCompletionSentence(latest));
+  }
+  return latest;
+}
+
+function recordTechniqueFrame(signal, coachSnapshot, now = performance.now()) {
+  if (!active || sessionStartedAtMs === null) return;
+  const elapsedMs = techniqueElapsedAt(now);
+  if (elapsedMs <= lastTechniqueRecordedElapsedMs) return;
+  lastTechniqueRecordedElapsedMs = elapsedMs;
+  const baseline = Number.isFinite(coachSnapshot.baselineCadenceSpm) ? coachSnapshot.baselineCadenceSpm : null;
+  const cadence = Number.isFinite(signal.cadenceSpm) ? signal.cadenceSpm : null;
+  const rhythmStable = baseline === null || cadence === null
+    ? null
+    : cadence >= baseline * (1 - (coach.config?.driftRatio ?? 0.06));
+  techniqueSnapshot = techniqueEngine.recordFrame({
+    elapsedMs,
+    movementState: signal.movementState,
+    eligible: (!fieldSession || preflightConfirmed) && !coachSnapshot.plannedBreakActive,
+    interrupted: Boolean(interruptionActive),
+    cadenceSpm: cadence,
+    rhythmStable,
+    heartRateBpm: signal.heartRateBpm,
+    speedMps: signal.speedMps,
+    metrics: currentMotionTechniqueMetrics(Math.max(0, now - 1_000)),
+    placement: phonePlacement,
+    side: pocketSide,
+    cadenceSource: signal.cadenceSource,
+    sensorSource: phonePlacement === "hand"
+      ? armSnapshot.capabilities?.signalSource || "phone-motion"
+      : "phone-motion"
+  });
+  detectTechniqueExperimentChange();
+}
+
+function advanceTechniqueClock(now = performance.now(), { announce = true } = {}) {
+  if (!active || sessionStartedAtMs === null) return techniqueSnapshot;
+  techniqueSnapshot = techniqueEngine.tick(techniqueElapsedAt(now));
+  detectTechniqueExperimentChange({ announce });
+  return techniqueSnapshot;
 }
 
 function setPreflightItem(id, label, state = "waiting") {
@@ -186,6 +348,10 @@ function applyRunConfiguration({ placement, side } = {}) {
 }
 
 function resetReadySession() {
+  if (demoPreviousComparisonWindowMs !== null) {
+    comparisonWindowMs = demoPreviousComparisonWindowMs;
+    demoPreviousComparisonWindowMs = null;
+  }
   detector = new HipMotionCadenceDetector();
   fusion = new RunSignalFusion();
   coach = new RunRhythmCoach();
@@ -194,6 +360,69 @@ function resetReadySession() {
   interruptions = [];
   interruptionActive = null;
   placementSwitchCount = 0;
+  techniqueEngine = new TechniqueLapEngine({ windowMs: comparisonWindowMs, initialTerrain: currentTerrain });
+  techniqueSnapshot = techniqueEngine.snapshot(0);
+  latestRetrospectiveComparison = null;
+  lastTechniqueExperimentCount = 0;
+  techniqueDemoScale = 1;
+  techniqueDemoOffsetMs = 0;
+  lastTechniqueRecordedElapsedMs = -Infinity;
+}
+
+function renderTechniqueSetup() {
+  const minutes = techniqueWindowMinutes();
+  const context = `${terrainLabel().toUpperCase()} · ${minutes}-MIN COMPARE`;
+  els["run-context-summary"].textContent = context;
+  els["terrain-chip"].textContent = `${terrainLabel().toUpperCase()} · ${minutes} MIN`;
+  for (const button of doc.querySelectorAll("[data-terrain-option]")) {
+    button.setAttribute("aria-pressed", String(button.dataset.terrainOption === currentTerrain));
+  }
+  for (const button of doc.querySelectorAll("[data-window-minutes]")) {
+    button.setAttribute("aria-pressed", String(Number(button.dataset.windowMinutes) === minutes));
+    button.disabled = active;
+  }
+}
+
+function setTechniqueWindow(windowMs, { announce = false } = {}) {
+  if (!TECHNIQUE_WINDOW_OPTIONS_MS.includes(windowMs)) return false;
+  const result = techniqueEngine.setWindowMs(windowMs);
+  if (!result.changed && active) {
+    if (announce) reply("Finish or cancel the active comparison before changing its window.");
+    return false;
+  }
+  comparisonWindowMs = windowMs;
+  writeStoredText(comparisonWindowStorageKey, String(windowMs));
+  techniqueSnapshot = techniqueEngine.snapshot(techniqueSnapshot?.elapsedMs || 0);
+  renderTechniqueSetup();
+  render(true);
+  if (announce) reply(`Technique comparison window set to ${techniqueWindowMinutes()} minutes.`);
+  return true;
+}
+
+function setTerrainContext(terrain, { announce = false, source = "touch" } = {}) {
+  if (!RUN_TERRAINS.includes(terrain)) return false;
+  currentTerrain = terrain;
+  writeStoredText(terrainStorageKey, terrain);
+  if (active) {
+    techniqueEngine.setTerrain(terrain, techniqueElapsedAt(), { source });
+    techniqueSnapshot = techniqueEngine.snapshot(techniqueElapsedAt());
+    persistActiveSession(true);
+  } else if (snapshot.status !== "REVIEW") {
+    techniqueEngine = new TechniqueLapEngine({ windowMs: comparisonWindowMs, initialTerrain: currentTerrain });
+    techniqueSnapshot = techniqueEngine.snapshot(0);
+  }
+  renderTechniqueSetup();
+  render(true);
+  if (els["terrain-dialog"].open) els["terrain-dialog"].close();
+  if (announce) reply(`Terrain set to ${terrainLabel()}. Measurements from this point use that label.`);
+  return true;
+}
+
+function openTerrainDialog() {
+  if (!active && snapshot.status === "REVIEW") return;
+  els["terrain-dialog"].showModal();
+  const selected = els["terrain-dialog"].querySelector(`[data-terrain-option="${currentTerrain}"]`);
+  selected?.focus();
 }
 
 function setRunConfiguration({ placement, side } = {}) {
@@ -234,6 +463,13 @@ function switchActivePlacement(requestedPlacement, { forceReply = false } = {}) 
   }
 
   const now = performance.now();
+  const cancelledTechnique = techniqueSnapshot?.active
+    ? techniqueEngine.cancelActive(techniqueElapsedAt(now), "placement-changed")
+    : null;
+  if (cancelledTechnique) {
+    techniqueSnapshot = techniqueEngine.snapshot(techniqueElapsedAt(now));
+    detectTechniqueExperimentChange({ announce: false });
+  }
   if (phonePlacement === "hand") armSnapshot = armAnalyzer.snapshot(now, { force: true });
   else formSnapshot = formAnalyzer.snapshot(now, { force: true });
 
@@ -270,7 +506,7 @@ function switchActivePlacement(requestedPlacement, { forceReply = false } = {}) 
 
   persistActiveSession(true);
   render(true);
-  const message = `${placementName(phonePlacement)} selected. New measurement segment started.`;
+  const message = `${placementName(phonePlacement)} selected. New measurement segment started.${cancelledTechnique ? " The active technique comparison was cancelled because the phone moved." : ""}`;
   els["placement-switch-status"].textContent = message;
   if (forceReply) reply(message);
   else speak(message);
@@ -319,6 +555,12 @@ function restoreCompletedReport() {
     interruptions = completedFormReport.interruptions;
     interruptionActive = null;
   }
+  if (TECHNIQUE_WINDOW_OPTIONS_MS.includes(completedFormReport.comparisonWindowMs)) {
+    comparisonWindowMs = completedFormReport.comparisonWindowMs;
+  }
+  const reportTerrain = completedFormReport.terrainSegments?.at(-1)?.terrain;
+  if (RUN_TERRAINS.includes(reportTerrain)) currentTerrain = reportTerrain;
+  latestRetrospectiveComparison = completedFormReport.retrospectiveComparison || null;
   showingCompletedReport = true;
   completedSaveState = pendingCompletedRun ? "failed" : "saved";
   return true;
@@ -353,7 +595,10 @@ function renderPhonePlacement({ placement = phonePlacement, side = pocketSide } 
   els["form-side-label"].textContent = placement === "hand" ? "PHONE HAND" : "POCKET SIDE";
   els["pocket-lock-label"].textContent = placement === "hand" ? "RUN LOCKED" : "POCKET LOCKED";
   els["pocket-lock"].querySelector("strong").textContent = placement === "hand" ? "RUN LOCK" : "POCKET LOCK";
-  els["pocket-lock-screen"].setAttribute("aria-label", placement === "hand" ? "Run lock active" : "Pocket lock active");
+  els["pocket-lock-screen"].setAttribute(
+    "aria-label",
+    `${placement === "hand" ? "Run lock" : "Pocket lock"} active; live dashboard remains visible`
+  );
   els["hand-mode-note"].hidden = placement !== "hand";
   const switchDestination = placement === "hand" ? "hip" : "hand";
   els["placement-switch"].hidden = !active;
@@ -515,9 +760,7 @@ function writeStoredText(key, value) {
 }
 
 function setSaveHealth(healthy, label = healthy ? "SAVE READY" : "SAVE FAILED") {
-  storageHealthy = healthy;
   setPreflightItem("preflight-save", label, healthy ? "ready" : "warning");
-  if (!healthy && pocketLocked) els["pocket-lock-health"].textContent = "RUN ACTIVE · SAVE FAILED";
 }
 
 function writeStoredJson(key, value) {
@@ -570,7 +813,10 @@ function persistActiveSession(force = false) {
       armState: armAnalyzer.exportState(),
       phonePlacement,
       pocketSide,
-      interruptions
+      interruptions,
+      techniqueState: techniqueEngine.exportState(),
+      terrain: currentTerrain,
+      comparisonWindowMs
     }),
     placementSwitchCount
   };
@@ -599,11 +845,11 @@ function startResilienceMonitor() {
     } else if (motionMissing) {
       beginInterruption("motion-gap");
       setConnection("phone-connection", "MOTION INTERRUPTED", "warning");
-      els["pocket-lock-health"].textContent = "MOTION INTERRUPTED · KEEP SCREEN ACTIVE";
     } else if (interruptionActive) {
       endInterruption();
     }
     if (!wakeLock || wakeLock.released) requestWakeLock();
+    advanceTechniqueClock(now);
     persistActiveSession();
     render();
   }, 2_000);
@@ -650,6 +896,240 @@ function statusSentence() {
   const cadence = Number.isFinite(snapshot.cadenceSpm) ? `${Math.round(snapshot.cadenceSpm)} steps per minute` : "cadence is still settling";
   const baseline = Number.isFinite(snapshot.baselineCadenceSpm) ? `Your baseline is ${snapshot.baselineCadenceSpm}` : `Baseline learning is ${snapshot.baselineProgress} percent complete`;
   return `${snapshot.message} Current ${cadence}. ${baseline}. ${snapshot.unplannedWalks} unplanned ${snapshot.unplannedWalks === 1 ? "walk" : "walks"}.${armStatusSupplement()}`;
+}
+
+function techniqueStatusSentence() {
+  if (!active) {
+    const completed = completedFormReport?.techniqueComparisons?.filter(item => item.status === "complete") || [];
+    return completed.length
+      ? `${completed.length} technique ${completed.length === 1 ? "comparison is" : "comparisons are"} saved in the last run review.`
+      : "There is no active technique comparison.";
+  }
+  advanceTechniqueClock();
+  if (techniqueSnapshot.active) {
+    return `Technique comparison ${techniqueSnapshot.active.sequence} is collecting. ${formatMinutes(techniqueSnapshot.active.remainingMs)} remains.`;
+  }
+  if (techniqueSnapshot.elapsedMs < techniqueSnapshot.windowMs) {
+    return `Technique Lap needs ${formatMinutes(techniqueSnapshot.windowMs - techniqueSnapshot.elapsedMs)} more history before you can mark a change.`;
+  }
+  const latest = techniqueSnapshot.experiments.at(-1);
+  if (latest?.status === "complete") return techniqueCompletionSentence(latest);
+  return `Technique Lap is ready. Say mark change to compare the previous ${techniqueWindowMinutes(techniqueSnapshot.windowMs)} minutes with the next ${techniqueWindowMinutes(techniqueSnapshot.windowMs)} minutes.`;
+}
+
+function markTechniqueChange({ forceReply = true } = {}) {
+  if (!active) {
+    if (forceReply) reply("Start the run before marking a technique change.");
+    return false;
+  }
+  if (fieldSession && !preflightConfirmed) {
+    if (forceReply) reply("Wait for the motion and screen checks to pass before marking a change.");
+    return false;
+  }
+  advanceTechniqueClock();
+  const result = techniqueEngine.markChange(techniqueSnapshot.elapsedMs);
+  techniqueSnapshot = techniqueEngine.snapshot(techniqueSnapshot.elapsedMs);
+  if (!result.accepted) {
+    if (forceReply) {
+      reply(result.reason === "comparison-active"
+        ? `A technique comparison is already collecting. ${formatMinutes(result.remainingMs)} remains.`
+        : `Keep running for ${formatMinutes(result.remainingMs)} before marking a change.`);
+    }
+    render(true);
+    return false;
+  }
+  navigator.vibrate?.(120);
+  persistActiveSession(true);
+  render(true);
+  if (forceReply) reply(`Change marked. Comparing the next ${techniqueWindowMinutes(result.active.windowMs)} minutes.`);
+  return true;
+}
+
+function cancelTechniqueComparison({ forceReply = true, reason = "runner-cancelled" } = {}) {
+  if (!active || !techniqueSnapshot.active) {
+    if (forceReply) reply("There is no active technique comparison to cancel.");
+    return false;
+  }
+  const cancelled = techniqueEngine.cancelActive(techniqueElapsedAt(), reason);
+  techniqueSnapshot = techniqueEngine.snapshot(techniqueElapsedAt());
+  detectTechniqueExperimentChange({ announce: false });
+  persistActiveSession(true);
+  render(true);
+  if (forceReply) reply(`Technique comparison ${cancelled.sequence} cancelled. Your whole run is still recording.`);
+  return true;
+}
+
+function compareRecentTechnique(windowMinutes = techniqueWindowMinutes(), { forceReply = true } = {}) {
+  if (!active) {
+    if (forceReply) reply("Start the run before comparing recent technique windows.");
+    return null;
+  }
+  advanceTechniqueClock();
+  const result = techniqueEngine.compareLastToPrevious({
+    elapsedMs: techniqueSnapshot.elapsedMs,
+    windowMs: Number(windowMinutes) * 60_000
+  });
+  if (!result.available) {
+    if (forceReply) reply(`Another ${formatMinutes(result.remainingMs)} of history is needed for that comparison.`);
+    return null;
+  }
+  latestRetrospectiveComparison = result;
+  render(true);
+  if (forceReply) reply(techniqueCompletionSentence({ ...result, status: "complete" }));
+  return result;
+}
+
+function showPreviousTechnique(windowMinutes = techniqueWindowMinutes()) {
+  const result = compareRecentTechnique(windowMinutes, { forceReply: false });
+  if (!result) return false;
+  const cadence = result.previous.metrics?.cadenceSpm;
+  const rhythm = result.previous.metrics?.rhythmStabilityPercent;
+  const readings = [
+    Number.isFinite(cadence) ? `cadence averaged ${Math.round(cadence)} steps per minute` : null,
+    Number.isFinite(rhythm) ? `rhythm stability was ${Math.round(rhythm)} percent` : null
+  ].filter(Boolean);
+  reply(`The previous ${windowMinutes} minutes had ${readings.length ? readings.join(" and ") : "insufficient running data"}. Terrain was ${terrainLabel(result.previous.terrain?.primary)}. Coverage was ${result.previous.coveragePercent} percent.`);
+  return true;
+}
+
+function comparisonWarningText(warnings = []) {
+  const labels = {
+    "terrain-mismatch": "Terrain changed between the two blocks.",
+    "before-terrain-unlabelled": "The before block had no terrain label.",
+    "after-terrain-unlabelled": "The after block had no terrain label.",
+    "before-terrain-mixed": "The before block crossed terrain segments.",
+    "after-terrain-mixed": "The after block crossed terrain segments.",
+    "before-variable-terrain": "The before block used variable terrain.",
+    "after-variable-terrain": "The after block used variable terrain.",
+    "speed-context-changed": "Pace changed enough to affect interpretation.",
+    "heart-rate-context-changed": "Heart-rate context changed.",
+    "cadence-source-mismatch": "Cadence source changed between blocks.",
+    "placement-mismatch": "Phone placement changed between blocks.",
+    "after-window-incomplete": "The run ended before the after block finished.",
+    "before-low-running-coverage": "The before block contained limited running data.",
+    "after-low-running-coverage": "The after block contained limited running data.",
+    "before-missing-samples": "The before block has missing sensor samples.",
+    "after-missing-samples": "The after block has missing sensor samples."
+  };
+  return [...new Set(warnings.map(warning => labels[warning]).filter(Boolean))].slice(0, 2).join(" ");
+}
+
+function metricDisplay(key, value) {
+  if (!Number.isFinite(value)) return "—";
+  if (key === "cadenceSpm" || key === "heartRateBpm" || key === "armCycleRpm") return String(Math.round(value));
+  if (["rhythmStabilityPercent", "armRegularityPercent"].includes(key)) return `${Math.round(value)}%`;
+  return String(Math.round(value * 100) / 100);
+}
+
+function comparisonCard(comparison) {
+  const card = doc.createElement("article");
+  card.className = "technique-comparison-card";
+  card.dataset.quality = comparison.quality || "low";
+  const header = doc.createElement("header");
+  const title = doc.createElement("h3");
+  title.textContent = `CHANGE ${comparison.sequence} · ${formatMinutes(comparison.markedAtElapsedMs)}`;
+  const quality = doc.createElement("small");
+  quality.textContent = comparison.status === "complete" ? `${String(comparison.quality || "low").toUpperCase()} CONFIDENCE` : String(comparison.status || "incomplete").toUpperCase();
+  header.append(title, quality);
+  const context = doc.createElement("p");
+  context.className = "technique-comparison-context";
+  context.textContent = `${formatMinutes(comparison.before.startMs)}–${formatMinutes(comparison.before.endMs)} vs ${formatMinutes(comparison.after.startMs)}–${formatMinutes(comparison.after.endMs)} · ${terrainLabel(comparison.before.terrain?.primary)} → ${terrainLabel(comparison.after.terrain?.primary)}`;
+  const grid = doc.createElement("div");
+  grid.className = "technique-comparison-grid";
+  for (const label of ["MEASURE", "BEFORE", "AFTER", "CHANGE"]) {
+    const cell = doc.createElement("span");
+    cell.textContent = label;
+    grid.append(cell);
+  }
+  const orderedKeys = Object.keys(TECHNIQUE_METRIC_LABELS).filter(key => comparison.changes?.[key]);
+  for (const key of orderedKeys) {
+    const change = comparison.changes[key];
+    const changeText = change.direction === "unchanged"
+      ? "SAME"
+      : `${change.absolute > 0 ? "+" : ""}${metricDisplay(key, change.absolute)}`;
+    for (const value of [TECHNIQUE_METRIC_LABELS[key], metricDisplay(key, change.before), metricDisplay(key, change.after), changeText]) {
+      const cell = doc.createElement("span");
+      cell.textContent = value;
+      grid.append(cell);
+    }
+  }
+  card.append(header, context, grid);
+  const warningText = comparisonWarningText(comparison.warnings);
+  if (warningText) {
+    const warning = doc.createElement("p");
+    warning.className = "technique-comparison-warning";
+    warning.textContent = warningText;
+    card.append(warning);
+  }
+  return card;
+}
+
+function renderTechniqueReport() {
+  const reviewing = !active && snapshot.status === "REVIEW";
+  const comparisons = showingCompletedReport
+    ? completedFormReport?.techniqueComparisons || []
+    : techniqueEngine.getCompletedComparisons();
+  const retrospective = showingCompletedReport
+    ? completedFormReport?.retrospectiveComparison || null
+    : latestRetrospectiveComparison;
+  const visible = reviewing && (comparisons.length > 0 || retrospective?.available);
+  els["technique-report"].hidden = !visible;
+  if (!visible) return;
+  els["technique-report-count"].textContent = `${comparisons.length} ${comparisons.length === 1 ? "MARK" : "MARKS"}`;
+  els["technique-report-list"].replaceChildren(...comparisons.map(comparisonCard));
+  els["technique-retrospective"].hidden = !retrospective?.available;
+  if (retrospective?.available) {
+    const minutes = techniqueWindowMinutes(retrospective.previous.durationMs);
+    els["technique-retrospective-title"].textContent = `LAST ${minutes} / PREVIOUS ${minutes}`;
+    els["technique-retrospective-confidence"].textContent = `${String(retrospective.quality || "low").toUpperCase()} CONFIDENCE`;
+    const cadence = retrospective.changes?.cadenceSpm;
+    const rhythm = retrospective.changes?.rhythmStabilityPercent;
+    els["technique-retrospective-content"].textContent = [
+      cadence ? techniqueChangePhrase(cadence, "Cadence") : null,
+      rhythm ? techniqueChangePhrase(rhythm, "Rhythm stability") : null,
+      comparisonWarningText(retrospective.warnings)
+    ].filter(Boolean).join(" · ") || "Not enough comparable running data.";
+  }
+}
+
+function renderTechniquePanel() {
+  const reviewing = !active && snapshot.status === "REVIEW";
+  els["technique-panel"].hidden = !active;
+  els["terrain-chip"].disabled = reviewing;
+  if (!active) {
+    renderTechniqueReport();
+    return;
+  }
+  advanceTechniqueClock(performance.now(), { announce: true });
+  const remainingBeforeMs = Math.max(0, techniqueSnapshot.windowMs - techniqueSnapshot.elapsedMs);
+  const activeComparison = techniqueSnapshot.active;
+  let state = "ready";
+  let title = techniqueSnapshot.completedCount ? "READY FOR ANOTHER CHANGE" : "READY TO MARK A CHANGE";
+  let message = `Previous ${techniqueWindowMinutes(techniqueSnapshot.windowMs)} vs next ${techniqueWindowMinutes(techniqueSnapshot.windowMs)} minutes · ${terrainLabel()}`;
+  let confidence = `${techniqueSnapshot.completedCount} COMPLETE`;
+  if (activeComparison) {
+    state = "collecting";
+    title = `COMPARING · ${formatMinutes(activeComparison.remainingMs)} LEFT`;
+    message = `Change ${activeComparison.sequence} · fixed ${techniqueWindowMinutes(activeComparison.windowMs)}-minute after block`;
+    confidence = "COLLECTING";
+  } else if (remainingBeforeMs > 0) {
+    state = "building";
+    title = `READY IN ${formatMinutes(remainingBeforeMs)}`;
+    message = `Building the previous ${techniqueWindowMinutes(techniqueSnapshot.windowMs)}-minute block`;
+    confidence = "HISTORY";
+  }
+  els["technique-panel"].dataset.state = state;
+  els["technique-panel-title"].textContent = title;
+  els["technique-panel-message"].textContent = message;
+  els["technique-confidence"].textContent = confidence;
+  els["mark-change"].dataset.state = state;
+  els["mark-change-label"].textContent = activeComparison
+    ? `COMPARING · ${formatMinutes(activeComparison.remainingMs)}`
+    : remainingBeforeMs > 0
+      ? `READY IN ${formatMinutes(remainingBeforeMs)}`
+      : techniqueSnapshot.completedCount ? "MARK NEXT CHANGE" : "MARK CHANGE";
+  els["mark-change-detail"].textContent = `Previous ${techniqueWindowMinutes(techniqueSnapshot.windowMs)} vs next ${techniqueWindowMinutes(techniqueSnapshot.windowMs)}`;
+  renderTechniqueReport();
 }
 
 function voiceIdleState() {
@@ -764,10 +1244,14 @@ async function handleVoiceTranscript(alternatives) {
   const command = parsed.find(result => result.intent !== VOICE_INTENTS.UNKNOWN) || parsed[0];
   els["voice-subtitle"].textContent = `Heard: “${command?.transcript || alternatives[0]}”`;
 
-  await executeRunIntent(command?.intent);
+  await executeRunIntent(command);
 }
 
-async function executeRunIntent(intent) {
+async function executeRunIntent(actionOrIntent) {
+  const action = typeof actionOrIntent === "string"
+    ? { command: actionOrIntent }
+    : { ...actionOrIntent, command: actionOrIntent?.command || actionOrIntent?.intent };
+  const intent = action.command;
   switch (intent) {
     case VOICE_INTENTS.START:
       if (active) reply("The run coach is already active.");
@@ -791,6 +1275,24 @@ async function executeRunIntent(intent) {
     case VOICE_INTENTS.SWITCH_HAND:
       switchActivePlacement("hand", { forceReply: true });
       break;
+    case VOICE_INTENTS.MARK_CHANGE:
+      markTechniqueChange();
+      break;
+    case VOICE_INTENTS.TECHNIQUE_STATUS:
+      reply(techniqueStatusSentence());
+      break;
+    case VOICE_INTENTS.CANCEL_COMPARISON:
+      cancelTechniqueComparison();
+      break;
+    case VOICE_INTENTS.COMPARE_RECENT:
+      compareRecentTechnique(action.windowMinutes);
+      break;
+    case VOICE_INTENTS.SHOW_PREVIOUS:
+      showPreviousTechnique(action.windowMinutes);
+      break;
+    case VOICE_INTENTS.SET_TERRAIN:
+      setTerrainContext(action.terrain, { announce: true, source: "voice" });
+      break;
     case VOICE_INTENTS.QUIET:
       setVoicePrompts(false);
       break;
@@ -813,7 +1315,7 @@ async function executeRunIntent(intent) {
       reply("Finish cancelled. Keep running.");
       break;
     case VOICE_INTENTS.HELP:
-      reply("You can say start run, coach status, planned walk, resume running, switch to hand, switch to hip, prompts off, prompts on, finish run, or stop listening.");
+      reply("You can say mark change, technique status, cancel comparison, compare last five, show previous five, terrain uphill, planned walk, resume running, coach status, prompts off, finish run, or stop listening.");
       break;
     case VOICE_INTENTS.VOICE_OFF:
       voiceController?.disable();
@@ -912,23 +1414,6 @@ function render(force = false) {
   els["stop-value"].textContent = snapshot.stopCount || 0;
   els["interruption-value"].textContent = interruptionSummary(interruptions).count;
   els["summary-state"].textContent = snapshot.status === "REVIEW" ? "FINAL" : active ? "LIVE" : "READY";
-  els["pocket-lock-status"].textContent = snapshot.status;
-  els["pocket-lock-time"].textContent = formatMinutes(elapsedMs);
-  if (phonePlacement === "hand") {
-    els["pocket-lock-cadence"].textContent = Number.isFinite(armSnapshot.regularityPercent) ? `${armSnapshot.regularityPercent}%` : "—";
-    els["pocket-lock-metric-label"].textContent = "ARM REGULARITY";
-  } else {
-    els["pocket-lock-cadence"].textContent = cadence ?? "—";
-    els["pocket-lock-metric-label"].textContent = "CADENCE";
-  }
-
-  if (!interruptionActive) {
-    els["pocket-lock-health"].textContent = storageHealthy === false
-      ? "RUN ACTIVE · SAVE FAILED"
-      : preflightConfirmed
-        ? phonePlacement === "hand" ? "ARM MOTION LIVE · SCREEN PROTECTED" : "MOTION LIVE · SCREEN PROTECTED"
-        : phonePlacement === "hand" ? "HAND CHECK IN PROGRESS" : "POCKET CHECK IN PROGRESS";
-  }
   renderCompletedSaveState();
   const reviewingRun = !active && snapshot.status === "REVIEW";
   els["start-session"].hidden = active || Boolean(savedSession) || Boolean(pendingCompletedRun);
@@ -956,6 +1441,8 @@ function render(force = false) {
       ? "Tap once to enable hands-free commands, then leave the screen open."
       : "Voice commands are unavailable in this browser. Spoken replies still work.";
   if (els["voice-dock"].dataset.speaking !== "true") setVoiceIdle();
+  renderTechniqueSetup();
+  renderTechniquePanel();
   renderFormLab();
 }
 
@@ -1042,11 +1529,13 @@ async function requestMotionPermission() {
 }
 
 function processSignal(signal) {
-  handleSnapshot(coach.update({
+  const nextSnapshot = coach.update({
     timestampMs: signal.timestampMs,
     cadenceSpm: signal.cadenceSpm,
     movementState: signal.movementState
-  }));
+  });
+  recordTechniqueFrame(signal, nextSnapshot, performance.now());
+  handleSnapshot(nextSnapshot);
   els["garmin-connection"].classList.toggle("muted", !signal.garminConnected);
   els["garmin-connection"].innerHTML = `<i></i> ${signal.garminConnected ? "GARMIN LIVE" : "GARMIN OFFLINE"}`;
 }
@@ -1155,6 +1644,13 @@ async function startSession() {
     coach = new RunRhythmCoach();
     formAnalyzer = new HipFormAnalyzer();
     armAnalyzer = new ArmSwingAnalyzer();
+    techniqueEngine = new TechniqueLapEngine({ windowMs: comparisonWindowMs, initialTerrain: currentTerrain });
+    techniqueSnapshot = techniqueEngine.snapshot(0);
+    latestRetrospectiveComparison = null;
+    lastTechniqueExperimentCount = 0;
+    techniqueDemoScale = 1;
+    techniqueDemoOffsetMs = 0;
+    lastTechniqueRecordedElapsedMs = -Infinity;
     active = true;
     fieldSession = true;
     motionSignalConfirmed = false;
@@ -1231,6 +1727,26 @@ async function resumeSavedSession() {
     fieldSession = true;
     sessionStartedAtEpochMs = restored.startedAtEpochMs;
     sessionStartedAtMs = now - Math.max(0, Date.now() - restored.startedAtEpochMs);
+    comparisonWindowMs = TECHNIQUE_WINDOW_OPTIONS_MS.includes(restored.comparisonWindowMs)
+      ? restored.comparisonWindowMs
+      : comparisonWindowMs;
+    currentTerrain = RUN_TERRAINS.includes(restored.terrain) ? restored.terrain : currentTerrain;
+    const restoredTechniqueElapsedMs = techniqueElapsedAt(now);
+    try {
+      techniqueEngine = restored.techniqueState
+        ? TechniqueLapEngine.restore(restored.techniqueState, { elapsedMs: restoredTechniqueElapsedMs })
+        : new TechniqueLapEngine({ windowMs: comparisonWindowMs, initialTerrain: currentTerrain });
+    } catch (_) {
+      techniqueEngine = new TechniqueLapEngine({ windowMs: comparisonWindowMs, initialTerrain: currentTerrain });
+    }
+    techniqueSnapshot = techniqueEngine.snapshot(restoredTechniqueElapsedMs);
+    currentTerrain = techniqueSnapshot.currentTerrain;
+    comparisonWindowMs = techniqueSnapshot.windowMs;
+    lastTechniqueExperimentCount = techniqueSnapshot.experiments.length;
+    latestRetrospectiveComparison = null;
+    techniqueDemoScale = 1;
+    techniqueDemoOffsetMs = 0;
+    lastTechniqueRecordedElapsedMs = techniqueSnapshot.elapsedMs - 1_000;
     interruptions = [...restored.interruptions];
     interruptionActive = interruptions.at(-1)?.endedAtEpochMs == null ? interruptions.at(-1) : null;
     motionSignalConfirmed = false;
@@ -1324,6 +1840,17 @@ function finishSession() {
   pendingFinishUntil = -Infinity;
   clearMotionTimeout();
   lastSessionElapsedMs = sessionStartedAtMs === null ? 0 : Math.max(0, snapshot.timestampMs - sessionStartedAtMs);
+  advanceTechniqueClock(performance.now(), { announce: false });
+  if (techniqueSnapshot.active) {
+    techniqueEngine.finishActive(techniqueSnapshot.elapsedMs, "run-ended");
+    techniqueSnapshot = techniqueEngine.snapshot(techniqueSnapshot.elapsedMs);
+    detectTechniqueExperimentChange({ announce: false });
+  }
+  const retrospective = techniqueEngine.compareLastToPrevious({
+    elapsedMs: techniqueSnapshot.elapsedMs,
+    windowMs: techniqueSnapshot.windowMs
+  });
+  latestRetrospectiveComparison = retrospective.available ? retrospective : null;
   if (interruptionActive) endInterruption();
   const interruptionData = interruptionSummary(interruptions);
   if (phonePlacement === "hand") armSnapshot = armAnalyzer.snapshot(performance.now(), { force: true });
@@ -1358,7 +1885,11 @@ function finishSession() {
       phonePlacement,
       pocketSide,
       placementSwitchCount,
-      interruptions
+      interruptions,
+      techniqueComparisons: techniqueEngine.getCompletedComparisons(),
+      terrainSegments: techniqueEngine.getTerrainSegments(),
+      comparisonWindowMs: techniqueSnapshot.windowMs,
+      retrospectiveComparison: latestRetrospectiveComparison
     });
     completedSaved = storeCompletedRun(completedPayload);
   } else completedSaveState = "demo";
@@ -1397,6 +1928,30 @@ function startDemo() {
   });
   formAnalyzer = new HipFormAnalyzer();
   armAnalyzer = new ArmSwingAnalyzer();
+  demoPreviousComparisonWindowMs = comparisonWindowMs;
+  comparisonWindowMs = 60_000;
+  techniqueEngine = new TechniqueLapEngine({ windowMs: comparisonWindowMs, initialTerrain: currentTerrain });
+  techniqueSnapshot = techniqueEngine.snapshot(0);
+  latestRetrospectiveComparison = null;
+  lastTechniqueExperimentCount = 0;
+  techniqueDemoScale = 6;
+  techniqueDemoOffsetMs = 60_000;
+  for (let elapsedMs = 0; elapsedMs < techniqueDemoOffsetMs; elapsedMs += 1_000) {
+    techniqueEngine.recordFrame({
+      elapsedMs,
+      movementState: "running",
+      eligible: true,
+      cadenceSpm: 170,
+      rhythmStable: true,
+      metrics: { hipVerticalIndex: 0.82, hipHorizontalIndex: 0.42, hipRotationIndex: 18, hipImpactVariationIndex: 0.11 },
+      placement: phonePlacement,
+      side: pocketSide,
+      cadenceSource: "phone",
+      sensorSource: "demo"
+    });
+  }
+  techniqueSnapshot = techniqueEngine.snapshot(techniqueDemoOffsetMs);
+  lastTechniqueRecordedElapsedMs = techniqueDemoOffsetMs - 1_000;
   active = true;
   fieldSession = false;
   motionSignalConfirmed = false;
@@ -1445,7 +2000,7 @@ export async function ingestGarminControl(payload) {
       detail: error.message
     };
   }
-  await executeRunIntent(message.command);
+  await executeRunIntent(message);
   return createRunControlAck(message, { accepted: true, detail: "Command received by phone coach" });
 }
 
@@ -1530,6 +2085,7 @@ function beginPocketUnlock(event) {
 window.runCoachGarminSample = ingestGarminTelemetry;
 window.runCoachGarminControl = ingestGarminControl;
 window.runCoachVoiceCommand = transcript => handleVoiceTranscript([String(transcript || "")]);
+window.runCoachTechniqueAction = payload => executeRunIntent(normaliseRunControlAction(payload));
 voiceController = BrowserVoiceController.fromWindow(window, {
   onTranscript: handleVoiceTranscript,
   onState: handleVoiceState
@@ -1548,6 +2104,7 @@ els["finish-dialog"].addEventListener("click", event => {
   if (event.target === els["finish-dialog"]) cancelFinishConfirmation();
 });
 els["demo-session"].addEventListener("click", startDemo);
+els["mark-change"].addEventListener("click", () => executeRunIntent({ command: VOICE_INTENTS.MARK_CHANGE }));
 els["planned-walk"].addEventListener("click", () => handleSnapshot(coach.markPlannedBreak(performance.now())));
 els["resume-run"].addEventListener("click", resumeRunning);
 els["speak-status"].addEventListener("click", () => reply(statusSentence()));
@@ -1561,6 +2118,21 @@ els["pocket-side-left"].addEventListener("click", () => setPocketSide("left"));
 els["pocket-side-right"].addEventListener("click", () => setPocketSide("right"));
 els["voice-toggle"].addEventListener("click", toggleVoiceControls);
 els["voice-prompts-toggle"].addEventListener("click", toggleVoicePrompts);
+els["terrain-chip"].addEventListener("click", openTerrainDialog);
+els["terrain-dialog-close"].addEventListener("click", () => els["terrain-dialog"].close());
+els["terrain-dialog"].addEventListener("cancel", event => {
+  event.preventDefault();
+  els["terrain-dialog"].close();
+});
+els["terrain-dialog"].addEventListener("click", event => {
+  if (event.target === els["terrain-dialog"]) els["terrain-dialog"].close();
+});
+for (const button of doc.querySelectorAll("[data-terrain-option]")) {
+  button.addEventListener("click", () => setTerrainContext(button.dataset.terrainOption, { announce: active, source: "touch" }));
+}
+for (const button of doc.querySelectorAll("[data-window-minutes]")) {
+  button.addEventListener("click", () => setTechniqueWindow(Number(button.dataset.windowMinutes) * 60_000));
+}
 els["install-app"].addEventListener("click", installRunningApp);
 els["pocket-lock"].addEventListener("click", () => setPocketLock(true));
 els["pocket-unlock"].addEventListener("pointerdown", beginPocketUnlock);

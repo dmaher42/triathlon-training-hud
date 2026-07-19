@@ -6,6 +6,56 @@ const normalise = value => String(value || "")
 
 const matches = (text, patterns) => patterns.some(pattern => pattern.test(text));
 
+const WINDOW_MINUTES = Object.freeze({
+  "1": 1,
+  one: 1,
+  "3": 3,
+  three: 3,
+  "5": 5,
+  five: 5,
+  "10": 10,
+  ten: 10
+});
+
+const TERRAIN_ALIASES = Object.freeze({
+  unlabelled: "unlabelled",
+  unlabeled: "unlabelled",
+  none: "unlabelled",
+  flat: "flat",
+  uphill: "uphill",
+  "up hill": "uphill",
+  downhill: "downhill",
+  "down hill": "downhill",
+  rolling: "rolling",
+  "rolling hills": "rolling",
+  trail: "trail",
+  uneven: "trail",
+  "trail uneven": "trail",
+  treadmill: "treadmill"
+});
+
+const readWindowMinutes = (text, patterns) => {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return WINDOW_MINUTES[match[1]] || null;
+  }
+  return null;
+};
+
+const readTerrain = text => {
+  if (/^(clear|reset|remove)(\s+the)?\s+terrain(\s+label)?$/.test(text)) return "unlabelled";
+  const patterns = [
+    /^(?:set|change|switch)(?:\s+the)?\s+terrain(?:\s+to)?\s+(.+)$/,
+    /^terrain(?:\s+is|\s+to)?\s+(.+)$/,
+    /^(.+)\s+terrain$/
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && TERRAIN_ALIASES[match[1]]) return TERRAIN_ALIASES[match[1]];
+  }
+  return null;
+};
+
 export const VOICE_INTENTS = Object.freeze({
   START: "start",
   STATUS: "status",
@@ -13,6 +63,12 @@ export const VOICE_INTENTS = Object.freeze({
   RESUME: "resume",
   SWITCH_HIP: "switch-hip",
   SWITCH_HAND: "switch-hand",
+  MARK_CHANGE: "mark-change",
+  TECHNIQUE_STATUS: "technique-status",
+  CANCEL_COMPARISON: "cancel-comparison",
+  COMPARE_RECENT: "compare-recent",
+  SHOW_PREVIOUS: "show-previous",
+  SET_TERRAIN: "set-terrain",
   QUIET: "quiet",
   PROMPTS_ON: "prompts-on",
   FINISH_REQUEST: "finish-request",
@@ -44,6 +100,56 @@ export function parseVoiceCommand(transcript, { awaitingFinishConfirmation = fal
   }
   if (matches(text, [/^(start|begin)(\s+the)?\s+(run|coach|session)$/, /^start$/])) {
     return { intent: VOICE_INTENTS.START, transcript: text };
+  }
+  if (matches(text, [
+    /^mark(\s+a|\s+the)?\s+(change|technique\s+change)$/,
+    /^(start|begin)(\s+a|\s+the)?\s+(technique\s+)?comparison$/,
+    /^(new|mark)(\s+a)?\s+technique\s+lap$/,
+    /^technique\s+lap$/
+  ])) {
+    return { intent: VOICE_INTENTS.MARK_CHANGE, transcript: text };
+  }
+  if (matches(text, [
+    /^technique\s+(status|update)$/,
+    /^(change|comparison)\s+(status|update)$/,
+    /^how\s+is\s+(the\s+)?(change|comparison)\s+going$/
+  ])) {
+    return { intent: VOICE_INTENTS.TECHNIQUE_STATUS, transcript: text };
+  }
+  if (matches(text, [
+    /^cancel(\s+the)?\s+(change|comparison|technique\s+comparison|technique\s+lap)$/,
+    /^stop(\s+the)?\s+(comparison|technique\s+comparison)$/
+  ])) {
+    return { intent: VOICE_INTENTS.CANCEL_COMPARISON, transcript: text };
+  }
+
+  const compareWindowMinutes = readWindowMinutes(text, [
+    /^compare(?:\s+the)?\s+(?:last|recent)\s+(1|one|3|three|5|five|10|ten)(?:\s+minutes?)?$/,
+    /^compare\s+(1|one|3|three|5|five|10|ten)\s+minutes?$/
+  ]);
+  if (compareWindowMinutes) {
+    return {
+      intent: VOICE_INTENTS.COMPARE_RECENT,
+      transcript: text,
+      windowMinutes: compareWindowMinutes
+    };
+  }
+
+  const previousWindowMinutes = readWindowMinutes(text, [
+    /^(?:show|review)(?:\s+me)?(?:\s+the)?\s+previous\s+(1|one|3|three|5|five|10|ten)(?:\s+minutes?)?$/,
+    /^previous\s+(1|one|3|three|5|five|10|ten)(?:\s+minutes?)?$/
+  ]);
+  if (previousWindowMinutes) {
+    return {
+      intent: VOICE_INTENTS.SHOW_PREVIOUS,
+      transcript: text,
+      windowMinutes: previousWindowMinutes
+    };
+  }
+
+  const terrain = readTerrain(text);
+  if (terrain) {
+    return { intent: VOICE_INTENTS.SET_TERRAIN, transcript: text, terrain };
   }
   if (matches(text, [/^(coach\s+)?status$/, /^run\s+(status|summary|update)$/, /^arm\s+(status|swing|update)$/, /^how\s+am\s+i\s+doing$/, /^update\s+me$/])) {
     return { intent: VOICE_INTENTS.STATUS, transcript: text };
