@@ -568,7 +568,7 @@ function switchActivePlacement(requestedPlacement, { forceReply = false } = {}) 
     clearMotionTimeout();
     setConnection("phone-connection", "MOVE PHONE TO CONFIRM", "warning");
     setPreflightItem("preflight-motion", phonePlacement === "hand" ? "HAND MOTION CHECK" : "HIP MOTION CHECK", "waiting");
-    setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK ARMING" : "POCKET LOCK ARMING", "waiting");
+    setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK READY" : "POCKET LOCK READY", "ready");
     motionSignalTimeout = setTimeout(() => {
       if (!active || !fieldSession || motionSignalConfirmed) return;
       setConnection("phone-connection", phonePlacement === "hand" ? "NO HAND MOTION YET" : "NO HIP MOTION YET", "warning");
@@ -1561,8 +1561,7 @@ function maybeConfirmPreflight() {
   preflightConfirmed = true;
   setPreflightItem("preflight-motion", "MOTION LIVE", "ready");
   setPreflightItem("preflight-screen", "SCREEN PROTECTED", "ready");
-  setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCKED" : "POCKET LOCKED", "ready");
-  setPocketLock(true, { announce: false });
+  setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK READY" : "POCKET LOCK READY", "ready");
   render(true);
   if (!preflightAnnounced) {
     preflightAnnounced = true;
@@ -1767,7 +1766,7 @@ async function startSession() {
     placementSwitchCount = 0;
     setPreflightItem("preflight-motion", "MOTION CHECK", "waiting");
     setPreflightItem("preflight-screen", "SCREEN CHECK", "waiting");
-    setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK ARMING" : "POCKET ARMING", "waiting");
+    setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK READY" : "POCKET LOCK READY", "ready");
     updateBatteryDisplay();
     setConnection("phone-connection", "WAITING FOR MOTION", "warning");
     setConnection("screen-connection", "CHECKING SCREEN", "warning");
@@ -1873,7 +1872,7 @@ async function resumeSavedSession() {
     setConnection("screen-connection", "RECOVERING SCREEN", "warning");
     setPreflightItem("preflight-motion", "MOTION CHECK", "waiting");
     setPreflightItem("preflight-screen", "SCREEN CHECK", "waiting");
-    setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK ARMING" : "POCKET ARMING", "waiting");
+    setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK READY" : "POCKET LOCK READY", "ready");
     window.addEventListener("devicemotion", onDeviceMotion);
     render(true);
     startResilienceMonitor();
@@ -2180,8 +2179,11 @@ async function setPocketLock(locked, { announce = true } = {}) {
     setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCKED" : "POCKET LOCKED", "ready");
     els["pocket-unlock"].focus({ preventScroll: true });
     if (announce) reply(`${phonePlacement === "hand" ? "Run lock" : "Pocket lock"} on. Press and hold the unlock button for two seconds to unlock.`);
-  } else if (doc.fullscreenElement) {
-    try { await doc.exitFullscreen(); } catch (_) {}
+  } else {
+    if (doc.fullscreenElement) {
+      try { await doc.exitFullscreen(); } catch (_) {}
+    }
+    setPreflightItem("preflight-pocket", phonePlacement === "hand" ? "RUN LOCK READY" : "POCKET LOCK READY", "ready");
   }
   if (!pocketLocked && lockReturnFocus) {
     const focusTarget = lockReturnFocus;

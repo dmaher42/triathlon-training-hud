@@ -80,6 +80,10 @@ test("Technique Lap keeps four primary in-run actions and moves prompt settings 
 test("Run Lock keeps the live dashboard visible behind its touch shield", () => {
   assert.match(html, /id="pocket-lock-screen"[^>]*live dashboard remains visible/);
   assert.match(app, /querySelector\("\.run-shell"\)\.inert = pocketLocked/);
+  assert.match(app, /pocket-lock"\]\.addEventListener\("click", \(\) => setPocketLock\(true\)\)/);
+  assert.equal((app.match(/setPocketLock\(true/g) || []).length, 1, "Run Lock should activate only from its button");
+  assert.doesNotMatch(app, /(?:RUN|POCKET)(?: LOCK)? ARMING/);
+  assert.match(app, /phonePlacement === "hand" \? "RUN LOCK READY" : "POCKET LOCK READY"/);
   assert.match(css, /\.pocket-lock-screen \{[\s\S]*justify-content:\s*flex-end[\s\S]*background:\s*linear-gradient\([\s\S]*transparent/);
   assert.doesNotMatch(css, /\.pocket-lock-screen\s*\{[^}]*background:\s*#000/);
   assert.doesNotMatch(html, /pocket-lock-(?:status|time|cadence|metric-label|readings|health|technique)/);
