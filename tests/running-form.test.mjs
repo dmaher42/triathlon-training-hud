@@ -134,6 +134,8 @@ test("queries exact half-open hip comparison windows without changing the rollin
   assert.equal(exact.observedBucketCount, 1);
   assert.equal(exact.expectedBucketCount, 1);
   assert.equal(exact.coverageRatio, 1);
+  assert.equal(exact.aggregate.kind, "hip");
+  assert.equal(exact.aggregate.count, exact.sampleCount);
   assert.equal(wider.sampleCount, 50);
   assert.ok(visibleRecent.sampleCount < wider.sampleCount);
   assert.equal(analyzer.windowMetrics(2_000, 3_000).sampleCount, 10);
@@ -169,7 +171,7 @@ test("restores compact hip comparison windows at the resumed clock", () => {
   const analyzer = new HipFormAnalyzer({ minimumSampleIntervalMs: 90, summaryIntervalMs: 0 });
   analyzer.start(0);
   for (let at = 0; at < 5_000; at += 100) sample(analyzer, at);
-  const before = analyzer.windowMetrics(0, 5_000);
+  const before = analyzer.windowMetrics(0, 4_000);
   const exported = analyzer.exportState();
   assert.ok(Array.isArray(exported.state.comparisonBuckets[0]));
   assert.equal("recentBuckets" in exported.state, false);
@@ -179,6 +181,20 @@ test("restores compact hip comparison windows at the resumed clock", () => {
   const after = restored.windowMetrics(45_000, 50_000);
   assert.equal(after.sampleCount, before.sampleCount);
   assert.deepEqual(after.metrics, before.metrics);
+});
+
+test("drops the rebased open hip bucket after an app resume", () => {
+  const analyzer = new HipFormAnalyzer({ minimumSampleIntervalMs: 90, summaryIntervalMs: 0 });
+  analyzer.start(0);
+  for (let at = 0; at <= 4_900; at += 100) sample(analyzer, at);
+  for (const resumeAtMs of [50_100, 50_950]) {
+    const bucketShift = Math.floor((resumeAtMs - 4_900) / 1_000) * 1_000;
+    const restored = new HipFormAnalyzer();
+    restored.restoreState(analyzer.exportState(), resumeAtMs);
+    const currentBucket = Math.floor(resumeAtMs / 1_000) * 1_000;
+    assert.equal(restored.windowMetrics(currentBucket, currentBucket + 1_000).sampleCount, 0);
+    assert.ok(restored.windowMetrics(bucketShift, bucketShift + 4_000).sampleCount > 0);
+  }
 });
 
 test("restores the previous hip state format", () => {
@@ -198,7 +214,7 @@ test("restores the previous hip state format", () => {
   const restored = new HipFormAnalyzer();
   const result = restored.restoreState(legacy, 10_000);
   assert.equal(result.opening.sampleCount, 20);
-  assert.equal(restored.windowMetrics(8_000, 10_000).sampleCount, 20);
+  assert.equal(restored.windowMetrics(8_000, 10_000).sampleCount, 10);
 });
 
 test("keeps a simulated hour bounded and fast enough for pocket operation", () => {

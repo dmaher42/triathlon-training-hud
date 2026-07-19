@@ -203,7 +203,8 @@ export class HipFormAnalyzer {
       expectedBucketCount,
       coverageRatio,
       coveragePercent: Math.round(coverageRatio * 100),
-      metrics
+      metrics,
+      aggregate: { kind: "hip", ...stats }
     };
   }
 
@@ -275,6 +276,7 @@ export class HipFormAnalyzer {
     const previousNow = finite(payload.state.lastSampleAtMs) ?? now;
     const shift = now - previousNow;
     const bucketShift = Math.floor(shift / COMPARISON_BUCKET_MS) * COMPARISON_BUCKET_MS;
+    const previousOpenBucketMs = Math.floor(previousNow / COMPARISON_BUCKET_MS) * COMPARISON_BUCKET_MS;
     Object.assign(this, payload.state);
     this.startedAtMs = finite(payload.state.startedAtMs) === null ? now : payload.state.startedAtMs + shift;
     this.lastSampleAtMs = now;
@@ -286,7 +288,9 @@ export class HipFormAnalyzer {
     this.comparisonBuckets = storedBuckets
       .map(decodeBucket)
       .filter(Boolean)
-      .map(bucket => ({ ...bucket, atMs: bucket.atMs + bucketShift }));
+      .filter(bucket => bucket.atMs < previousOpenBucketMs)
+      .map(bucket => ({ ...bucket, atMs: bucket.atMs + bucketShift }))
+      .filter(bucket => bucket.atMs < Math.floor(now / COMPARISON_BUCKET_MS) * COMPARISON_BUCKET_MS);
     const comparisonHistoryMs = Math.max(
       MINIMUM_COMPARISON_HISTORY_MS,
       finite(this.config.comparisonHistoryMs) ?? MINIMUM_COMPARISON_HISTORY_MS

@@ -7,9 +7,138 @@ import {
   TECHNIQUE_WINDOW_OPTIONS_MS,
   TechniqueLapEngine
 } from "../src/running/technique-lap-engine.js";
+import { ArmSwingAnalyzer } from "../src/running/arm-swing-analyzer.js";
+import { HipFormAnalyzer } from "../src/running/hip-form-analyzer.js";
 
 const SECOND_MS = 1_000;
 const MINUTE_MS = 60_000;
+
+test("merges arm aggregate statistics before deriving whole-window regularity", () => {
+  const analyzer = new ArmSwingAnalyzer();
+  const engine = new TechniqueLapEngine({ windowMs: MINUTE_MS });
+  analyzer.start(0);
+  for (let second = 0; second < 60; second += 1) {
+    const intervalMs = second % 2 ? 300 : 500;
+    for (const [offset, direction] of [[100, 1], [400, -1], [700, 1]]) {
+      analyzer.addComparisonSwing({
+        atMs: second * SECOND_MS + offset,
+        intervalMs,
+        rangeValue: 20,
+        direction
+      });
+    }
+    const aggregate = analyzer.windowMetrics(second * SECOND_MS, (second + 1) * SECOND_MS).aggregate;
+    engine.recordFrame({
+      elapsedMs: second * SECOND_MS,
+      movementState: "running",
+      eligible: true,
+      mechanicsAggregate: aggregate,
+      placement: "hand"
+    });
+  }
+  const exact = analyzer.windowMetrics(0, MINUTE_MS).metrics;
+  const summary = engine.summarizeWindow(0, MINUTE_MS);
+  assert.equal(exact.regularityPercent, 17);
+  assert.equal(summary.metrics.armRegularityPercent, exact.regularityPercent);
+  assert.equal(summary.metrics.armCycleRpm, exact.armCycleRpm);
+  assert.equal(summary.metrics.armRangeIndex, exact.rangeMean);
+  const exported = engine.exportState();
+  assert.ok(Array.isArray(exported.frames[0][13]));
+  const restored = TechniqueLapEngine.restore(exported);
+  assert.deepEqual(restored.summarizeWindow(0, MINUTE_MS).metrics, summary.metrics);
+});
+
+test("merges hip aggregate statistics before deriving RMS and impact variation", () => {
+  const analyzer = new HipFormAnalyzer();
+  const engine = new TechniqueLapEngine({ windowMs: MINUTE_MS });
+  analyzer.start(0);
+  for (let second = 0; second < 60; second += 1) {
+    const value = second % 2 ? 2 : 1;
+    for (let sample = 0; sample < 10; sample += 1) {
+      analyzer.addRecentMeasurement(second * SECOND_MS + sample * 100, {
+        vertical: value,
+        horizontal: value / 2,
+        rotation: 10,
+        impact: value
+      });
+    }
+    const aggregate = analyzer.windowMetrics(second * SECOND_MS, (second + 1) * SECOND_MS).aggregate;
+    engine.recordFrame({
+      elapsedMs: second * SECOND_MS,
+      movementState: "running",
+      eligible: true,
+      mechanicsAggregate: aggregate,
+      placement: "hip"
+    });
+  }
+  const exact = analyzer.windowMetrics(0, MINUTE_MS).metrics;
+  const summary = engine.summarizeWindow(0, MINUTE_MS);
+  assert.equal(exact.verticalRms, 1.58);
+  assert.equal(exact.impactVariation, 0.333);
+  assert.equal(summary.metrics.hipVerticalIndex, exact.verticalRms);
+  assert.equal(summary.metrics.hipHorizontalIndex, exact.horizontalRms);
+  assert.equal(summary.metrics.hipRotationIndex, exact.rotationRms);
+  assert.equal(summary.metrics.hipImpactVariationIndex, exact.impactVariation);
+});
+
+test("accepts a closed bucket after the visible clock has advanced", () => {
+  const engine = new TechniqueLapEngine({ windowMs: MINUTE_MS });
+  engine.tick(2_000);
+  engine.recordClosedFrame({
+    elapsedMs: 1_000,
+    movementState: "running",
+    eligible: true,
+    cadenceSpm: 172
+  });
+  assert.equal(engine.summarizeWindow(1_000, 2_000).metrics.cadenceSpm, 172);
+  assert.equal(engine.snapshot().elapsedMs, 2_000);
+});
+
+test("restores legacy frames that predate mechanics aggregates", () => {
+  const engine = new TechniqueLapEngine({ windowMs: MINUTE_MS });
+  recordRunning(engine, 0, 172, { metrics: { hipVerticalIndex: 1, motionIndex: 1.72 } });
+  const legacy = engine.exportState();
+  legacy.version = 1;
+  legacy.frames = legacy.frames.map(frame => frame.slice(0, 13));
+  const restored = TechniqueLapEngine.restore(legacy);
+  const summary = restored.summarizeWindow(0, 1_000);
+  assert.equal(summary.metrics.cadenceSpm, 172);
+  assert.equal(summary.metrics.motionIndex, 1.72);
+  assert.equal(summary.metrics.hipVerticalIndex, undefined);
+});
+
+test("does not claim mechanics until a mixed legacy window has fresh aggregate coverage", () => {
+  const original = new TechniqueLapEngine({ windowMs: MINUTE_MS });
+  for (let second = 0; second < 60; second += 1) {
+    recordRunning(original, second * SECOND_MS, 170, { metrics: { hipVerticalIndex: 1 } });
+  }
+  const legacy = original.exportState();
+  legacy.version = 1;
+  legacy.frames = legacy.frames.map(frame => frame.slice(0, 13));
+  const restored = TechniqueLapEngine.restore(legacy);
+  for (let second = 60; second < 120; second += 1) {
+    restored.recordFrame({
+      elapsedMs: second * SECOND_MS,
+      movementState: "running",
+      eligible: true,
+      mechanicsAggregate: {
+        kind: "hip",
+        count: 10,
+        verticalSq: 40,
+        horizontalSq: 10,
+        rotationCount: 10,
+        rotationSq: 1_000,
+        impactSum: 20,
+        impactSq: 40
+      }
+    });
+  }
+  const mixed = restored.summarizeWindow(0, 120 * SECOND_MS);
+  assert.equal(mixed.coveragePercent, 100);
+  assert.equal(mixed.metricCoveragePercent.hipVerticalIndex, 50);
+  assert.equal(mixed.metrics.hipVerticalIndex, undefined);
+  assert.ok(mixed.warnings.includes("mechanics-history-upgrading"));
+});
 
 function recordRunning(engine, elapsedMs, cadenceSpm, options = {}) {
   return engine.recordFrame({

@@ -9,7 +9,7 @@ export const TECHNIQUE_WINDOW_OPTIONS_MS = Object.freeze([
 
 export const DEFAULT_TECHNIQUE_WINDOW_MS = 5 * MINUTE_MS;
 export const TECHNIQUE_FRAME_RETENTION_MS = 20 * MINUTE_MS;
-export const TECHNIQUE_LAP_STATE_VERSION = 1;
+export const TECHNIQUE_LAP_STATE_VERSION = 2;
 
 export const RUN_TERRAINS = Object.freeze([
   "unlabelled",
@@ -28,6 +28,11 @@ const allowedMovementStates = new Set(["running", "walking", "stopped", "unknown
 const MAX_EXPERIMENTS = 50;
 const MAX_CUSTOM_METRICS = 32;
 const MIN_PERCENT_BASE = 1e-9;
+const MECHANICS_METRIC_KEYS = Object.freeze({
+  hip: ["hipVerticalIndex", "hipHorizontalIndex", "hipRotationIndex", "hipImpactVariationIndex"],
+  arm: ["armCycleRpm", "armRegularityPercent", "armRangeIndex"]
+});
+const LEGACY_MECHANICS_METRIC_KEYS = new Set(Object.values(MECHANICS_METRIC_KEYS).flat());
 
 const finite = value => {
   if (value == null || (typeof value === "string" && value.trim() === "")) return null;
@@ -52,6 +57,30 @@ const uniqueWarnings = warnings => unique(warnings);
 const clone = value => {
   if (value == null) return value;
   return JSON.parse(JSON.stringify(value));
+};
+
+const stripLegacyMechanicsMetrics = metrics => Object.fromEntries(
+  Object.entries(metrics || {}).filter(([key]) => !LEGACY_MECHANICS_METRIC_KEYS.has(key))
+);
+
+const stripLegacyMechanicsSummary = summary => {
+  if (!summary || typeof summary !== "object") return summary;
+  const next = clone(summary);
+  next.metrics = stripLegacyMechanicsMetrics(next.metrics);
+  next.metricCoveragePercent = stripLegacyMechanicsMetrics(next.metricCoveragePercent);
+  next.warnings = uniqueWarnings([...(next.warnings || []), "mechanics-history-upgrading"]);
+  return next;
+};
+
+const stripLegacyMechanicsComparison = comparison => {
+  if (!comparison || typeof comparison !== "object") return comparison;
+  const next = clone(comparison);
+  next.before = stripLegacyMechanicsSummary(next.before);
+  next.after = stripLegacyMechanicsSummary(next.after);
+  next.changes = stripLegacyMechanicsMetrics(next.changes);
+  next.warnings = uniqueWarnings([...(next.warnings || []), "mechanics-history-upgrading"]);
+  next.quality = "low";
+  return next;
 };
 
 const normaliseWindowMs = value => {
@@ -82,6 +111,124 @@ const normaliseMetrics = metrics => {
     if (key && value !== null) entries.push([key, value]);
   }
   return Object.fromEntries(entries);
+};
+
+const HIP_AGGREGATE_KEYS = Object.freeze([
+  "count",
+  "verticalSq",
+  "horizontalSq",
+  "rotationCount",
+  "rotationSq",
+  "impactSum",
+  "impactSq"
+]);
+
+const ARM_AGGREGATE_KEYS = Object.freeze([
+  "count",
+  "intervalCount",
+  "intervalSum",
+  "intervalSq",
+  "positiveIntervalCount",
+  "positiveIntervalSum",
+  "positiveIntervalSq",
+  "negativeIntervalCount",
+  "negativeIntervalSum",
+  "negativeIntervalSq",
+  "rangeCount",
+  "rangeSum",
+  "rangeSq"
+]);
+
+const aggregateKeys = kind => kind === "hip"
+  ? HIP_AGGREGATE_KEYS
+  : kind === "arm" ? ARM_AGGREGATE_KEYS : null;
+
+const normaliseMechanicsAggregate = value => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const kind = value.kind === "hip" ? "hip" : value.kind === "arm" ? "arm" : null;
+  const keys = aggregateKeys(kind);
+  if (!keys) return null;
+  return Object.fromEntries([
+    ["kind", kind],
+    ...keys.map(key => [key, nonNegative(value[key])])
+  ]);
+};
+
+const encodeMechanicsAggregate = value => {
+  const aggregate = normaliseMechanicsAggregate(value);
+  if (!aggregate) return null;
+  return [aggregate.kind === "hip" ? 1 : 2, ...aggregateKeys(aggregate.kind).map(key => aggregate[key])];
+};
+
+const decodeMechanicsAggregate = value => {
+  if (!Array.isArray(value)) return normaliseMechanicsAggregate(value);
+  const kind = value[0] === 1 ? "hip" : value[0] === 2 ? "arm" : null;
+  const keys = aggregateKeys(kind);
+  if (!keys) return null;
+  return normaliseMechanicsAggregate(Object.fromEntries([
+    ["kind", kind],
+    ...keys.map((key, index) => [key, value[index + 1]])
+  ]));
+};
+
+const mergeMechanicsAggregate = (target, source) => {
+  const aggregate = normaliseMechanicsAggregate(source);
+  if (!aggregate) return target;
+  const merged = target || normaliseMechanicsAggregate({ kind: aggregate.kind });
+  if (!merged || merged.kind !== aggregate.kind) return target;
+  for (const key of aggregateKeys(aggregate.kind)) merged[key] += aggregate[key];
+  return merged;
+};
+
+const directionalRegularityFromAggregate = aggregate => {
+  const directions = ["positive", "negative"]
+    .map(prefix => {
+      const count = aggregate[`${prefix}IntervalCount`] || 0;
+      if (count < 2) return null;
+      const mean = aggregate[`${prefix}IntervalSum`] / count;
+      const variance = Math.max(0, aggregate[`${prefix}IntervalSq`] / count - mean * mean);
+      const coefficientOfVariation = mean ? Math.sqrt(variance) / mean : null;
+      const score = coefficientOfVariation === null
+        ? null
+        : Math.min(1, Math.max(0, 1 - coefficientOfVariation / 0.3));
+      return score === null ? null : { count, score };
+    })
+    .filter(Boolean);
+  if (!directions.length) return null;
+  const weight = directions.reduce((total, item) => total + item.count, 0);
+  return Math.round(directions.reduce((total, item) => total + item.score * item.count, 0) / weight * 100);
+};
+
+const metricsFromMechanicsAggregate = aggregate => {
+  if (!aggregate?.count) return {};
+  if (aggregate.kind === "hip") {
+    const impactMean = aggregate.impactSum / aggregate.count;
+    const impactVariance = Math.max(0, aggregate.impactSq / aggregate.count - impactMean * impactMean);
+    return {
+      hipVerticalIndex: round(Math.sqrt(aggregate.verticalSq / aggregate.count), 2),
+      hipHorizontalIndex: round(Math.sqrt(aggregate.horizontalSq / aggregate.count), 2),
+      hipRotationIndex: aggregate.rotationCount
+        ? round(Math.sqrt(aggregate.rotationSq / aggregate.rotationCount), 1)
+        : null,
+      hipImpactVariationIndex: impactMean
+        ? round(Math.sqrt(impactVariance) / impactMean, 3)
+        : null
+    };
+  }
+  const positiveMean = aggregate.positiveIntervalCount
+    ? aggregate.positiveIntervalSum / aggregate.positiveIntervalCount
+    : null;
+  const negativeMean = aggregate.negativeIntervalCount
+    ? aggregate.negativeIntervalSum / aggregate.negativeIntervalCount
+    : null;
+  const intervalMean = positiveMean !== null && negativeMean !== null
+    ? (positiveMean + negativeMean) / 2
+    : aggregate.intervalCount ? aggregate.intervalSum / aggregate.intervalCount : null;
+  return {
+    armCycleRpm: intervalMean ? round(30_000 / intervalMean, 1) : null,
+    armRegularityPercent: directionalRegularityFromAggregate(aggregate),
+    armRangeIndex: aggregate.rangeCount ? round(aggregate.rangeSum / aggregate.rangeCount, 3) : null
+  };
 };
 
 const average = values => values.length
@@ -237,8 +384,25 @@ export class TechniqueLapEngine {
     return { changed: true, terrain: next, segmentId: segment.id };
   }
 
-  recordFrame({
-    elapsedMs,
+  recordFrame(input = {}) {
+    const atMs = this.#advanceTo(input.elapsedMs);
+    this.#storeFrame(input, atMs);
+    this.#pruneFrames(atMs);
+    return this.snapshot(atMs);
+  }
+
+  recordClosedFrame(input = {}) {
+    const atMs = finite(input.elapsedMs);
+    if (atMs === null || atMs < 0) throw new TypeError("Technique Lap requires a non-negative elapsedMs.");
+    if (atMs > this.lastElapsedMs) return this.recordFrame(input);
+    const oldestRetainedMs = Math.max(0, this.lastElapsedMs - TECHNIQUE_FRAME_RETENTION_MS);
+    if (atMs < oldestRetainedMs) throw new RangeError("Closed Technique Lap frame is outside retained history.");
+    this.#storeFrame(input, atMs);
+    this.#pruneFrames(this.lastElapsedMs);
+    return this.snapshot(this.lastElapsedMs);
+  }
+
+  #storeFrame({
     movementState = "unknown",
     eligible,
     interrupted = false,
@@ -247,12 +411,12 @@ export class TechniqueLapEngine {
     heartRateBpm = null,
     speedMps = null,
     metrics = {},
+    mechanicsAggregate = null,
     placement = "unknown",
     side = "unknown",
     cadenceSource = "unknown",
     sensorSource = "unknown"
-  } = {}) {
-    const atMs = this.#advanceTo(elapsedMs);
+  }, atMs) {
     const movement = normaliseMovement(movementState);
     const isEligible = movement === "running" && (eligible === undefined || Boolean(eligible));
     const frame = {
@@ -266,6 +430,7 @@ export class TechniqueLapEngine {
       heartRateBpm: finite(heartRateBpm),
       speedMps: finite(speedMps),
       metrics: normaliseMetrics(metrics),
+      mechanicsAggregate: normaliseMechanicsAggregate(mechanicsAggregate),
       placement: normalisePlacement(placement),
       side: normaliseSide(side),
       cadenceSource: safeContextText(cadenceSource),
@@ -279,8 +444,6 @@ export class TechniqueLapEngine {
     } else {
       this.frames[existingIndex] = frame;
     }
-    this.#pruneFrames(atMs);
-    return this.snapshot(atMs);
   }
 
   tick(elapsedMs) {
@@ -361,6 +524,8 @@ export class TechniqueLapEngine {
 
     let stableCount = 0;
     let stableMeasuredCount = 0;
+    const mechanicsByKind = new Map();
+    const mechanicsFrameCount = new Map();
     for (const frame of eligibleFrames) {
       addMetric("cadenceSpm", frame.cadenceSpm);
       addMetric("heartRateBpm", frame.heartRateBpm);
@@ -370,11 +535,23 @@ export class TechniqueLapEngine {
         if (frame.rhythmStable) stableCount += 1;
       }
       for (const [key, value] of Object.entries(frame.metrics)) addMetric(key, value);
+      if (frame.mechanicsAggregate?.kind) {
+        const kind = frame.mechanicsAggregate.kind;
+        mechanicsByKind.set(kind, mergeMechanicsAggregate(mechanicsByKind.get(kind), frame.mechanicsAggregate));
+        if (frame.mechanicsAggregate.count > 0) {
+          mechanicsFrameCount.set(kind, (mechanicsFrameCount.get(kind) || 0) + 1);
+        }
+      }
     }
 
     const metrics = Object.fromEntries(
       [...metricValues.entries()].map(([key, values]) => [key, round(average(values), metricPlaces(key))])
     );
+    for (const aggregate of mechanicsByKind.values()) {
+      for (const [key, value] of Object.entries(metricsFromMechanicsAggregate(aggregate))) {
+        if (Number.isFinite(value)) metrics[key] = value;
+      }
+    }
     if (stableMeasuredCount) metrics.rhythmStabilityPercent = round(stableCount / stableMeasuredCount * 100, 1);
 
     const terrain = this.#terrainContext(start, end);
@@ -404,6 +581,15 @@ export class TechniqueLapEngine {
     const metricCoveragePercent = Object.fromEntries(
       [...metricValues.entries()].map(([key, values]) => [key, Math.min(100, Math.round(values.length / expectedFrames * 100))])
     );
+    for (const [kind, frameCount] of mechanicsFrameCount.entries()) {
+      const coverage = Math.min(100, Math.round(frameCount / expectedFrames * 100));
+      for (const key of MECHANICS_METRIC_KEYS[kind] || []) {
+        if (!Number.isFinite(metrics[key])) continue;
+        metricCoveragePercent[key] = coverage;
+        if (coverage < 80) delete metrics[key];
+      }
+      if (coverage < 80) warnings.push("mechanics-history-upgrading");
+    }
     if (stableMeasuredCount) metricCoveragePercent.rhythmStabilityPercent = Math.min(100, Math.round(stableMeasuredCount / expectedFrames * 100));
 
     return {
@@ -477,7 +663,8 @@ export class TechniqueLapEngine {
         frame.placement,
         frame.side,
         frame.cadenceSource,
-        frame.sensorSource
+        frame.sensorSource,
+        encodeMechanicsAggregate(frame.mechanicsAggregate)
       ]),
       activeExperiment: clone(this.activeExperiment),
       experiments: clone(this.experiments)
@@ -485,9 +672,10 @@ export class TechniqueLapEngine {
   }
 
   static restore(payload, { elapsedMs = null } = {}) {
-    if (!payload || payload.version !== TECHNIQUE_LAP_STATE_VERSION) {
+    if (!payload || ![1, TECHNIQUE_LAP_STATE_VERSION].includes(payload.version)) {
       throw new TypeError("Unsupported Technique Lap state.");
     }
+    const legacyMechanics = payload.version === 1;
     const engine = new TechniqueLapEngine({
       windowMs: payload.windowMs,
       initialTerrain: payload.terrainSegments?.[0]?.terrain,
@@ -497,12 +685,14 @@ export class TechniqueLapEngine {
     engine.nextExperimentId = Math.max(1, Math.floor(nonNegative(payload.nextExperimentId, 1)));
     engine.nextTerrainId = Math.max(2, Math.floor(nonNegative(payload.nextTerrainId, 2)));
     engine.terrainSegments = TechniqueLapEngine.#restoreTerrainSegments(payload.terrainSegments);
-    engine.frames = TechniqueLapEngine.#restoreFrames(payload.frames);
-    engine.activeExperiment = payload.activeExperiment && typeof payload.activeExperiment === "object"
+    engine.frames = TechniqueLapEngine.#restoreFrames(payload.frames, { legacyMechanics });
+    engine.activeExperiment = !legacyMechanics && payload.activeExperiment && typeof payload.activeExperiment === "object"
       ? clone(payload.activeExperiment)
       : null;
     engine.experiments = Array.isArray(payload.experiments)
-      ? clone(payload.experiments.slice(-engine.maxExperiments))
+      ? clone(payload.experiments.slice(-engine.maxExperiments)).map(comparison => (
+          legacyMechanics ? stripLegacyMechanicsComparison(comparison) : comparison
+        ))
       : [];
     engine.#rebuildFrameIndex();
     const restoredAt = finite(elapsedMs);
@@ -524,7 +714,7 @@ export class TechniqueLapEngine {
     })).sort((left, right) => left.startMs - right.startMs);
   }
 
-  static #restoreFrames(frames) {
+  static #restoreFrames(frames, { legacyMechanics = false } = {}) {
     if (!Array.isArray(frames)) return [];
     const restored = [];
     for (const packed of frames) {
@@ -541,11 +731,14 @@ export class TechniqueLapEngine {
         rhythmStable: packed[5] === null ? null : packed[5] === 1,
         heartRateBpm: finite(packed[6]),
         speedMps: finite(packed[7]),
-        metrics: normaliseMetrics(packed[8]),
+        metrics: legacyMechanics
+          ? stripLegacyMechanicsMetrics(normaliseMetrics(packed[8]))
+          : normaliseMetrics(packed[8]),
         placement: normalisePlacement(packed[9]),
         side: normaliseSide(packed[10]),
         cadenceSource: safeContextText(packed[11]),
-        sensorSource: safeContextText(packed[12])
+        sensorSource: safeContextText(packed[12]),
+        mechanicsAggregate: legacyMechanics ? null : decodeMechanicsAggregate(packed[13])
       });
     }
     return restored.sort((left, right) => left.atMs - right.atMs);

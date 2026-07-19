@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   closeInterruption, createInterruption, interruptionSummary,
-  makeCompletedRun, makePersistedSession, parseCompletedRun, parsePersistedSession
+  makeCompletedRun, makePersistedSession, parseCompletedRun, parsePersistedSession, resumeTechniqueElapsed
 } from "../src/running/session-resilience.js";
 import { RunRhythmCoach } from "../src/running/rhythm-engine.js";
 
@@ -18,7 +18,13 @@ test("persists and validates a recent active run", () => {
     interruptions: [],
     techniqueState: { version: 1, windowMs: 300_000 },
     terrain: "rolling",
-    comparisonWindowMs: 300_000
+    comparisonWindowMs: 300_000,
+    retrospectiveComparison: {
+      available: true,
+      previous: { durationMs: 180_000 },
+      changes: { cadenceSpm: { absolute: 2 }, hipVerticalIndex: { absolute: 0.2 } },
+      quality: "high"
+    }
   });
   payload.placementSwitchCount = 2;
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).startedAtEpochMs, 1_000);
@@ -30,7 +36,24 @@ test("persists and validates a recent active run", () => {
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).terrain, "rolling");
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).comparisonWindowMs, 300_000);
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).techniqueState.version, 1);
+  assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).retrospectiveComparison.previous.durationMs, 180_000);
+  assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).retrospectiveComparison.changes.hipVerticalIndex, undefined);
+  assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).retrospectiveComparison.changes.cadenceSpm.absolute, 2);
+  assert.ok(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 12_000 }).retrospectiveComparison.warnings.includes("mechanics-history-upgrading"));
   assert.equal(parsePersistedSession(JSON.stringify(payload), { nowEpochMs: 50_000, maxAgeMs: 20_000 }), null);
+});
+
+test("resumes the saved aligned Technique clock without moving backwards", () => {
+  assert.equal(resumeTechniqueElapsed({
+    savedElapsedMs: 1_000,
+    savedAtEpochMs: 10_000,
+    nowEpochMs: 10_200
+  }), 1_000);
+  assert.equal(resumeTechniqueElapsed({
+    savedElapsedMs: 59_000,
+    savedAtEpochMs: 10_000,
+    nowEpochMs: 12_400
+  }), 61_000);
 });
 
 test("restores legacy saved runs as hip-pocket sessions", () => {
@@ -97,7 +120,7 @@ test("persists and restores a complete finished-run review", () => {
   });
   const restored = parseCompletedRun(JSON.stringify(completed));
 
-  assert.equal(restored.version, 4);
+  assert.equal(restored.version, 5);
   assert.equal(restored.elapsedMs, 18_000);
   assert.equal(restored.runSnapshot.status, "REVIEW");
   assert.equal(restored.runSnapshot.stablePercent, 82);
@@ -112,6 +135,37 @@ test("persists and restores a complete finished-run review", () => {
   assert.equal(restored.comparisonWindowMs, 300_000);
   assert.equal(restored.retrospectiveComparison.quality, "high");
   assert.deepEqual(interruptionSummary(restored.interruptions, 20_000), { count: 1, totalMs: 1_000 });
+});
+
+test("removes inaccurate mechanics from version-four completed reviews", () => {
+  const legacy = makeCompletedRun({
+    completedAtEpochMs: 20_000,
+    elapsedMs: 18_000,
+    runSnapshot: { status: "REVIEW", events: [] },
+    motionSnapshot: { version: 2 },
+    techniqueComparisons: [{
+      id: "technique-1",
+      before: { metrics: { cadenceSpm: 170, hipVerticalIndex: 1 }, warnings: [] },
+      after: { metrics: { cadenceSpm: 172, hipVerticalIndex: 2 }, warnings: [] },
+      changes: { cadenceSpm: { absolute: 2 }, hipVerticalIndex: { absolute: 1 } },
+      warnings: [],
+      quality: "high"
+    }],
+    retrospectiveComparison: {
+      available: true,
+      changes: { cadenceSpm: { absolute: 2 }, armRegularityPercent: { absolute: 20 } },
+      warnings: [],
+      quality: "high"
+    }
+  });
+  legacy.version = 4;
+  const restored = parseCompletedRun(JSON.stringify(legacy));
+  assert.equal(restored.techniqueComparisons[0].changes.hipVerticalIndex, undefined);
+  assert.equal(restored.techniqueComparisons[0].changes.cadenceSpm.absolute, 2);
+  assert.equal(restored.techniqueComparisons[0].quality, "low");
+  assert.ok(restored.techniqueComparisons[0].warnings.includes("mechanics-history-upgrading"));
+  assert.equal(restored.retrospectiveComparison.changes.armRegularityPercent, undefined);
+  assert.equal(restored.retrospectiveComparison.changes.cadenceSpm.absolute, 2);
 });
 
 test("keeps legacy motion reports readable without inventing a full review", () => {

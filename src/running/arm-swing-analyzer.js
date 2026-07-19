@@ -464,7 +464,8 @@ export class ArmSwingAnalyzer {
       expectedBucketCount,
       coverageRatio,
       coveragePercent: Math.round(coverageRatio * 100),
-      metrics
+      metrics,
+      aggregate: { kind: "arm", ...stats }
     };
   }
 
@@ -639,6 +640,7 @@ export class ArmSwingAnalyzer {
     const previousNow = finite(payload.state.lastSampleAtMs) ?? now;
     const shift = now - previousNow;
     const bucketShift = Math.floor(shift / COMPARISON_BUCKET_MS) * COMPARISON_BUCKET_MS;
+    const previousOpenBucketMs = Math.floor(previousNow / COMPARISON_BUCKET_MS) * COMPARISON_BUCKET_MS;
     Object.assign(this, payload.state);
     this.startedAtMs = now;
     this.lastSampleAtMs = now;
@@ -676,7 +678,9 @@ export class ArmSwingAnalyzer {
     this.comparisonBuckets = (payload.version === 3 ? payload.state.comparisonBuckets || [] : [])
       .map(decodeBucket)
       .filter(Boolean)
-      .map(bucket => ({ ...bucket, atMs: bucket.atMs + bucketShift }));
+      .filter(bucket => bucket.atMs < previousOpenBucketMs)
+      .map(bucket => ({ ...bucket, atMs: bucket.atMs + bucketShift }))
+      .filter(bucket => bucket.atMs < Math.floor(now / COMPARISON_BUCKET_MS) * COMPARISON_BUCKET_MS);
     const comparisonHistoryMs = Math.max(
       MINIMUM_COMPARISON_HISTORY_MS,
       finite(this.config.comparisonHistoryMs) ?? MINIMUM_COMPARISON_HISTORY_MS

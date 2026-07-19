@@ -304,6 +304,8 @@ test("queries exact half-open arm-swing comparison windows", () => {
   assert.equal(result.observedBucketCount, 1);
   assert.equal(result.expectedBucketCount, 1);
   assert.equal(result.coverageRatio, 1);
+  assert.equal(result.aggregate.kind, "arm");
+  assert.equal(result.aggregate.count, result.sampleCount);
   assert.equal(result.metrics.rangeMean, 21);
   assert.equal(analyzer.windowMetrics(2_000, 3_000).sampleCount, 1);
   assert.throws(() => analyzer.windowMetrics(1_100, 2_100), /one-second boundaries/);
@@ -364,6 +366,23 @@ test("restores compact arm-swing comparison windows without raw swings", () => {
   const after = restored.windowMetrics(42_000, 50_000);
   assert.equal(after.sampleCount, before.sampleCount);
   assert.deepEqual(after.metrics, before.metrics);
+});
+
+test("drops the rebased open arm-swing bucket after an app resume", () => {
+  const analyzer = new ArmSwingAnalyzer(quickConfig);
+  analyzer.start(0);
+  for (let at = 100; at <= 4_900; at += 400) {
+    analyzer.addComparisonSwing({ atMs: at, intervalMs: 400, rangeValue: 20, direction: at % 800 ? 1 : -1 });
+  }
+  analyzer.lastSampleAtMs = 4_900;
+  for (const resumeAtMs of [50_100, 50_950]) {
+    const bucketShift = Math.floor((resumeAtMs - 4_900) / 1_000) * 1_000;
+    const restored = new ArmSwingAnalyzer();
+    restored.restoreState(analyzer.exportState(), resumeAtMs);
+    const currentBucket = Math.floor(resumeAtMs / 1_000) * 1_000;
+    assert.equal(restored.windowMetrics(currentBucket, currentBucket + 1_000).sampleCount, 0);
+    assert.ok(restored.windowMetrics(bucketShift, bucketShift + 4_000).sampleCount > 0);
+  }
 });
 
 test("restores the previous arm-swing state format", () => {

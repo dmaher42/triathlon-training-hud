@@ -1,10 +1,43 @@
 export const RUN_SESSION_VERSION = 2;
-export const COMPLETED_RUN_VERSION = 4;
+export const COMPLETED_RUN_VERSION = 5;
 export const DEFAULT_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+const mechanicsMetricKeys = new Set([
+  "hipVerticalIndex", "hipHorizontalIndex", "hipRotationIndex", "hipImpactVariationIndex",
+  "armCycleRpm", "armRegularityPercent", "armRangeIndex"
+]);
 
 const finite = value => {
   if (value == null || (typeof value === "string" && value.trim() === "")) return null;
   return Number.isFinite(Number(value)) ? Number(value) : null;
+};
+
+const withoutLegacyMechanics = values => Object.fromEntries(
+  Object.entries(values || {}).filter(([key]) => !mechanicsMetricKeys.has(key))
+);
+
+const sanitiseLegacySummary = summary => {
+  if (!summary || typeof summary !== "object") return summary;
+  return {
+    ...summary,
+    metrics: withoutLegacyMechanics(summary.metrics),
+    metricCoveragePercent: withoutLegacyMechanics(summary.metricCoveragePercent),
+    warnings: [...new Set([...(summary.warnings || []), "mechanics-history-upgrading"])]
+  };
+};
+
+const sanitiseLegacyComparison = comparison => {
+  if (!comparison || typeof comparison !== "object") return comparison;
+  return {
+    ...comparison,
+    before: sanitiseLegacySummary(comparison.before),
+    after: sanitiseLegacySummary(comparison.after),
+    previous: sanitiseLegacySummary(comparison.previous),
+    last: sanitiseLegacySummary(comparison.last),
+    changes: withoutLegacyMechanics(comparison.changes),
+    warnings: [...new Set([...(comparison.warnings || []), "mechanics-history-upgrading"])],
+    quality: "low"
+  };
 };
 
 export function createInterruption({ reason, startedAtEpochMs }) {
@@ -32,6 +65,18 @@ export function interruptionSummary(interruptions = [], nowEpochMs = Date.now())
   }, { count: 0, totalMs: 0 });
 }
 
+export function resumeTechniqueElapsed({
+  savedElapsedMs = 0,
+  savedAtEpochMs,
+  nowEpochMs = Date.now()
+} = {}) {
+  const saved = Math.max(0, finite(savedElapsedMs) ?? 0);
+  const savedAt = finite(savedAtEpochMs) ?? nowEpochMs;
+  const now = finite(nowEpochMs) ?? savedAt;
+  const offlineMs = Math.max(0, now - savedAt);
+  return Math.max(saved, Math.floor((saved + offlineMs) / 1_000) * 1_000);
+}
+
 export function makePersistedSession({
   startedAtEpochMs,
   savedAtEpochMs = Date.now(),
@@ -43,7 +88,8 @@ export function makePersistedSession({
   interruptions = [],
   techniqueState = null,
   terrain = "unlabelled",
-  comparisonWindowMs = 5 * 60_000
+  comparisonWindowMs = 5 * 60_000,
+  retrospectiveComparison = null
 }) {
   return {
     version: RUN_SESSION_VERSION,
@@ -58,7 +104,10 @@ export function makePersistedSession({
     interruptions,
     techniqueState: techniqueState && typeof techniqueState === "object" ? techniqueState : null,
     terrain: String(terrain || "unlabelled").slice(0, 24),
-    comparisonWindowMs: Math.max(60_000, finite(comparisonWindowMs) ?? 5 * 60_000)
+    comparisonWindowMs: Math.max(60_000, finite(comparisonWindowMs) ?? 5 * 60_000),
+    retrospectiveComparison: retrospectiveComparison && typeof retrospectiveComparison === "object"
+      ? retrospectiveComparison
+      : null
   };
 }
 
@@ -71,6 +120,14 @@ export function parsePersistedSession(raw, { nowEpochMs = Date.now(), maxAgeMs =
     if (startedAtEpochMs === null || savedAtEpochMs === null) return null;
     if (savedAtEpochMs > nowEpochMs + 60_000 || nowEpochMs - savedAtEpochMs > maxAgeMs) return null;
     if (!value.coachState || typeof value.coachState !== "object") return null;
+    const techniqueState = value.techniqueState && typeof value.techniqueState === "object"
+      ? value.techniqueState
+      : null;
+    const retrospectiveComparison = value.retrospectiveComparison && typeof value.retrospectiveComparison === "object"
+      ? techniqueState?.version === 1
+        ? sanitiseLegacyComparison(value.retrospectiveComparison)
+        : value.retrospectiveComparison
+      : null;
     return {
       ...value,
       startedAtEpochMs,
@@ -78,9 +135,10 @@ export function parsePersistedSession(raw, { nowEpochMs = Date.now(), maxAgeMs =
       phonePlacement: value.phonePlacement === "hand" ? "hand" : "hip",
       pocketSide: value.pocketSide === "left" ? "left" : "right",
       interruptions: Array.isArray(value.interruptions) ? value.interruptions.slice(0, 100) : [],
-      techniqueState: value.techniqueState && typeof value.techniqueState === "object" ? value.techniqueState : null,
+      techniqueState,
       terrain: String(value.terrain || "unlabelled").slice(0, 24),
-      comparisonWindowMs: Math.max(60_000, finite(value.comparisonWindowMs) ?? 5 * 60_000)
+      comparisonWindowMs: Math.max(60_000, finite(value.comparisonWindowMs) ?? 5 * 60_000),
+      retrospectiveComparison
     };
   } catch (_) {
     return null;
@@ -125,7 +183,7 @@ export function makeCompletedRun({
 export function parseCompletedRun(raw) {
   try {
     const value = typeof raw === "string" ? JSON.parse(raw) : raw;
-    if (!value || ![1, 2, 3, COMPLETED_RUN_VERSION].includes(value.version)) return null;
+    if (!value || ![1, 2, 3, 4, COMPLETED_RUN_VERSION].includes(value.version)) return null;
     const completedAtEpochMs = finite(value.completedAtEpochMs);
     if (completedAtEpochMs === null || !value.snapshot || typeof value.snapshot !== "object") return null;
 
@@ -147,11 +205,17 @@ export function parseCompletedRun(raw) {
       elapsedMs,
       runSnapshot: { ...value.runSnapshot, events: [] },
       interruptions: Array.isArray(value.interruptions) ? value.interruptions.slice(0, 100) : [],
-      techniqueComparisons: Array.isArray(value.techniqueComparisons) ? value.techniqueComparisons.slice(0, 50) : [],
+      techniqueComparisons: Array.isArray(value.techniqueComparisons)
+        ? value.techniqueComparisons.slice(0, 50).map(comparison => (
+            value.version === 4 ? sanitiseLegacyComparison(comparison) : comparison
+          ))
+        : [],
       terrainSegments: Array.isArray(value.terrainSegments) ? value.terrainSegments.slice(0, 200) : [],
       comparisonWindowMs: Math.max(60_000, finite(value.comparisonWindowMs) ?? 5 * 60_000),
       retrospectiveComparison: value.retrospectiveComparison && typeof value.retrospectiveComparison === "object"
-        ? value.retrospectiveComparison
+        ? value.version === 4
+          ? sanitiseLegacyComparison(value.retrospectiveComparison)
+          : value.retrospectiveComparison
         : null
     };
   } catch (_) {

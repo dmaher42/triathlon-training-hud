@@ -131,3 +131,10 @@ test("failed completed-run saves remain visible, retryable and protected", () =>
   assert.match(css, /\.save-result\[data-state="failed"\]/);
   assert.match(css, /#retry-save[\s\S]*min-height:\s*44px/);
 });
+
+test("Technique persistence flushes closed mechanics before saving its aligned clock", () => {
+  assert.match(app, /flushClosedTechniqueFrame\(now\);[\s\S]*techniqueSnapshot = techniqueEngine\.tick\(techniqueElapsedAt\(now\)\);[\s\S]*techniqueState: techniqueEngine\.exportState\(\)/);
+  assert.match(app, /techniqueEngine\.recordClosedFrame\(/);
+  assert.match(app, /resumeTechniqueElapsed\(\{/);
+  assert.match(app, /function cancelTechniqueComparison[\s\S]*advanceTechniqueClock\(now, \{ announce: false \}\);[\s\S]*techniqueEngine\.cancelActive\(techniqueElapsedAt\(now\), reason\)/);
+});

@@ -10,7 +10,7 @@ import {
 } from "./technique-lap-engine.js";
 import {
   closeInterruption, createInterruption, interruptionSummary,
-  makeCompletedRun, makePersistedSession, parseCompletedRun, parsePersistedSession
+  makeCompletedRun, makePersistedSession, parseCompletedRun, parsePersistedSession, resumeTechniqueElapsed
 } from "./session-resilience.js";
 import { planActivePlacementSwitch, runConfigurationLocked, selectRunConfiguration } from "./run-configuration.js";
 
@@ -117,6 +117,9 @@ let techniqueDemoScale = 1;
 let techniqueDemoOffsetMs = 0;
 let demoPreviousComparisonWindowMs = null;
 let lastTechniqueRecordedElapsedMs = -Infinity;
+let techniqueClockOriginMs = null;
+let pendingTechniqueFrame = null;
+const invalidTechniqueBucketElapsedMs = new Set();
 if (savedSession && completedFormReport?.completedAtEpochMs >= savedSession.savedAtEpochMs) {
   savedSession = null;
   try { localStorage.removeItem(activeSessionStorageKey); } catch (_) {}
@@ -177,34 +180,48 @@ function runElapsedAt(now = performance.now()) {
 }
 
 function techniqueElapsedAt(now = performance.now()) {
+  if (techniqueDemoScale === 1 && techniqueClockOriginMs !== null) {
+    return Math.max(0, Math.floor(now / 1_000) * 1_000 - techniqueClockOriginMs);
+  }
   const displayElapsedMs = runElapsedAt(now);
   const scaled = techniqueDemoOffsetMs + displayElapsedMs * techniqueDemoScale;
   return Math.max(0, Math.floor(scaled / 1_000) * 1_000);
 }
 
-function currentMotionTechniqueMetrics(now = performance.now()) {
-  const bucketStartMs = Math.floor(now / 1_000) * 1_000;
+function currentMotionTechniqueAggregate(bucketStartMs) {
   const bucketEndMs = bucketStartMs + 1_000;
   try {
     const result = phonePlacement === "hand"
       ? armAnalyzer.windowMetrics(bucketStartMs, bucketEndMs)
       : formAnalyzer.windowMetrics(bucketStartMs, bucketEndMs);
-    const metrics = result.metrics || {};
-    if (phonePlacement === "hand") {
-      return {
-        armCycleRpm: metrics.armCycleRpm,
-        armRegularityPercent: metrics.regularityPercent,
-        armRangeIndex: metrics.rangeMean
-      };
-    }
-    return {
-      hipVerticalIndex: metrics.verticalRms,
-      hipHorizontalIndex: metrics.horizontalRms,
-      hipRotationIndex: metrics.rotationRms,
-      hipImpactVariationIndex: metrics.impactVariation
-    };
+    return result.aggregate || null;
   } catch (_) {
-    return {};
+    return null;
+  }
+}
+
+function invalidateCurrentTechniqueBucket(now = performance.now()) {
+  if (!active || sessionStartedAtMs === null || !fieldSession) return;
+  const elapsedMs = techniqueElapsedAt(now);
+  invalidTechniqueBucketElapsedMs.add(elapsedMs);
+  if (pendingTechniqueFrame?.elapsedMs === elapsedMs) pendingTechniqueFrame.eligible = false;
+}
+
+function flushClosedTechniqueFrame(now = performance.now()) {
+  if (!fieldSession || !pendingTechniqueFrame) return;
+  const currentBucketStartMs = Math.floor(now / 1_000) * 1_000;
+  if (pendingTechniqueFrame.bucketStartMs + 1_000 > currentBucketStartMs) return;
+  const frame = pendingTechniqueFrame;
+  const invalid = invalidTechniqueBucketElapsedMs.has(frame.elapsedMs);
+  techniqueSnapshot = techniqueEngine.recordClosedFrame({
+    ...frame,
+    eligible: frame.eligible && !invalid,
+    mechanicsAggregate: currentMotionTechniqueAggregate(frame.bucketStartMs)
+  });
+  lastTechniqueRecordedElapsedMs = frame.elapsedMs;
+  pendingTechniqueFrame = null;
+  for (const elapsedMs of invalidTechniqueBucketElapsedMs) {
+    if (elapsedMs <= frame.elapsedMs) invalidTechniqueBucketElapsedMs.delete(elapsedMs);
   }
 }
 
@@ -243,35 +260,83 @@ function detectTechniqueExperimentChange({ announce = true } = {}) {
 function recordTechniqueFrame(signal, coachSnapshot, now = performance.now()) {
   if (!active || sessionStartedAtMs === null) return;
   const elapsedMs = techniqueElapsedAt(now);
-  if (elapsedMs <= lastTechniqueRecordedElapsedMs) return;
-  lastTechniqueRecordedElapsedMs = elapsedMs;
   const baseline = Number.isFinite(coachSnapshot.baselineCadenceSpm) ? coachSnapshot.baselineCadenceSpm : null;
   const cadence = Number.isFinite(signal.cadenceSpm) ? signal.cadenceSpm : null;
   const rhythmStable = baseline === null || cadence === null
     ? null
     : cadence >= baseline * (1 - (coach.config?.driftRatio ?? 0.06));
-  techniqueSnapshot = techniqueEngine.recordFrame({
-    elapsedMs,
-    movementState: signal.movementState,
-    eligible: (!fieldSession || preflightConfirmed) && !coachSnapshot.plannedBreakActive,
-    interrupted: Boolean(interruptionActive),
-    cadenceSpm: cadence,
-    rhythmStable,
-    heartRateBpm: signal.heartRateBpm,
-    speedMps: signal.speedMps,
-    metrics: currentMotionTechniqueMetrics(Math.max(0, now - 1_000)),
-    placement: phonePlacement,
-    side: pocketSide,
-    cadenceSource: signal.cadenceSource,
-    sensorSource: phonePlacement === "hand"
+  const demoMetrics = fieldSession
+    ? {}
+    : phonePlacement === "hand"
+      ? { armCycleRpm: 85, armRegularityPercent: 90, armRangeIndex: 1 }
+      : { hipVerticalIndex: 0.82, hipHorizontalIndex: 0.42, hipRotationIndex: 18, hipImpactVariationIndex: 0.11 };
+  const eligible = (!fieldSession || preflightConfirmed) && !coachSnapshot.plannedBreakActive;
+  if (!fieldSession) {
+    if (elapsedMs <= lastTechniqueRecordedElapsedMs) return;
+    lastTechniqueRecordedElapsedMs = elapsedMs;
+    techniqueSnapshot = techniqueEngine.recordFrame({
+      elapsedMs,
+      movementState: signal.movementState,
+      eligible,
+      interrupted: Boolean(interruptionActive),
+      cadenceSpm: cadence,
+      rhythmStable,
+      heartRateBpm: signal.heartRateBpm,
+      speedMps: signal.speedMps,
+      metrics: demoMetrics,
+      placement: phonePlacement,
+      side: pocketSide,
+      cadenceSource: signal.cadenceSource,
+      sensorSource: "demo"
+    });
+    detectTechniqueExperimentChange();
+    return;
+  }
+
+  flushClosedTechniqueFrame(now);
+  const bucketStartMs = Math.floor(now / 1_000) * 1_000;
+  const frameEligible = eligible
+    && !interruptionActive
+    && !invalidTechniqueBucketElapsedMs.has(elapsedMs)
+    && signal.movementState === "running";
+  if (!pendingTechniqueFrame || pendingTechniqueFrame.elapsedMs !== elapsedMs) {
+    pendingTechniqueFrame = {
+      elapsedMs,
+      bucketStartMs,
+      movementState: signal.movementState,
+      eligible: frameEligible,
+      interrupted: Boolean(interruptionActive),
+      cadenceSpm: cadence,
+      rhythmStable,
+      heartRateBpm: signal.heartRateBpm,
+      speedMps: signal.speedMps,
+      metrics: {},
+      placement: phonePlacement,
+      side: pocketSide,
+      cadenceSource: signal.cadenceSource,
+      sensorSource: phonePlacement === "hand"
+        ? armSnapshot.capabilities?.signalSource || "phone-motion"
+        : "phone-motion"
+    };
+  } else {
+    pendingTechniqueFrame.movementState = signal.movementState;
+    pendingTechniqueFrame.eligible = pendingTechniqueFrame.eligible && frameEligible;
+    pendingTechniqueFrame.interrupted ||= Boolean(interruptionActive);
+    pendingTechniqueFrame.cadenceSpm = cadence;
+    pendingTechniqueFrame.rhythmStable = rhythmStable;
+    pendingTechniqueFrame.heartRateBpm = signal.heartRateBpm;
+    pendingTechniqueFrame.speedMps = signal.speedMps;
+    pendingTechniqueFrame.cadenceSource = signal.cadenceSource;
+    pendingTechniqueFrame.sensorSource = phonePlacement === "hand"
       ? armSnapshot.capabilities?.signalSource || "phone-motion"
-      : "phone-motion"
-  });
+      : "phone-motion";
+  }
   detectTechniqueExperimentChange();
 }
 
 function advanceTechniqueClock(now = performance.now(), { announce = true } = {}) {
   if (!active || sessionStartedAtMs === null) return techniqueSnapshot;
+  flushClosedTechniqueFrame(now);
   techniqueSnapshot = techniqueEngine.tick(techniqueElapsedAt(now));
   detectTechniqueExperimentChange({ announce });
   return techniqueSnapshot;
@@ -367,6 +432,9 @@ function resetReadySession() {
   techniqueDemoScale = 1;
   techniqueDemoOffsetMs = 0;
   lastTechniqueRecordedElapsedMs = -Infinity;
+  techniqueClockOriginMs = null;
+  pendingTechniqueFrame = null;
+  invalidTechniqueBucketElapsedMs.clear();
 }
 
 function renderTechniqueSetup() {
@@ -404,8 +472,11 @@ function setTerrainContext(terrain, { announce = false, source = "touch" } = {})
   currentTerrain = terrain;
   writeStoredText(terrainStorageKey, terrain);
   if (active) {
-    techniqueEngine.setTerrain(terrain, techniqueElapsedAt(), { source });
-    techniqueSnapshot = techniqueEngine.snapshot(techniqueElapsedAt());
+    const now = performance.now();
+    advanceTechniqueClock(now, { announce: false });
+    invalidateCurrentTechniqueBucket(now);
+    techniqueEngine.setTerrain(terrain, techniqueElapsedAt(now), { source });
+    techniqueSnapshot = techniqueEngine.snapshot(techniqueElapsedAt(now));
     persistActiveSession(true);
   } else if (snapshot.status !== "REVIEW") {
     techniqueEngine = new TechniqueLapEngine({ windowMs: comparisonWindowMs, initialTerrain: currentTerrain });
@@ -463,6 +534,8 @@ function switchActivePlacement(requestedPlacement, { forceReply = false } = {}) 
   }
 
   const now = performance.now();
+  advanceTechniqueClock(now, { announce: false });
+  invalidateCurrentTechniqueBucket(now);
   const cancelledTechnique = techniqueSnapshot?.active
     ? techniqueEngine.cancelActive(techniqueElapsedAt(now), "placement-changed")
     : null;
@@ -787,6 +860,9 @@ function initialiseStorageCheck() {
 
 function beginInterruption(reason) {
   if (!active || !fieldSession || interruptionActive) return;
+  const now = performance.now();
+  advanceTechniqueClock(now, { announce: false });
+  invalidateCurrentTechniqueBucket(now);
   interruptionActive = createInterruption({ reason, startedAtEpochMs: Date.now() });
   interruptions.push(interruptionActive);
   persistActiveSession(true);
@@ -794,6 +870,9 @@ function beginInterruption(reason) {
 
 function endInterruption() {
   if (!interruptionActive) return;
+  const now = performance.now();
+  advanceTechniqueClock(now, { announce: false });
+  invalidateCurrentTechniqueBucket(now);
   const closed = closeInterruption(interruptionActive, Date.now());
   interruptions[interruptions.length - 1] = closed;
   interruptionActive = null;
@@ -805,6 +884,8 @@ function persistActiveSession(force = false) {
   const now = performance.now();
   if (!force && now - lastPersistAttemptAtMs < 5_000) return;
   lastPersistAttemptAtMs = now;
+  flushClosedTechniqueFrame(now);
+  techniqueSnapshot = techniqueEngine.tick(techniqueElapsedAt(now));
   const payload = {
     ...makePersistedSession({
       startedAtEpochMs: sessionStartedAtEpochMs,
@@ -816,7 +897,8 @@ function persistActiveSession(force = false) {
       interruptions,
       techniqueState: techniqueEngine.exportState(),
       terrain: currentTerrain,
-      comparisonWindowMs
+      comparisonWindowMs,
+      retrospectiveComparison: latestRetrospectiveComparison
     }),
     placementSwitchCount
   };
@@ -926,7 +1008,8 @@ function markTechniqueChange({ forceReply = true } = {}) {
     if (forceReply) reply("Wait for the motion and screen checks to pass before marking a change.");
     return false;
   }
-  advanceTechniqueClock();
+  const markNow = performance.now();
+  advanceTechniqueClock(markNow);
   const result = techniqueEngine.markChange(techniqueSnapshot.elapsedMs);
   techniqueSnapshot = techniqueEngine.snapshot(techniqueSnapshot.elapsedMs);
   if (!result.accepted) {
@@ -938,6 +1021,8 @@ function markTechniqueChange({ forceReply = true } = {}) {
     render(true);
     return false;
   }
+  invalidateCurrentTechniqueBucket(markNow);
+  if (phonePlacement === "hand") armAnalyzer.resetLiveSwing();
   navigator.vibrate?.(120);
   persistActiveSession(true);
   render(true);
@@ -950,8 +1035,16 @@ function cancelTechniqueComparison({ forceReply = true, reason = "runner-cancell
     if (forceReply) reply("There is no active technique comparison to cancel.");
     return false;
   }
-  const cancelled = techniqueEngine.cancelActive(techniqueElapsedAt(), reason);
-  techniqueSnapshot = techniqueEngine.snapshot(techniqueElapsedAt());
+  const now = performance.now();
+  advanceTechniqueClock(now, { announce: false });
+  if (!techniqueSnapshot.active) {
+    persistActiveSession(true);
+    render(true);
+    if (forceReply) reply("The technique comparison completed before the cancel command arrived.");
+    return false;
+  }
+  const cancelled = techniqueEngine.cancelActive(techniqueElapsedAt(now), reason);
+  techniqueSnapshot = techniqueEngine.snapshot(techniqueElapsedAt(now));
   detectTechniqueExperimentChange({ announce: false });
   persistActiveSession(true);
   render(true);
@@ -1005,6 +1098,7 @@ function comparisonWarningText(warnings = []) {
     "heart-rate-context-changed": "Heart-rate context changed.",
     "cadence-source-mismatch": "Cadence source changed between blocks.",
     "placement-mismatch": "Phone placement changed between blocks.",
+    "mechanics-history-upgrading": "Older mechanics history was excluded while the accuracy upgrade builds a fresh window.",
     "after-window-incomplete": "The run ended before the after block finished.",
     "before-low-running-coverage": "The before block contained limited running data.",
     "after-low-running-coverage": "The after block contained limited running data.",
@@ -1262,12 +1356,12 @@ async function executeRunIntent(actionOrIntent) {
       break;
     case VOICE_INTENTS.PLANNED_WALK:
       if (!active) reply("Start the run coach before marking a planned walk.");
-      else handleSnapshot(coach.markPlannedBreak(performance.now()));
+      else markPlannedWalk();
       break;
     case VOICE_INTENTS.RESUME:
       if (!active) reply("The run coach is not active.");
       else if (!snapshot.plannedBreakActive) reply("There is no planned walk to end.");
-      else handleSnapshot(coach.resumePlannedBreak(performance.now()));
+      else resumeRunning();
       break;
     case VOICE_INTENTS.SWITCH_HIP:
       switchActivePlacement("hip", { forceReply: true });
@@ -1463,6 +1557,7 @@ function maybeConfirmPreflight() {
   setConnection("phone-connection", "PHONE LIVE");
   setConnection("screen-connection", "SCREEN AWAKE");
   if (preflightConfirmed) return;
+  invalidateCurrentTechniqueBucket();
   preflightConfirmed = true;
   setPreflightItem("preflight-motion", "MOTION LIVE", "ready");
   setPreflightItem("preflight-screen", "SCREEN PROTECTED", "ready");
@@ -1651,12 +1746,16 @@ async function startSession() {
     techniqueDemoScale = 1;
     techniqueDemoOffsetMs = 0;
     lastTechniqueRecordedElapsedMs = -Infinity;
+    pendingTechniqueFrame = null;
+    invalidTechniqueBucketElapsedMs.clear();
     active = true;
     fieldSession = true;
     motionSignalConfirmed = false;
     preflightConfirmed = false;
     preflightAnnounced = false;
     sessionStartedAtMs = performance.now();
+    techniqueClockOriginMs = Math.floor(sessionStartedAtMs / 1_000) * 1_000;
+    invalidateCurrentTechniqueBucket(sessionStartedAtMs);
     sessionStartedAtEpochMs = Date.now();
     lastSessionElapsedMs = 0;
     interruptions = [];
@@ -1727,11 +1826,21 @@ async function resumeSavedSession() {
     fieldSession = true;
     sessionStartedAtEpochMs = restored.startedAtEpochMs;
     sessionStartedAtMs = now - Math.max(0, Date.now() - restored.startedAtEpochMs);
+    techniqueDemoScale = 1;
+    techniqueDemoOffsetMs = 0;
+    const restoredTechniqueElapsedMs = resumeTechniqueElapsed({
+      savedElapsedMs: restored.techniqueState?.lastElapsedMs,
+      savedAtEpochMs: restored.savedAtEpochMs,
+      nowEpochMs: Date.now()
+    });
+    techniqueClockOriginMs = Math.floor(now / 1_000) * 1_000 - restoredTechniqueElapsedMs;
+    pendingTechniqueFrame = null;
+    invalidTechniqueBucketElapsedMs.clear();
+    invalidTechniqueBucketElapsedMs.add(restoredTechniqueElapsedMs);
     comparisonWindowMs = TECHNIQUE_WINDOW_OPTIONS_MS.includes(restored.comparisonWindowMs)
       ? restored.comparisonWindowMs
       : comparisonWindowMs;
     currentTerrain = RUN_TERRAINS.includes(restored.terrain) ? restored.terrain : currentTerrain;
-    const restoredTechniqueElapsedMs = techniqueElapsedAt(now);
     try {
       techniqueEngine = restored.techniqueState
         ? TechniqueLapEngine.restore(restored.techniqueState, { elapsedMs: restoredTechniqueElapsedMs })
@@ -1743,9 +1852,7 @@ async function resumeSavedSession() {
     currentTerrain = techniqueSnapshot.currentTerrain;
     comparisonWindowMs = techniqueSnapshot.windowMs;
     lastTechniqueExperimentCount = techniqueSnapshot.experiments.length;
-    latestRetrospectiveComparison = null;
-    techniqueDemoScale = 1;
-    techniqueDemoOffsetMs = 0;
+    latestRetrospectiveComparison = restored.retrospectiveComparison || null;
     lastTechniqueRecordedElapsedMs = techniqueSnapshot.elapsedMs - 1_000;
     interruptions = [...restored.interruptions];
     interruptionActive = interruptions.at(-1)?.endedAtEpochMs == null ? interruptions.at(-1) : null;
@@ -1850,7 +1957,9 @@ function finishSession() {
     elapsedMs: techniqueSnapshot.elapsedMs,
     windowMs: techniqueSnapshot.windowMs
   });
-  latestRetrospectiveComparison = retrospective.available ? retrospective : null;
+  if (!latestRetrospectiveComparison?.available) {
+    latestRetrospectiveComparison = retrospective.available ? retrospective : null;
+  }
   if (interruptionActive) endInterruption();
   const interruptionData = interruptionSummary(interruptions);
   if (phonePlacement === "hand") armSnapshot = armAnalyzer.snapshot(performance.now(), { force: true });
@@ -1898,6 +2007,9 @@ function finishSession() {
   preflightConfirmed = false;
   sessionStartedAtMs = null;
   sessionStartedAtEpochMs = null;
+  techniqueClockOriginMs = null;
+  pendingTechniqueFrame = null;
+  invalidTechniqueBucketElapsedMs.clear();
   window.removeEventListener("devicemotion", onDeviceMotion);
   if (demoTimer) clearInterval(demoTimer);
   demoTimer = null;
@@ -1936,6 +2048,9 @@ function startDemo() {
   lastTechniqueExperimentCount = 0;
   techniqueDemoScale = 6;
   techniqueDemoOffsetMs = 60_000;
+  techniqueClockOriginMs = null;
+  pendingTechniqueFrame = null;
+  invalidTechniqueBucketElapsedMs.clear();
   for (let elapsedMs = 0; elapsedMs < techniqueDemoOffsetMs; elapsedMs += 1_000) {
     techniqueEngine.recordFrame({
       elapsedMs,
@@ -2022,7 +2137,18 @@ function resumeRunning() {
     reply("There is no planned walk to end.");
     return;
   }
-  handleSnapshot(coach.resumePlannedBreak(performance.now()));
+  const now = performance.now();
+  advanceTechniqueClock(now, { announce: false });
+  invalidateCurrentTechniqueBucket(now);
+  handleSnapshot(coach.resumePlannedBreak(now));
+}
+
+function markPlannedWalk() {
+  if (!active) return;
+  const now = performance.now();
+  advanceTechniqueClock(now, { announce: false });
+  invalidateCurrentTechniqueBucket(now);
+  handleSnapshot(coach.markPlannedBreak(now));
 }
 
 function isInstalledApp() {
@@ -2105,7 +2231,7 @@ els["finish-dialog"].addEventListener("click", event => {
 });
 els["demo-session"].addEventListener("click", startDemo);
 els["mark-change"].addEventListener("click", () => executeRunIntent({ command: VOICE_INTENTS.MARK_CHANGE }));
-els["planned-walk"].addEventListener("click", () => handleSnapshot(coach.markPlannedBreak(performance.now())));
+els["planned-walk"].addEventListener("click", markPlannedWalk);
 els["resume-run"].addEventListener("click", resumeRunning);
 els["speak-status"].addEventListener("click", () => reply(statusSentence()));
 els["silence-coach"].addEventListener("click", toggleVoicePrompts);
